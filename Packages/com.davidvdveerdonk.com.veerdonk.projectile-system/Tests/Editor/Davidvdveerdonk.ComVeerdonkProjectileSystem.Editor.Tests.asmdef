@@ -1,0 +1,14 @@
+{
+    "name": "Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests",
+    "references": [
+        "Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor",
+        "Davidvdveerdonk.ComVeerdonkProjectileSystem"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}

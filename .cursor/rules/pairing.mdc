@@ -1,0 +1,15 @@
+---
+description: Pair one phase at a time against docs; stop for human review
+alwaysApply: true
+---
+
+# Pairing
+
+- Spec is `docs/REQUIREMENTS.md`, `docs/ARCHITECTURE.md`, `docs/PHASES.md`, `docs/DECISIONS.md`.
+- Implement **exactly one phase** from `docs/PHASES.md`, then stop.
+- Plan first when adding public types. Match `IProjectileWorld`; do not invent a second façade.
+- Six stage lists only. No Noita wrap, graphs, or unused extension points.
+- Runtime package: spawn, simulate, pool, hits, events. Sandbox: camera, input, dummy HP.
+- New architecture → ADR in `docs/DECISIONS.md` before code.
+- After the human refines a phase, the next phase starts from that code.
+- Editor/scene work: Unity MCP per `docs/MCP.md`.
