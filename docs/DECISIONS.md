@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-004 — IDamageable is a Target marker, not HP
+
+- **Date:** 2026-09-14
+- **Decision:** The runtime package defines `IDamageable` with an opaque `TargetId` only. A PhysX hit whose collider has `IDamageable` is `HitKind.Target`; all other colliders are `HitKind.World`. The world does not call damage methods or change HP. Sandbox (or the game) implements `IDamageable` and applies HP from `IProjectileWorld.Hit`.
+- **Why:** Games need a package-level way to mark Target colliders without layer-mask setup. HP still does not belong in the package.
+- **Consequences:** `PhysicsHitQuery` uses `GetComponentInParent<IDamageable>()`. The v1 non-goal is HP application, not the marker interface.
+
 ## ADR-003 — Lifetime is recipe data, not a Timer modifier
 
 - **Date:** 2026-09-14

@@ -50,7 +50,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - DOTS / Entities runtime
 - Player controller, inventory, wand UI, mana / spell points
 - A second composition model (Noita wrap-the-next-spell, behaviour trees, visual graphs)
-- `IDamageable` or HP inside the runtime package (sandbox listens to `Hit` and applies damage)
+- HP / damage application inside the runtime package (sandbox listens to `Hit` and applies damage). `IDamageable` is a Target-classification marker only; see [DECISIONS.md](DECISIONS.md) ADR-004
 - New folders or patterns without an ADR
 
 ## Package vs game boundary

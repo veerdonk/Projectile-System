@@ -34,6 +34,7 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 - Put player, camera, input, or HP logic in the runtime package
 - Use `FindObjectOfType` in the package or `Update` on every instance
 - Edit `Library/`, `Temp/`, `Logs/`, or `UserSettings/`
+- Add comments to code an experienced developer can understand easily
 
 ## Unity MCP
 
