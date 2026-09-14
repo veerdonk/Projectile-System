@@ -28,6 +28,7 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 1 | Straight Recipe | Hits dummy, dummy HP drops, pool count returns |
 | 1 | Lifetime-only Recipe | Dies at 3s, no child |
 | 1 | OnHit-spawn Recipe | Child appears at hit point along normal |
+| 1b | Same three Recipes as phase 1 | Same proofs; instances are ECS entities under the same HUD |
 | 2 | Pierce(2) | Three targets: first two live-through, third kills the instance |
 | 2 | Bounce(1) | Reflects off wall, then dies on dummy |
 | 3 | Multiply on interval | Extra instances at 0.5s |

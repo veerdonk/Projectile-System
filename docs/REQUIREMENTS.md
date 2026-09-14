@@ -38,7 +38,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - 3D projectiles only
 - Unity 6 LTS (project is `6000.6.0f1`)
 - Ship as an embedded UPM package with a sandbox lab
-- GameObject adapters around plain C# simulation data (DOTS-ready data, not a DOTS runtime yet)
+- GameObject adapters around hybrid ECS simulation (Entities for instance state, PhysX hits, GameObject views; see [DECISIONS.md](DECISIONS.md) ADR-005)
 - Composition via the six stage lists
 - Object pooling required
 - Sandbox scene for development and Play Mode proof only
@@ -47,7 +47,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - Pixel or material physics
 - Networking
-- DOTS / Entities runtime
+- Unity Physics / Entities Graphics (hybrid ECS is in; full DOTS stack is later)
 - Player controller, inventory, wand UI, mana / spell points
 - A second composition model (Noita wrap-the-next-spell, behaviour trees, visual graphs)
 - HP / damage application inside the runtime package (sandbox listens to `Hit` and applies damage). `IDamageable` is a Target-classification marker only; see [DECISIONS.md](DECISIONS.md) ADR-004
@@ -59,6 +59,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - Spawn, simulate, compose (stage lists), pool
 - Hit pipeline and events
+- Hybrid ECS simulation (`com.unity.entities`; see [ECS.md](ECS.md))
 - Later: developer tooling for Recipes (not before the “later” phase)
 
 **Game / sandbox (`Assets/`)**

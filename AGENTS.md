@@ -11,6 +11,7 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 | `docs/PHASES.md` | What to build now; stop lines |
 | `docs/DECISIONS.md` | ADRs |
 | `docs/SANDBOX.md` | Play Mode proofs |
+| `docs/ECS.md` | Hybrid ECS map (what each piece does) |
 | `docs/MCP.md` | Unity MCP: start, recover, how agents should call the Editor |
 | `Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/` | Product runtime/editor/tests |
 | `Assets/` | Sandbox only |
@@ -22,7 +23,7 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 3. Match the six stage lists. Do not introduce wrap-the-next-spell, graphs, or a second world/façade.
 4. Do not generate unused extension points “for later.”
 5. Prefer Edit Mode tests. Play Mode only for pooling and physics queries.
-6. **Stop** at the phase stop line. Do not start the next phase unless the human asks.
+6. **Stop** at the phase stop line. Do not start the next phase unless the human asks. After phase 1b or any later ECS change, the stop message must walk through the pieces using [docs/ECS.md](docs/ECS.md) and the files just added. Assume GameObject/C# fluency, not ECS fluency.
 7. After the human refines, continue from that code.
 8. Architectural change → add an ADR in `docs/DECISIONS.md` before code.
 9. Git: work on a branch; integrate through human GitHub review. Do not push unless asked.
@@ -30,7 +31,7 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 ## Do not
 
 - Build the whole system in one session
-- Add DOTS, networking, Addressables, or Zenject “just in case”
+- Add Unity Physics, Entities Graphics, networking, Addressables, or Zenject “just in case” (hybrid ECS is ADR-005; do not widen the DOTS stack without an ADR)
 - Put player, camera, input, or HP logic in the runtime package
 - Use `FindObjectOfType` in the package or `Update` on every instance
 - Edit `Library/`, `Temp/`, `Logs/`, or `UserSettings/`

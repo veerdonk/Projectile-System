@@ -10,23 +10,25 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         {
             Recipe recipe = SimulationTestHelper.CreateRecipe("pool", speed: 10f, lifetime: 1f);
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe, prewarm: 4);
-
-            Assert.AreEqual(4, world.AvailableCount);
-
-            world.Spawn(new SpawnRequest
+            using (world)
             {
-                Recipe = recipe,
-                Position = Vector3.zero,
-                Direction = Vector3.forward
-            });
+                Assert.AreEqual(4, world.AvailableCount);
 
-            Assert.AreEqual(3, world.AvailableCount);
-            Assert.AreEqual(1, world.ActiveCount);
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
 
-            world.Tick(1f);
+                Assert.AreEqual(3, world.AvailableCount);
+                Assert.AreEqual(1, world.ActiveCount);
 
-            Assert.AreEqual(0, world.ActiveCount);
-            Assert.AreEqual(4, world.AvailableCount);
+                world.Tick(1f);
+
+                Assert.AreEqual(0, world.ActiveCount);
+                Assert.AreEqual(4, world.AvailableCount);
+            }
         }
     }
 }

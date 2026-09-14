@@ -17,32 +17,35 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
 
             var hits = new ScriptedHitQuery();
             var world = new ProjectileWorld(hits, createViews: false);
-            world.Prewarm(parent, 4);
-            world.Prewarm(child, 4);
-
-            ProjectileId parentId = world.Spawn(new SpawnRequest
+            using (world)
             {
-                Recipe = parent,
-                Position = Vector3.zero,
-                Direction = Vector3.forward
-            });
+                world.Prewarm(parent, 4);
+                world.Prewarm(child, 4);
 
-            Vector3 point = new Vector3(1f, 2f, 3f);
-            Vector3 normal = Vector3.up;
-            hits.Queue(HitKind.Target, point, normal, new TargetId(1));
+                ProjectileId parentId = world.Spawn(new SpawnRequest
+                {
+                    Recipe = parent,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
 
-            world.Tick(0.1f);
+                Vector3 point = new Vector3(1f, 2f, 3f);
+                Vector3 normal = Vector3.up;
+                hits.Queue(HitKind.Target, point, normal, new TargetId(1));
 
-            Assert.AreEqual(1, world.ActiveCount);
-            Assert.IsTrue(world.TryGetActiveAt(0, out ProjectileId childId, out Vector3 position, out Vector3 velocity, out Recipe recipe));
-            Assert.AreNotEqual(parentId, childId);
-            Assert.AreEqual(child.Id, recipe.Id);
-            Assert.AreEqual(point.x, position.x, 0.0001f);
-            Assert.AreEqual(point.y, position.y, 0.0001f);
-            Assert.AreEqual(point.z, position.z, 0.0001f);
-            Assert.AreEqual(0f, velocity.x, 0.0001f);
-            Assert.AreEqual(child.Speed, velocity.y, 0.0001f);
-            Assert.AreEqual(0f, velocity.z, 0.0001f);
+                world.Tick(0.1f);
+
+                Assert.AreEqual(1, world.ActiveCount);
+                Assert.IsTrue(world.TryGetActiveAt(0, out ProjectileId childId, out Vector3 position, out Vector3 velocity, out Recipe recipe));
+                Assert.AreNotEqual(parentId, childId);
+                Assert.AreEqual(child.Id, recipe.Id);
+                Assert.AreEqual(point.x, position.x, 0.0001f);
+                Assert.AreEqual(point.y, position.y, 0.0001f);
+                Assert.AreEqual(point.z, position.z, 0.0001f);
+                Assert.AreEqual(0f, velocity.x, 0.0001f);
+                Assert.AreEqual(child.Speed, velocity.y, 0.0001f);
+                Assert.AreEqual(0f, velocity.z, 0.0001f);
+            }
         }
     }
 }

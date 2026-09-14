@@ -50,6 +50,8 @@ namespace Sandbox
         void OnDestroy()
         {
             dummyTarget?.Unbind();
+            world?.Dispose();
+            world = null;
         }
 
         void Update()
@@ -81,7 +83,7 @@ namespace Sandbox
         {
             const float width = 420f;
             GUILayout.BeginArea(new Rect(16f, 16f, width, 320f), GUI.skin.box);
-            GUILayout.Label("Projectile lab — phase 1");
+            GUILayout.Label("Projectile lab — phase 1b (hybrid ECS)");
             GUILayout.Label("Space fires the selected Recipe. 1/2/3 select. Dummy loses HP on Target hits.");
 
             if (GUILayout.Button("Fire straight", GUILayout.Height(28f)))

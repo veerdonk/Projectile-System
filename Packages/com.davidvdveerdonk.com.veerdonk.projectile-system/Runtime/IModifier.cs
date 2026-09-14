@@ -55,24 +55,32 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             });
         }
 
-        internal void Bind(LiveProjectile projectile, bool hasHit, in HitInfo hit)
+        internal void Bind(
+            ProjectileId instanceId,
+            Vector3 position,
+            Vector3 velocity,
+            float speed,
+            float remainingLifetime,
+            float radius,
+            bool hasHit,
+            in HitInfo hit)
         {
-            InstanceId = projectile.Id;
-            Position = projectile.Position;
-            Velocity = projectile.Velocity;
-            Speed = projectile.Speed;
-            RemainingLifetime = projectile.RemainingLifetime;
-            Radius = projectile.Radius;
+            InstanceId = instanceId;
+            Position = position;
+            Velocity = velocity;
+            Speed = speed;
+            RemainingLifetime = remainingLifetime;
+            Radius = radius;
             HasHit = hasHit;
             Hit = hit;
             CancelDespawn = false;
         }
 
-        internal void ApplyTo(LiveProjectile projectile)
+        internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
         {
-            projectile.Velocity = Velocity;
             projectile.Speed = Speed;
             projectile.RemainingLifetime = RemainingLifetime;
+            velocity.Value = new Unity.Mathematics.float3(Velocity.x, Velocity.y, Velocity.z);
         }
     }
 }

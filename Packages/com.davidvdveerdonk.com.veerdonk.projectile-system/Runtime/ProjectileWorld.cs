@@ -1,34 +1,67 @@
 using System;
-using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
-    /// <summary>Default <see cref="IProjectileWorld"/>: kinematic move, PhysX hits, pool rent/return.</summary>
-    public sealed class ProjectileWorld : IProjectileWorld
+    /// <summary>Default <see cref="IProjectileWorld"/>: ECS instances, kinematic move, PhysX hits, entity recycle.</summary>
+    public sealed class ProjectileWorld : IProjectileWorld, IDisposable
     {
         readonly IHitQuery hitQuery;
-        readonly ProjectilePool pool;
-        readonly List<LiveProjectile> active = new List<LiveProjectile>();
-        readonly List<SpawnRequest> pendingSpawns = new List<SpawnRequest>();
+        readonly RecipeStore recipes = new RecipeStore();
+        readonly System.Collections.Generic.List<SpawnRequest> pendingSpawns = new System.Collections.Generic.List<SpawnRequest>();
         readonly ModifierContext modifierContext;
+        readonly SimulationBridge bridge;
+        World ecsWorld;
+        ProjectilePool pool;
+        SimulationSystemGroup simulationGroup;
+        ProjectileSimulationSystem simulation;
+        Entity deltaTimeEntity;
+        EntityQuery liveQuery;
         int nextId = 1;
+        bool disposed;
 
         public ProjectileWorld(Transform poolParent = null)
-            : this(new PhysicsHitQuery(), new ProjectilePool(poolParent, createViews: true))
+            : this(new PhysicsHitQuery(), createViews: true, poolParent)
         {
         }
 
         internal ProjectileWorld(IHitQuery hitQuery, bool createViews)
-            : this(hitQuery, new ProjectilePool(null, createViews))
+            : this(hitQuery, createViews, null)
         {
         }
 
-        internal ProjectileWorld(IHitQuery hitQuery, ProjectilePool pool)
+        ProjectileWorld(IHitQuery hitQuery, bool createViews, Transform poolParent)
         {
             this.hitQuery = hitQuery ?? throw new ArgumentNullException(nameof(hitQuery));
-            this.pool = pool ?? throw new ArgumentNullException(nameof(pool));
             modifierContext = new ModifierContext(pendingSpawns);
+            ecsWorld = new World("ProjectileSimulation");
+            pool = new ProjectilePool(ecsWorld, poolParent, createViews);
+
+            EntityManager em = ecsWorld.EntityManager;
+            deltaTimeEntity = em.CreateEntity(typeof(SimDeltaTime));
+            em.SetComponentData(deltaTimeEntity, new SimDeltaTime { Value = 0f });
+            liveQuery = em.CreateEntityQuery(ComponentType.ReadOnly<Projectile>());
+
+            simulationGroup = ecsWorld.GetOrCreateSystemManaged<SimulationSystemGroup>();
+            SystemHandle lifetime = ecsWorld.CreateSystem<LifetimeSystem>();
+            simulation = ecsWorld.CreateSystemManaged<ProjectileSimulationSystem>();
+            simulationGroup.AddSystemToUpdateList(lifetime);
+            simulationGroup.AddSystemToUpdateList(simulation);
+            simulationGroup.SortSystems();
+
+            bridge = new SimulationBridge
+            {
+                HitQuery = this.hitQuery,
+                Recipes = recipes,
+                Pool = pool,
+                ModifierContext = modifierContext,
+                Hit = info => Hit?.Invoke(info),
+                Expired = info => Expired?.Invoke(info)
+            };
+            simulation.Bridge = bridge;
         }
 
         public event Action<HitInfo> Hit;
@@ -39,27 +72,31 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         {
             get
             {
-                int count = 0;
-                for (int i = 0; i < active.Count; i++)
-                {
-                    if (active[i].Alive)
-                        count++;
-                }
-
-                return count;
+                ThrowIfDisposed();
+                return liveQuery.CalculateEntityCount();
             }
         }
 
-        public int AvailableCount => pool.AvailableCount;
+        public int AvailableCount
+        {
+            get
+            {
+                ThrowIfDisposed();
+                return pool.AvailableCount;
+            }
+        }
 
-        /// <summary>Creates inactive pooled views (or logical slots) for <paramref name="recipe"/>.</summary>
+        /// <summary>Creates inactive pooled entities (and views when enabled) for <paramref name="recipe"/>.</summary>
         public void Prewarm(Recipe recipe, int count)
         {
-            pool.Prewarm(recipe, count);
+            ThrowIfDisposed();
+            int index = recipes.GetOrAdd(recipe);
+            pool.Prewarm(index, recipe, count);
         }
 
         public ProjectileId Spawn(in SpawnRequest request)
         {
+            ThrowIfDisposed();
             ProjectileId id = SpawnCore(request);
             FlushPendingSpawns();
             return id;
@@ -67,28 +104,38 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public void Tick(float dt)
         {
+            ThrowIfDisposed();
             if (dt < 0f)
                 dt = 0f;
 
-            for (int i = 0; i < active.Count; i++)
-                TickOne(active[i], dt);
-
-            CompactDead();
+            ecsWorld.EntityManager.SetComponentData(deltaTimeEntity, new SimDeltaTime { Value = dt });
+            simulationGroup.Update();
             FlushPendingSpawns();
         }
 
         internal bool TryGetState(ProjectileId id, out Vector3 position, out Vector3 velocity, out Recipe recipe)
         {
-            for (int i = 0; i < active.Count; i++)
+            ThrowIfDisposed();
+            EntityManager em = ecsWorld.EntityManager;
+            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
+            try
             {
-                LiveProjectile projectile = active[i];
-                if (!projectile.Alive || projectile.Id != id)
-                    continue;
+                for (int i = 0; i < entities.Length; i++)
+                {
+                    Entity entity = entities[i];
+                    Projectile projectile = em.GetComponentData<Projectile>(entity);
+                    if (new ProjectileId(projectile.Id) != id)
+                        continue;
 
-                position = projectile.Position;
-                velocity = projectile.Velocity;
-                recipe = projectile.Recipe;
-                return true;
+                    position = ToVector3(em.GetComponentData<ProjectilePosition>(entity).Value);
+                    velocity = ToVector3(em.GetComponentData<ProjectileVelocity>(entity).Value);
+                    recipe = recipes.Get(projectile.RecipeIndex);
+                    return true;
+                }
+            }
+            finally
+            {
+                entities.Dispose();
             }
 
             position = default;
@@ -99,30 +146,62 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         internal bool TryGetActiveAt(int index, out ProjectileId id, out Vector3 position, out Vector3 velocity, out Recipe recipe)
         {
-            int n = 0;
-            for (int i = 0; i < active.Count; i++)
+            ThrowIfDisposed();
+            if (index < 0)
             {
-                LiveProjectile projectile = active[i];
-                if (!projectile.Alive)
-                    continue;
-
-                if (n == index)
-                {
-                    id = projectile.Id;
-                    position = projectile.Position;
-                    velocity = projectile.Velocity;
-                    recipe = projectile.Recipe;
-                    return true;
-                }
-
-                n++;
+                id = default;
+                position = default;
+                velocity = default;
+                recipe = null;
+                return false;
             }
 
-            id = default;
-            position = default;
-            velocity = default;
-            recipe = null;
-            return false;
+            EntityManager em = ecsWorld.EntityManager;
+            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
+            try
+            {
+                if (index >= entities.Length)
+                {
+                    id = default;
+                    position = default;
+                    velocity = default;
+                    recipe = null;
+                    return false;
+                }
+
+                Entity entity = entities[index];
+                Projectile projectile = em.GetComponentData<Projectile>(entity);
+                id = new ProjectileId(projectile.Id);
+                position = ToVector3(em.GetComponentData<ProjectilePosition>(entity).Value);
+                velocity = ToVector3(em.GetComponentData<ProjectileVelocity>(entity).Value);
+                recipe = recipes.Get(projectile.RecipeIndex);
+                return true;
+            }
+            finally
+            {
+                entities.Dispose();
+            }
+        }
+
+        public void Dispose()
+        {
+            if (disposed)
+                return;
+            disposed = true;
+
+            pool?.Dispose();
+            pool = null;
+
+            if (ecsWorld != null && ecsWorld.IsCreated)
+            {
+                liveQuery.Dispose();
+                liveQuery = default;
+                ecsWorld.Dispose();
+            }
+
+            simulation = null;
+            simulationGroup = null;
+            ecsWorld = null;
         }
 
         ProjectileId SpawnCore(in SpawnRequest request)
@@ -139,104 +218,29 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             else
                 direction.Normalize();
 
-            var projectile = new LiveProjectile
+            int recipeIndex = recipes.GetOrAdd(recipe);
+            Entity entity = pool.Rent(recipeIndex, recipe, out ProjectileView view);
+            int idValue = nextId++;
+
+            float3 position = new float3(request.Position.x, request.Position.y, request.Position.z);
+            float3 velocity = new float3(direction.x, direction.y, direction.z) * recipe.Speed;
+
+            EntityManager em = ecsWorld.EntityManager;
+            em.SetComponentData(entity, new Projectile
             {
-                Id = new ProjectileId(nextId++),
-                Recipe = recipe,
-                Position = request.Position,
-                Velocity = direction * recipe.Speed,
+                Id = idValue,
+                RecipeIndex = recipeIndex,
                 Speed = recipe.Speed,
                 Radius = recipe.Radius,
-                RemainingLifetime = recipe.LifetimeSeconds,
-                Alive = true,
-                View = pool.Rent(recipe)
-            };
+                RemainingLifetime = recipe.LifetimeSeconds
+            });
+            em.SetComponentData(entity, new ProjectilePosition { Value = position });
+            em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });
+            em.SetComponentData(entity, new ProjectileCandidate { Value = position });
 
-            projectile.View?.Bind(projectile.Position, projectile.Radius);
-            active.Add(projectile);
-
-            RunStage(recipe.OnSpawn, projectile, hasHit: false, default);
-            RunStage(recipe.OnTravel, projectile, hasHit: false, default);
-            return projectile.Id;
-        }
-
-        void TickOne(LiveProjectile projectile, float dt)
-        {
-            if (!projectile.Alive)
-                return;
-
-            projectile.RemainingLifetime -= dt;
-            if (projectile.RemainingLifetime <= 0f)
-            {
-                Despawn(projectile, runOnHit: false, default);
-                return;
-            }
-
-            RunStage(projectile.Recipe.OnTick, projectile, hasHit: false, default);
-
-            Vector3 from = projectile.Position;
-            Vector3 delta = projectile.Velocity * dt;
-            float distance = delta.magnitude;
-            Vector3 direction = distance > 1e-8f ? delta / distance : projectile.Velocity;
-
-            if (hitQuery.TryCast(projectile.Id, from, direction, distance, projectile.Radius, out HitInfo hit))
-            {
-                Hit?.Invoke(hit);
-                Despawn(projectile, runOnHit: true, hit);
-                return;
-            }
-
-            projectile.Position = from + delta;
-            projectile.View?.SetPose(projectile.Position, projectile.Velocity);
-        }
-
-        void Despawn(LiveProjectile projectile, bool runOnHit, in HitInfo hit)
-        {
-            if (!projectile.Alive)
-                return;
-
-            if (runOnHit)
-            {
-                RunStage(projectile.Recipe.OnHit, projectile, hasHit: true, hit);
-                if (modifierContext.CancelDespawn)
-                {
-                    projectile.View?.SetPose(projectile.Position, projectile.Velocity);
-                    return;
-                }
-            }
-
-            RunStage(projectile.Recipe.OnExpire, projectile, hasHit: false, default);
-
-            projectile.Alive = false;
-            pool.Return(projectile.Recipe.Id, projectile.View);
-            projectile.View = null;
-            Expired?.Invoke(new ExpireInfo { InstanceId = projectile.Id });
-        }
-
-        void RunStage(IModifier[] modifiers, LiveProjectile projectile, bool hasHit, in HitInfo hit)
-        {
-            if (modifiers == null || modifiers.Length == 0)
-                return;
-
-            modifierContext.Bind(projectile, hasHit, hit);
-            for (int i = 0; i < modifiers.Length; i++)
-            {
-                IModifier modifier = modifiers[i];
-                if (modifier == null)
-                    continue;
-                modifier.Apply(modifierContext);
-            }
-
-            modifierContext.ApplyTo(projectile);
-        }
-
-        void CompactDead()
-        {
-            for (int i = active.Count - 1; i >= 0; i--)
-            {
-                if (!active[i].Alive)
-                    active.RemoveAt(i);
-            }
+            view?.Bind(request.Position, recipe.Radius);
+            simulation.RunSpawnStages(entity);
+            return new ProjectileId(idValue);
         }
 
         void FlushPendingSpawns()
@@ -247,6 +251,17 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 pendingSpawns.RemoveAt(0);
                 SpawnCore(request);
             }
+        }
+
+        void ThrowIfDisposed()
+        {
+            if (disposed)
+                throw new ObjectDisposedException(nameof(ProjectileWorld));
+        }
+
+        static Vector3 ToVector3(float3 value)
+        {
+            return new Vector3(value.x, value.y, value.z);
         }
     }
 }

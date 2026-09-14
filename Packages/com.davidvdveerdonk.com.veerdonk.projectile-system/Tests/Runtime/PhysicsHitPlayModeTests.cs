@@ -17,30 +17,37 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Tests
                 dummy = CreateDummy(new Vector3(0f, 0f, 4f), new TargetId(7));
                 poolRoot = new GameObject("TestPool");
                 var world = new ProjectileWorld(poolRoot.transform);
-                Recipe recipe = CreateRecipe("straight", speed: 20f, lifetime: 5f);
-                world.Prewarm(recipe, 4);
-                int availableBefore = world.AvailableCount;
-
-                HitInfo? seen = null;
-                world.Hit += info => seen = info;
-
-                world.Spawn(new SpawnRequest
+                try
                 {
-                    Recipe = recipe,
-                    Position = Vector3.zero,
-                    Direction = Vector3.forward
-                });
+                    Recipe recipe = CreateRecipe("straight", speed: 20f, lifetime: 5f);
+                    world.Prewarm(recipe, 4);
+                    int availableBefore = world.AvailableCount;
 
-                Physics.SyncTransforms();
-                yield return null;
+                    HitInfo? seen = null;
+                    world.Hit += info => seen = info;
 
-                TickUntilIdle(world, 1f);
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = recipe,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward
+                    });
 
-                Assert.IsTrue(seen.HasValue);
-                Assert.AreEqual(HitKind.Target, seen.Value.Kind);
-                Assert.AreEqual(new TargetId(7), seen.Value.TargetId);
-                Assert.AreEqual(0, world.ActiveCount);
-                Assert.AreEqual(availableBefore, world.AvailableCount);
+                    Physics.SyncTransforms();
+                    yield return null;
+
+                    TickUntilIdle(world, 1f);
+
+                    Assert.IsTrue(seen.HasValue);
+                    Assert.AreEqual(HitKind.Target, seen.Value.Kind);
+                    Assert.AreEqual(new TargetId(7), seen.Value.TargetId);
+                    Assert.AreEqual(0, world.ActiveCount);
+                    Assert.AreEqual(availableBefore, world.AvailableCount);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
             }
             finally
             {
@@ -61,25 +68,32 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Tests
                 dummy = CreateDummy(new Vector3(0f, 0f, 4f), new TargetId(1));
                 poolRoot = new GameObject("TestPool");
                 var world = new ProjectileWorld(poolRoot.transform);
-                Recipe child = CreateRecipe("child", speed: 8f, lifetime: 2f);
-                Recipe parent = CreateRecipe("parent", speed: 20f, lifetime: 5f);
-                parent.OnHit = new IModifier[] { new Multiply(1, child) };
-                world.Prewarm(parent, 4);
-                world.Prewarm(child, 4);
-
-                world.Spawn(new SpawnRequest
+                try
                 {
-                    Recipe = parent,
-                    Position = Vector3.zero,
-                    Direction = Vector3.forward
-                });
+                    Recipe child = CreateRecipe("child", speed: 8f, lifetime: 2f);
+                    Recipe parent = CreateRecipe("parent", speed: 20f, lifetime: 5f);
+                    parent.OnHit = new IModifier[] { new Multiply(1, child) };
+                    world.Prewarm(parent, 4);
+                    world.Prewarm(child, 4);
 
-                Physics.SyncTransforms();
-                yield return null;
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = parent,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward
+                    });
 
-                TickUntil(world, 1f, w => w.ActiveCount == 1);
+                    Physics.SyncTransforms();
+                    yield return null;
 
-                Assert.AreEqual(1, world.ActiveCount);
+                    TickUntil(world, 1f, w => w.ActiveCount == 1);
+
+                    Assert.AreEqual(1, world.ActiveCount);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
             }
             finally
             {
@@ -98,25 +112,32 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Tests
             {
                 poolRoot = new GameObject("TestPool");
                 var world = new ProjectileWorld(poolRoot.transform);
-                Recipe recipe = CreateRecipe("lifetime", speed: 4f, lifetime: 3f);
-                world.Prewarm(recipe, 4);
-                int availableBefore = world.AvailableCount;
-                int hitCount = 0;
-                world.Hit += _ => hitCount++;
-
-                world.Spawn(new SpawnRequest
+                try
                 {
-                    Recipe = recipe,
-                    Position = Vector3.zero,
-                    Direction = Vector3.forward
-                });
+                    Recipe recipe = CreateRecipe("lifetime", speed: 4f, lifetime: 3f);
+                    world.Prewarm(recipe, 4);
+                    int availableBefore = world.AvailableCount;
+                    int hitCount = 0;
+                    world.Hit += _ => hitCount++;
 
-                yield return null;
-                world.Tick(3f);
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = recipe,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward
+                    });
 
-                Assert.AreEqual(0, world.ActiveCount);
-                Assert.AreEqual(availableBefore, world.AvailableCount);
-                Assert.AreEqual(0, hitCount);
+                    yield return null;
+                    world.Tick(3f);
+
+                    Assert.AreEqual(0, world.ActiveCount);
+                    Assert.AreEqual(availableBefore, world.AvailableCount);
+                    Assert.AreEqual(0, hitCount);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
             }
             finally
             {

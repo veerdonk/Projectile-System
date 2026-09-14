@@ -1,20 +1,33 @@
 using System;
 using System.Collections.Generic;
+using Unity.Entities;
 using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
-    sealed class ProjectilePool
+    sealed class ProjectilePool : IDisposable
     {
+        readonly World world;
         readonly Transform parent;
         readonly bool createViews;
-        readonly Dictionary<string, Stack<ProjectileView>> views = new Dictionary<string, Stack<ProjectileView>>();
-        readonly Dictionary<string, int> available = new Dictionary<string, int>();
+        readonly EntityArchetype pooledArchetype;
+        readonly Dictionary<int, Stack<Entity>> free = new Dictionary<int, Stack<Entity>>();
+        readonly Dictionary<int, int> available = new Dictionary<int, int>();
+        readonly Dictionary<int, Stack<ProjectileView>> viewStacks = new Dictionary<int, Stack<ProjectileView>>();
+        readonly Dictionary<Entity, ProjectileView> liveViews = new Dictionary<Entity, ProjectileView>();
+        readonly List<ProjectileView> allViews = new List<ProjectileView>();
 
-        public ProjectilePool(Transform parent, bool createViews)
+        public ProjectilePool(World world, Transform parent, bool createViews)
         {
+            this.world = world ?? throw new ArgumentNullException(nameof(world));
             this.parent = parent;
             this.createViews = createViews;
+            pooledArchetype = world.EntityManager.CreateArchetype(
+                typeof(Projectile),
+                typeof(ProjectilePosition),
+                typeof(ProjectileVelocity),
+                typeof(ProjectileCandidate),
+                typeof(Disabled));
         }
 
         public int AvailableCount
@@ -28,68 +41,100 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             }
         }
 
-        public void Prewarm(Recipe recipe, int count)
+        public void Prewarm(int recipeIndex, Recipe recipe, int count)
         {
             if (recipe == null)
                 throw new ArgumentNullException(nameof(recipe));
-            if (string.IsNullOrEmpty(recipe.Id))
-                throw new ArgumentException("Recipe.Id is required.", nameof(recipe));
             if (count < 0)
                 throw new ArgumentOutOfRangeException(nameof(count));
 
-            EnsureBucket(recipe.Id);
+            EnsureBucket(recipeIndex);
+            EntityManager em = world.EntityManager;
             for (int i = 0; i < count; i++)
             {
+                free[recipeIndex].Push(em.CreateEntity(pooledArchetype));
+                available[recipeIndex]++;
                 if (createViews)
-                    views[recipe.Id].Push(CreateView(recipe));
-                available[recipe.Id]++;
+                    viewStacks[recipeIndex].Push(CreateView(recipe));
             }
         }
 
-        public ProjectileView Rent(Recipe recipe)
+        public Entity Rent(int recipeIndex, Recipe recipe, out ProjectileView view)
         {
             if (recipe == null)
                 throw new ArgumentNullException(nameof(recipe));
-            if (string.IsNullOrEmpty(recipe.Id))
-                throw new ArgumentException("Recipe.Id is required.", nameof(recipe));
 
-            EnsureBucket(recipe.Id);
+            EnsureBucket(recipeIndex);
+            EntityManager em = world.EntityManager;
+            Entity entity = free[recipeIndex].Count > 0
+                ? free[recipeIndex].Pop()
+                : em.CreateEntity(pooledArchetype);
 
-            ProjectileView view = null;
+            em.SetEnabled(entity, true);
+
+            view = null;
             if (createViews)
             {
-                Stack<ProjectileView> stack = views[recipe.Id];
+                Stack<ProjectileView> stack = viewStacks[recipeIndex];
                 view = stack.Count > 0 ? stack.Pop() : CreateView(recipe);
+                liveViews[entity] = view;
             }
 
-            if (available[recipe.Id] > 0)
-                available[recipe.Id]--;
+            if (available[recipeIndex] > 0)
+                available[recipeIndex]--;
 
-            return view;
+            return entity;
         }
 
-        public void Return(string recipeId, ProjectileView view)
+        public void Return(int recipeIndex, Entity entity)
         {
-            if (string.IsNullOrEmpty(recipeId))
-                throw new ArgumentException("Recipe id is required.", nameof(recipeId));
+            EntityManager em = world.EntityManager;
+            em.SetEnabled(entity, false);
+            EnsureBucket(recipeIndex);
+            free[recipeIndex].Push(entity);
+            available[recipeIndex]++;
 
-            EnsureBucket(recipeId);
-
-            if (createViews && view != null)
+            if (liveViews.TryGetValue(entity, out ProjectileView view))
             {
+                liveViews.Remove(entity);
                 view.Release();
-                views[recipeId].Push(view);
+                viewStacks[recipeIndex].Push(view);
             }
-
-            available[recipeId]++;
         }
 
-        void EnsureBucket(string recipeId)
+        public bool TryGetView(Entity entity, out ProjectileView view)
         {
-            if (!available.ContainsKey(recipeId))
-                available[recipeId] = 0;
-            if (createViews && !views.ContainsKey(recipeId))
-                views[recipeId] = new Stack<ProjectileView>();
+            return liveViews.TryGetValue(entity, out view);
+        }
+
+        public void Dispose()
+        {
+            for (int i = 0; i < allViews.Count; i++)
+            {
+                ProjectileView view = allViews[i];
+                if (view == null)
+                    continue;
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(view.gameObject);
+                else
+                    UnityEngine.Object.DestroyImmediate(view.gameObject);
+            }
+
+            allViews.Clear();
+            liveViews.Clear();
+            viewStacks.Clear();
+            free.Clear();
+            available.Clear();
+        }
+
+        void EnsureBucket(int recipeIndex)
+        {
+            if (!available.ContainsKey(recipeIndex))
+                available[recipeIndex] = 0;
+            if (!free.ContainsKey(recipeIndex))
+                free[recipeIndex] = new Stack<Entity>();
+            if (createViews && !viewStacks.ContainsKey(recipeIndex))
+                viewStacks[recipeIndex] = new Stack<ProjectileView>();
         }
 
         ProjectileView CreateView(Recipe recipe)
@@ -111,6 +156,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
             var view = go.AddComponent<ProjectileView>();
             view.Release();
+            allViews.Add(view);
             return view;
         }
     }
