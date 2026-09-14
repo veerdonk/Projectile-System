@@ -1,0 +1,10 @@
+{
+    "name": "Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor",
+    "references": [
+      "Davidvdveerdonk.ComVeerdonkProjectileSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}
