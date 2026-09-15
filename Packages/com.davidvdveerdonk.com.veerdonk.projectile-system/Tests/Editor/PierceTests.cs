@@ -62,6 +62,36 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void Pierce0_TargetHitDespawns()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "pierce-zero",
+                speed: 20f,
+                lifetime: 5f,
+                onHit: new IModifier[] { new Pierce(0) });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe, prewarm: 4);
+            using (world)
+            {
+                int availableBefore = world.AvailableCount;
+                ProjectileId id = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                Assert.IsTrue(world.TryGetRemaining(id, out int pierce, out _));
+                Assert.AreEqual(0, pierce);
+
+                hits.Queue(HitKind.Target, new Vector3(0f, 0f, 1f), Vector3.back, new TargetId(1));
+                world.Tick(0.1f);
+
+                Assert.AreEqual(0, world.ActiveCount);
+                Assert.AreEqual(availableBefore, world.AvailableCount);
+            }
+        }
+
+        [Test]
         public void Pierce_DoesNotAbsorbWorldHit()
         {
             Recipe recipe = SimulationTestHelper.CreateRecipe(

@@ -90,6 +90,36 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void Bounce0_WorldHitDespawns()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "bounce-zero",
+                speed: 20f,
+                lifetime: 5f,
+                onHit: new IModifier[] { new Bounce(0) });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe, prewarm: 4);
+            using (world)
+            {
+                int availableBefore = world.AvailableCount;
+                ProjectileId id = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                Assert.IsTrue(world.TryGetRemaining(id, out _, out int bounce));
+                Assert.AreEqual(0, bounce);
+
+                hits.Queue(HitKind.World, new Vector3(0f, 0f, 1f), Vector3.back);
+                world.Tick(0.1f);
+
+                Assert.AreEqual(0, world.ActiveCount);
+                Assert.AreEqual(availableBefore, world.AvailableCount);
+            }
+        }
+
+        [Test]
         public void Bounce_DoesNotAbsorbTargetHit()
         {
             Recipe recipe = SimulationTestHelper.CreateRecipe(
