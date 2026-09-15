@@ -2,12 +2,19 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
-## ADR-007 — Multicast depth is Recipe data, counted down
+## ADR-008 — Prewarm follows spawn chains
 
 - **Date:** 2026-09-15
-- **Decision:** `Recipe.MulticastGenerations` (default 0) says how many further generations of `Multicast` the extras of that Recipe may run. The Recipe that carries the `Multicast` owns the depth; the budget is handed to each extra and counted down, so the extra Recipe's own `MulticastGenerations` does not extend a chain it did not start. 0 keeps the phase 4 rule: extras run `OnSpawn` with `Multicast` skipped.
-- **Why:** The default has to stay "skip" or spawn explodes, but chained multicast is a real authoring wish. A counted-down budget is configurable and cannot loop forever, unlike a plain allow/deny flag: a Recipe whose `Multicast` spawns itself would drain the pool and hang the Editor, because `Spawn` flushes the whole queue before it returns.
-- **Consequences:** `SpawnRequest` carries internal `FromMulticast` and `MulticastGenerationsLeft`; a request that did not come from a multicast starts at `1 + Recipe.MulticastGenerations`. `ProjectileSimulationSystem.RunSpawnStages` takes the remaining count, skips `Multicast` at 0, and passes the rest to the extras through `ModifierContext.MulticastGenerationsForExtras`. Total instances are bounded by `n` to the power of `1 + MulticastGenerations`, so authors still need to prewarm for the chain they ask for.
+- **Decision:** `ProjectileWorld.Prewarm(recipe, count)` also prewarms the Recipes that `recipe` chains into through `Multicast` and `Multiply`, following the generations of ADR-007. Multicast extras count `n-1` per parent per generation. Multiply children count the modifier's count on `OnHit` and `OnExpire`, and on `OnInterval` the number in the air at once — spawns over one child lifetime, capped by the parent's. The walk stops at 8 levels and clamps to 512 instances per Recipe per call.
+- **Why:** Prewarm exists so firing does not allocate, and a chained Recipe multiplies demand fast. Asking every caller to hand-count each child Recipe is the kind of arithmetic that silently rots when a Recipe changes; the counts are already in the modifiers. The caps matter because a chain that re-enters through both modifiers (multicast extra whose child multiplies back) has no natural bound at author time.
+- **Consequences:** The numbers are an estimate, not a guarantee: the pool still creates on demand past them, and interval concurrency ignores hits cutting a parent short. Prewarming a parent now also creates the child views, so callers should stop prewarming children by hand or they double up. Pool totals in tests that snapshot `AvailableCount` before and after stay valid because they compare deltas.
+
+## ADR-007 — Chain depth is Recipe data, counted down
+
+- **Date:** 2026-09-15
+- **Decision:** `Recipe.MulticastGenerations` and `Recipe.MultiplyGenerations` (both default 0) say how many further generations of that modifier the instances spawned from this Recipe may run. The Recipe that carries the modifier owns the depth; the budget is handed to each spawned instance and counted down, so the child Recipe's own generations do not extend a chain it did not start. The two budgets are independent — a multicast extra still multiplies normally, and the other way round. At 0, extras run `OnSpawn` with `Multicast` skipped and children run their stages with `Multiply` skipped.
+- **Why:** The default has to stay "skip" or spawn explodes, but chained casts are a real authoring wish. A counted-down budget is configurable and cannot loop forever, unlike a plain allow/deny flag: a Recipe whose `Multicast` spawns itself would drain the pool and hang the Editor, because `Spawn` flushes the whole queue before it returns, and a self-multiplying interval Recipe would grow without limit while it flies.
+- **Consequences:** `SpawnRequest` carries two internal `ChainBudget` values; a request that did not come from that modifier starts at `1 + Recipe.<modifier>Generations`. Multicast only runs at spawn, so its count passes through `RunSpawnStages`; multiply fires on interval, hit, and expire, so `Projectile.MultiplyGenerationsLeft` lives on the entity and `ModifierContext` exposes it per stage. This changes phase 3 behaviour: a `Multiply` child Recipe that carries its own `Multiply` no longer chains unless the parent pays for it.
 
 ## ADR-006 — Multicast aims through a pattern
 

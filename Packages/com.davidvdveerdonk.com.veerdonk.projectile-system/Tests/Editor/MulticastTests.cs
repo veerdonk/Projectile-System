@@ -17,7 +17,6 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             using (world)
             {
                 world.Prewarm(parent, 4);
-                world.Prewarm(extra, 4);
 
                 world.Spawn(new SpawnRequest
                 {
@@ -27,7 +26,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 });
 
                 Assert.AreEqual(3, world.ActiveCount);
-                Assert.AreEqual(5, world.AvailableCount);
+                Assert.AreEqual(9, world.AvailableCount);
 
                 List<(ProjectileId id, Vector3 position, Vector3 velocity, Recipe recipe)> active =
                     SimulationTestHelper.CollectActive(world);
@@ -105,6 +104,34 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 world.Tick(0.1f);
 
                 Assert.AreEqual(7, world.ActiveCount);
+            }
+        }
+
+        [Test]
+        public void Prewarm_CoversEveryMulticastGeneration()
+        {
+            Recipe extra = SimulationTestHelper.CreateRecipe("prewarm-extra", speed: 12f, lifetime: 2f);
+            Recipe parent = SimulationTestHelper.CreateRecipe("prewarm-parent", speed: 20f, lifetime: 5f);
+            extra.OnSpawn = new IModifier[] { new Multicast(3, extra) };
+            parent.OnSpawn = new IModifier[] { new Multicast(3, extra) };
+            parent.MulticastGenerations = 1;
+
+            var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false);
+            using (world)
+            {
+                world.Prewarm(parent, 1);
+
+                Assert.AreEqual(7, world.AvailableCount);
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = parent,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                Assert.AreEqual(7, world.ActiveCount);
+                Assert.AreEqual(0, world.AvailableCount);
             }
         }
 

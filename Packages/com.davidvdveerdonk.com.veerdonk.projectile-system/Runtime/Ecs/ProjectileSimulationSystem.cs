@@ -160,7 +160,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Projectile projectile = em.GetComponentData<Projectile>(entity);
             Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
             IModifier[] modifiers = recipe.OnInterval;
-            if (modifiers == null || modifiers.Length == 0)
+            if (modifiers == null || modifiers.Length == 0 || projectile.MultiplyGenerationsLeft <= 0)
                 return;
 
             float elapsed = projectile.ElapsedSeconds;
@@ -220,6 +220,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                     continue;
                 if (skipMulticast && modifier is Multicast)
                     continue;
+                if (modifier is Multiply && !Bridge.ModifierContext.AllowsMultiply)
+                    continue;
                 modifier.Apply(Bridge.ModifierContext);
             }
 
@@ -246,6 +248,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 projectile.RemainingPierce,
                 projectile.RemainingBounce,
                 projectile.Radius,
+                projectile.MultiplyGenerationsLeft,
                 hasHit,
                 hit);
         }

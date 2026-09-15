@@ -140,6 +140,96 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void Multiply1_OnExpire_ChildDoesNotInheritMultiply_ByDefault()
+        {
+            (ProjectileWorld world, Recipe parent) = CreateExpireChain(generations: 0);
+            using (world)
+            {
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = parent,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                world.Tick(0.5f);
+                Assert.AreEqual(1, world.ActiveCount);
+
+                world.Tick(0.5f);
+                Assert.AreEqual(0, world.ActiveCount);
+            }
+        }
+
+        [Test]
+        public void Multiply1_OnExpire_ChildInheritsMultiply_ForOneGeneration()
+        {
+            (ProjectileWorld world, Recipe parent) = CreateExpireChain(generations: 1);
+            using (world)
+            {
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = parent,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                world.Tick(0.5f);
+                Assert.AreEqual(1, world.ActiveCount);
+
+                world.Tick(0.5f);
+                Assert.AreEqual(1, world.ActiveCount);
+
+                world.Tick(0.5f);
+                Assert.AreEqual(0, world.ActiveCount);
+            }
+        }
+
+        [Test]
+        public void Prewarm_CoversOnExpireChildren()
+        {
+            Recipe child = SimulationTestHelper.CreateRecipe("prewarm-expire-child", speed: 8f, lifetime: 2f);
+            Recipe parent = SimulationTestHelper.CreateRecipe("prewarm-expire-parent", speed: 10f, lifetime: 1f);
+            parent.OnExpire = new IModifier[] { new Multiply(1, child) };
+
+            var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false);
+            using (world)
+            {
+                world.Prewarm(parent, 2);
+
+                Assert.AreEqual(4, world.AvailableCount);
+            }
+        }
+
+        [Test]
+        public void Prewarm_CoversIntervalChildrenAliveAtOnce()
+        {
+            Recipe child = SimulationTestHelper.CreateRecipe("prewarm-interval-child", speed: 8f, lifetime: 2f);
+            Recipe parent = SimulationTestHelper.CreateRecipe("prewarm-interval-parent", speed: 10f, lifetime: 5f);
+            parent.OnInterval = new IModifier[] { new Multiply(2, child, intervalSeconds: 0.5f) };
+
+            var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false);
+            using (world)
+            {
+                world.Prewarm(parent, 1);
+
+                Assert.AreEqual(9, world.AvailableCount);
+            }
+        }
+
+        static (ProjectileWorld world, Recipe parent) CreateExpireChain(int generations)
+        {
+            Recipe child = SimulationTestHelper.CreateRecipe("chain-child", speed: 8f, lifetime: 0.5f);
+            Recipe parent = SimulationTestHelper.CreateRecipe("chain-parent", speed: 10f, lifetime: 0.5f);
+            child.OnExpire = new IModifier[] { new Multiply(1, child) };
+            parent.OnExpire = new IModifier[] { new Multiply(1, child) };
+            parent.MultiplyGenerations = generations;
+
+            var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false);
+            world.Prewarm(parent, 4);
+            return (world, parent);
+        }
+
+        [Test]
         public void Multiply1_OnExpire_KillingHit_UsesHitNormal()
         {
             Recipe child = SimulationTestHelper.CreateRecipe("kill-expire-child", speed: 8f, lifetime: 2f);

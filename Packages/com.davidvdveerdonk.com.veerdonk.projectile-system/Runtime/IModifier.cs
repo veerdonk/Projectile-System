@@ -50,18 +50,28 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         /// <summary>Queues an instance of an explicit child Recipe. Spawned after the current instance finishes this stage.</summary>
         public void RequestSpawn(Recipe recipe, Vector3 position, Vector3 direction)
         {
-            Enqueue(recipe, position, direction, fromMulticast: false);
+            Enqueue(recipe, position, direction, default, default);
         }
 
         /// <summary>Multicast expansions the extras queued from this stage may still run. Set before <c>OnSpawn</c>.</summary>
         internal int MulticastGenerationsForExtras { get; set; }
 
+        /// <summary>Multiply expansions this instance may still run, itself included. Bound per stage.</summary>
+        internal int MultiplyGenerationsLeft { get; set; }
+
+        internal bool AllowsMultiply => MultiplyGenerationsLeft > 0;
+
         internal void RequestMulticastExtra(Recipe recipe, Vector3 position, Vector3 direction)
         {
-            Enqueue(recipe, position, direction, fromMulticast: true);
+            Enqueue(recipe, position, direction, ChainBudget.Inherit(MulticastGenerationsForExtras), default);
         }
 
-        void Enqueue(Recipe recipe, Vector3 position, Vector3 direction, bool fromMulticast)
+        internal void RequestMultiplyChild(Recipe recipe, Vector3 position, Vector3 direction)
+        {
+            Enqueue(recipe, position, direction, default, ChainBudget.Inherit(MultiplyGenerationsLeft - 1));
+        }
+
+        void Enqueue(Recipe recipe, Vector3 position, Vector3 direction, ChainBudget multicast, ChainBudget multiply)
         {
             if (recipe == null)
                 throw new ArgumentNullException(nameof(recipe));
@@ -72,8 +82,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Position = position,
                 Direction = direction,
                 InheritIgnoreFrom = InstanceId,
-                FromMulticast = fromMulticast,
-                MulticastGenerationsLeft = fromMulticast ? MulticastGenerationsForExtras : 0
+                MulticastChain = multicast,
+                MultiplyChain = multiply
             });
         }
 
@@ -95,9 +105,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             int remainingPierce,
             int remainingBounce,
             float radius,
+            int multiplyGenerationsLeft,
             bool hasHit,
             in HitInfo hit)
         {
+            MultiplyGenerationsLeft = multiplyGenerationsLeft;
             InstanceId = instanceId;
             Position = position;
             Velocity = velocity;

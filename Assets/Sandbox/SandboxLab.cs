@@ -272,13 +272,11 @@ namespace Sandbox
             world.Prewarm(straightRecipe, PrewarmCount);
             world.Prewarm(lifetimeRecipe, PrewarmCount);
             world.Prewarm(onHitRecipe, PrewarmCount);
-            world.Prewarm(childRecipe, 32);
             world.Prewarm(pierceRecipe, PrewarmCount);
             world.Prewarm(bounceRecipe, PrewarmCount);
             world.Prewarm(intervalRecipe, PrewarmCount);
             world.Prewarm(expireRecipe, PrewarmCount);
             world.Prewarm(multicastRecipe, PrewarmCount);
-            world.Prewarm(multicastExtraRecipe, PrewarmCount * 2);
 
             BindDummies();
         }

@@ -56,7 +56,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Vector3 spawnPosition = context.HasHit
                     ? OffsetOffSurface(position, spawnDirection, ChildRecipe.Radius)
                     : position;
-                context.RequestSpawn(ChildRecipe, spawnPosition, spawnDirection);
+                context.RequestMultiplyChild(ChildRecipe, spawnPosition, spawnDirection);
             }
         }
 
