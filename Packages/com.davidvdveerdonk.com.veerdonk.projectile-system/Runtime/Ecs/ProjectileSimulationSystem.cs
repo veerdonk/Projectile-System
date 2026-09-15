@@ -53,7 +53,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
                 Projectile projectile = em.GetComponentData<Projectile>(entity);
                 Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
-                RunStage(recipe.OnTick, entity, hasHit: false, default);
+                RunStage(recipe.OnTick, entity, hasHit: false, default, dt);
                 RunIntervals(entity, dt);
             }
 
@@ -76,8 +76,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Projectile projectile = EntityManager.GetComponentData<Projectile>(entity);
             Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
             Bridge.ModifierContext.MulticastGenerationsForExtras = multicastGenerationsLeft - 1;
-            RunStage(recipe.OnSpawn, entity, hasHit: false, default, skipMulticast: multicastGenerationsLeft <= 0);
-            RunStage(recipe.OnTravel, entity, hasHit: false, default);
+            RunStage(recipe.OnSpawn, entity, hasHit: false, default, dt: 0f, skipMulticast: multicastGenerationsLeft <= 0);
+            RunStage(recipe.OnTravel, entity, hasHit: false, default, dt: 0f);
         }
 
         void TryMoveOrHit(Entity entity)
@@ -123,7 +123,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
             if (runOnHit)
             {
-                RunStage(recipe.OnHit, entity, hasHit: true, hit);
+                RunStage(recipe.OnHit, entity, hasHit: true, hit, dt: 0f);
                 if (Bridge.ModifierContext.CancelDespawn)
                 {
                     ContinueAfterHit(entity, hit);
@@ -131,7 +131,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 }
             }
 
-            RunStage(recipe.OnExpire, entity, hasHit: runOnHit, hit);
+            RunStage(recipe.OnExpire, entity, hasHit: runOnHit, hit, dt: 0f);
 
             int id = em.GetComponentData<Projectile>(entity).Id;
             int recipeIndex = em.GetComponentData<Projectile>(entity).RecipeIndex;
@@ -177,7 +177,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
                 if (!bound)
                 {
-                    BindContext(entity, hasHit: false, default);
+                    BindContext(entity, hasHit: false, default, dt);
                     bound = true;
                 }
 
@@ -205,13 +205,13 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             return fires > 0 ? fires : 0;
         }
 
-        void RunStage(IModifier[] modifiers, Entity entity, bool hasHit, in HitInfo hit, bool skipMulticast = false)
+        void RunStage(IModifier[] modifiers, Entity entity, bool hasHit, in HitInfo hit, float dt, bool skipMulticast = false)
         {
             Bridge.ModifierContext.CancelDespawn = false;
             if (modifiers == null || modifiers.Length == 0)
                 return;
 
-            BindContext(entity, hasHit, hit);
+            BindContext(entity, hasHit, hit, dt);
 
             for (int i = 0; i < modifiers.Length; i++)
             {
@@ -233,12 +233,15 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             em.SetComponentData(entity, velocity);
         }
 
-        void BindContext(Entity entity, bool hasHit, in HitInfo hit)
+        void BindContext(Entity entity, bool hasHit, in HitInfo hit, float dt)
         {
             EntityManager em = EntityManager;
             Projectile projectile = em.GetComponentData<Projectile>(entity);
             ProjectilePosition position = em.GetComponentData<ProjectilePosition>(entity);
             ProjectileVelocity velocity = em.GetComponentData<ProjectileVelocity>(entity);
+            HomingTarget homing = projectile.HomingHasTarget
+                ? HomingTarget.Assigned(projectile.HomingTargetId)
+                : default;
             Bridge.ModifierContext.Bind(
                 new ProjectileId(projectile.Id),
                 ToVector3(position.Value),
@@ -250,7 +253,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 projectile.Radius,
                 projectile.MultiplyGenerationsLeft,
                 hasHit,
-                hit);
+                hit,
+                dt,
+                homing);
         }
 
         static Vector3 ToVector3(float3 value)

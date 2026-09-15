@@ -11,6 +11,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             float speed = 10f,
             float lifetime = 10f,
             float radius = 0.25f,
+            IModifier[] onTick = null,
             IModifier[] onHit = null,
             IModifier[] onInterval = null,
             IModifier[] onExpire = null)
@@ -22,6 +23,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 Radius = radius,
                 LifetimeSeconds = lifetime,
                 PresentationId = "sphere",
+                OnTick = onTick ?? Array.Empty<IModifier>(),
                 OnHit = onHit ?? Array.Empty<IModifier>(),
                 OnInterval = onInterval ?? Array.Empty<IModifier>(),
                 OnExpire = onExpire ?? Array.Empty<IModifier>()

@@ -125,15 +125,15 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 ### Phase 5 — Strong homing
 
-- **Given:** `Homing(100)` on `OnTick` and a homing target assigned; initial velocity points away from the target
+- **Given:** `Homing(100)` on `OnTick`; the instance acquires the closest dummy in its travel direction; initial velocity is 25° off that dummy
 - **When:** the instance travels
-- **Then:** it turns hard enough to hit the homing target under sandbox distances
+- **Then:** it turns hard enough to hit the acquired dummy under sandbox distances
 
 ### Phase 5 — Weak homing
 
 - **Given:** `Homing(10)` on `OnTick` and the same miss-setup as the strong case
 - **When:** the instance travels
-- **Then:** it turns toward the target but misses at sandbox distances
+- **Then:** it turns toward the acquired dummy but misses at sandbox distances
 
 ### Phase 6 — Pierce(1) then home to a second dummy
 

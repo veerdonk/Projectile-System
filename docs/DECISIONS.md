@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-009 — Homing acquires once, then steers
+
+- **Date:** 2026-09-15
+- **Decision:** `Homing(n)` is maximum turn rate in **degrees per second**. Each instance steers toward one `HomingTarget`. If `SpawnRequest.HomingTarget` is assigned, that target is used. Otherwise the modifier's `IHomingAcquisition` may pick one during `OnTick` until it succeeds; after that the instance keeps the lock. v1 ships `ClosestInTravelDirectionAcquisition`: nearest registered candidate whose offset from the instance has a positive dot with travel. Games push live poses with `IProjectileWorld.SetHomingCandidate` / `RemoveHomingCandidate`. There is no retarget API. Later player-view or random locks are new `IHomingAcquisition` implementations, not a change to `Homing` or spawn.
+- **Why:** Phase 5 needs missiles that find a target themselves, and the next lock rules (aim from the player, pick at random) should not force a second façade. A strategy on the modifier matches ADR-006. `SpawnRequest` still wins so phase 6 can pin a second dummy. Simulation components cannot hold Unity objects, so the game registers ids and positions; Homing only reads those.
+- **Consequences:** Two new public types (`IHomingAcquisition`, `ClosestInTravelDirectionAcquisition`). `HomingTarget.Id` is `TargetId`. An assigned spawn target still needs a catalog entry to steer. If the locked candidate disappears, the instance flies straight rather than picking again.
+
 ## ADR-008 — Prewarm follows spawn chains
 
 - **Date:** 2026-09-15

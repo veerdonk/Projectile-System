@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 4 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
+    /// Phase 5 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -28,6 +28,7 @@ namespace Sandbox
         static readonly Vector3 WallPosition = new Vector3(8f, 2f, 8f);
         static readonly Vector3 WallScale = new Vector3(0.5f, 4f, 16f);
         static readonly Vector3 BounceDirection = new Vector3(1f, 0f, 1f);
+        static readonly Vector3 HomingDirection = Quaternion.AngleAxis(25f, Vector3.up) * Vector3.forward;
         static readonly Color Dummy1Color = new Color(0.82f, 0.22f, 0.18f);
         static readonly Color Dummy2Color = new Color(0.85f, 0.45f, 0.15f);
         static readonly Color Dummy3Color = new Color(0.55f, 0.12f, 0.12f);
@@ -48,6 +49,8 @@ namespace Sandbox
         Recipe intervalRecipe;
         Recipe expireRecipe;
         Recipe multicastRecipe;
+        Recipe strongHomingRecipe;
+        Recipe weakHomingRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
@@ -96,12 +99,19 @@ namespace Sandbox
                     selectedRecipe = 6;
                 if (keyboard.digit8Key.wasPressedThisFrame)
                     selectedRecipe = 7;
+                if (keyboard.digit9Key.wasPressedThisFrame)
+                    selectedRecipe = 8;
+                if (keyboard.digit0Key.wasPressedThisFrame)
+                    selectedRecipe = 9;
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
 
             if (world != null)
+            {
+                RefreshHomingCandidates();
                 world.Tick(Time.deltaTime);
+            }
 
             if (requestMarker != null)
             {
@@ -113,9 +123,9 @@ namespace Sandbox
         void OnGUI()
         {
             const float width = 420f;
-            GUILayout.BeginArea(new Rect(16f, 16f, width, 520f), GUI.skin.box);
-            GUILayout.Label("Projectile lab — phase 4 (multicast)");
-            GUILayout.Label("Space fires the selected Recipe. 1–8 select. Dummy loses HP on Target hits.");
+            GUILayout.BeginArea(new Rect(16f, 16f, width, 600f), GUI.skin.box);
+            GUILayout.Label("Projectile lab — phase 5 (homing)");
+            GUILayout.Label("Space fires the selected Recipe. 1–9 and 0 select. Dummy loses HP on Target hits.");
 
             if (GUILayout.Button("Fire straight", GUILayout.Height(28f)))
             {
@@ -165,6 +175,18 @@ namespace Sandbox
                 Fire(multicastRecipe);
             }
 
+            if (GUILayout.Button("Fire Homing(100)", GUILayout.Height(28f)))
+            {
+                selectedRecipe = 8;
+                Fire(strongHomingRecipe);
+            }
+
+            if (GUILayout.Button("Fire Homing(10)", GUILayout.Height(28f)))
+            {
+                selectedRecipe = 9;
+                Fire(weakHomingRecipe);
+            }
+
             GUILayout.Space(6f);
             GUILayout.Label(hasRequest
                 ? $"Last spawn request #{requestCount}\n  pos {lastRequestPosition}\n  dir {lastRequestDirection}\n  recipe {lastRecipeId}"
@@ -203,7 +225,7 @@ namespace Sandbox
             }
 
             lastRequestPosition = spawnPoint.Position;
-            lastRequestDirection = recipe == bounceRecipe ? BounceDirection : spawnPoint.Direction;
+            lastRequestDirection = FireDirection(recipe);
             lastRecipeId = recipe.Id;
             requestCount++;
             hasRequest = true;
@@ -242,9 +264,22 @@ namespace Sandbox
                     return expireRecipe;
                 case 7:
                     return multicastRecipe;
+                case 8:
+                    return strongHomingRecipe;
+                case 9:
+                    return weakHomingRecipe;
                 default:
                     return straightRecipe;
             }
+        }
+
+        Vector3 FireDirection(Recipe recipe)
+        {
+            if (recipe == bounceRecipe)
+                return BounceDirection;
+            if (recipe == strongHomingRecipe || recipe == weakHomingRecipe)
+                return HomingDirection;
+            return spawnPoint.Direction;
         }
 
         void BuildWorld()
@@ -265,6 +300,10 @@ namespace Sandbox
             multicastExtraRecipe = CreateRecipe("multicast-extra", speed: 18f, lifetime: 5f);
             multicastRecipe = CreateRecipe("multicast", speed: 18f, lifetime: 5f);
             multicastRecipe.OnSpawn = new IModifier[] { new Multicast(3, multicastExtraRecipe) };
+            strongHomingRecipe = CreateRecipe("homing-strong", speed: 20f, lifetime: 5f);
+            strongHomingRecipe.OnTick = new IModifier[] { new Homing(100f) };
+            weakHomingRecipe = CreateRecipe("homing-weak", speed: 20f, lifetime: 5f);
+            weakHomingRecipe.OnTick = new IModifier[] { new Homing(10f) };
 
             var poolRoot = new GameObject("ProjectilePool");
             poolRoot.transform.SetParent(transform, false);
@@ -277,6 +316,8 @@ namespace Sandbox
             world.Prewarm(intervalRecipe, PrewarmCount);
             world.Prewarm(expireRecipe, PrewarmCount);
             world.Prewarm(multicastRecipe, PrewarmCount);
+            world.Prewarm(strongHomingRecipe, PrewarmCount);
+            world.Prewarm(weakHomingRecipe, PrewarmCount);
 
             BindDummies();
         }
@@ -309,6 +350,16 @@ namespace Sandbox
             {
                 Transform marker = spawnPoint.transform.Find(MarkerName);
                 requestMarker = marker;
+            }
+        }
+
+        void RefreshHomingCandidates()
+        {
+            for (int i = 0; i < dummies.Length; i++)
+            {
+                SandboxDummyTarget dummy = dummies[i];
+                if (dummy != null)
+                    world.SetHomingCandidate(dummy.TargetId, dummy.transform.position);
             }
         }
 

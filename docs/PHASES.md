@@ -119,9 +119,9 @@ Keep phase 1 behaviour. Move live instances onto Entities.
 **In scope**
 
 - `Homing(n)` on `OnTick`
-- Homing target on `SpawnRequest`
+- Homing target on `SpawnRequest` when assigned; otherwise the instance acquires via `IHomingAcquisition` (v1: closest candidate in the travel direction)
 - Strong `Homing(100)` hits; weak `Homing(10)` misses in the sandbox layout
-- Document what `n` means (degrees per second or equivalent) in code comments once chosen
+- Document what `n` means (degrees per second) in code comments once chosen
 
 **Out of scope:** editor tooling, Unity Physics, Entities Graphics, extra modifiers
 

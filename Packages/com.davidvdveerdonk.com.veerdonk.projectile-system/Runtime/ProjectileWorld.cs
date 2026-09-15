@@ -15,6 +15,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         readonly IHitQuery hitQuery;
         readonly RecipeStore recipes = new RecipeStore();
         readonly System.Collections.Generic.List<SpawnRequest> pendingSpawns = new System.Collections.Generic.List<SpawnRequest>();
+        readonly System.Collections.Generic.List<(TargetId id, Vector3 position)> homingCandidates =
+            new System.Collections.Generic.List<(TargetId id, Vector3 position)>();
         readonly ModifierContext modifierContext;
         readonly SimulationBridge bridge;
         World ecsWorld;
@@ -39,7 +41,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         ProjectileWorld(IHitQuery hitQuery, bool createViews, Transform poolParent, uint seed = 1u)
         {
             this.hitQuery = hitQuery ?? throw new ArgumentNullException(nameof(hitQuery));
-            modifierContext = new ModifierContext(pendingSpawns, seed);
+            modifierContext = new ModifierContext(pendingSpawns, homingCandidates, seed);
             ecsWorld = new World("ProjectileSimulation");
             pool = new ProjectilePool(ecsWorld, poolParent, createViews);
 
@@ -129,6 +131,31 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             FlushPendingSpawns();
         }
 
+        public void SetHomingCandidate(TargetId id, Vector3 position)
+        {
+            ThrowIfDisposed();
+            for (int i = 0; i < homingCandidates.Count; i++)
+            {
+                if (!homingCandidates[i].id.Equals(id))
+                    continue;
+
+                homingCandidates[i] = (id, position);
+                return;
+            }
+
+            homingCandidates.Add((id, position));
+        }
+
+        public void RemoveHomingCandidate(TargetId id)
+        {
+            ThrowIfDisposed();
+            for (int i = homingCandidates.Count - 1; i >= 0; i--)
+            {
+                if (homingCandidates[i].id.Equals(id))
+                    homingCandidates.RemoveAt(i);
+            }
+        }
+
         internal bool TryGetState(ProjectileId id, out Vector3 position, out Vector3 velocity, out Recipe recipe)
         {
             ThrowIfDisposed();
@@ -185,6 +212,34 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
             remainingPierce = 0;
             remainingBounce = 0;
+            return false;
+        }
+
+        internal bool TryGetHomingTarget(ProjectileId id, out HomingTarget target)
+        {
+            ThrowIfDisposed();
+            EntityManager em = ecsWorld.EntityManager;
+            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
+            try
+            {
+                for (int i = 0; i < entities.Length; i++)
+                {
+                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
+                    if (new ProjectileId(projectile.Id) != id)
+                        continue;
+
+                    target = projectile.HomingHasTarget
+                        ? HomingTarget.Assigned(projectile.HomingTargetId)
+                        : default;
+                    return true;
+                }
+            }
+            finally
+            {
+                entities.Dispose();
+            }
+
+            target = default;
             return false;
         }
 
@@ -283,7 +338,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 ElapsedSeconds = 0f,
                 RemainingPierce = remainingPierce,
                 RemainingBounce = remainingBounce,
-                MultiplyGenerationsLeft = multiplyLeft
+                MultiplyGenerationsLeft = multiplyLeft,
+                HomingHasTarget = request.HomingTarget.IsAssigned,
+                HomingTargetId = request.HomingTarget.Id
             });
             em.SetComponentData(entity, new ProjectilePosition { Value = position });
             em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });

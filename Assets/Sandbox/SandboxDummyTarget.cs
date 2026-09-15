@@ -29,8 +29,11 @@ namespace Sandbox
         {
             Unbind();
             subscribed = world;
-            if (subscribed != null)
-                subscribed.Hit += OnHit;
+            if (subscribed == null)
+                return;
+
+            subscribed.Hit += OnHit;
+            subscribed.SetHomingCandidate(TargetId, transform.position);
         }
 
         public void Unbind()
@@ -39,6 +42,7 @@ namespace Sandbox
                 return;
 
             subscribed.Hit -= OnHit;
+            subscribed.RemoveHomingCandidate(TargetId);
             subscribed = null;
         }
 

@@ -17,11 +17,16 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     public sealed class ModifierContext
     {
         readonly List<SpawnRequest> pendingSpawns;
+        readonly List<(TargetId id, Vector3 position)> homingCandidates;
         Unity.Mathematics.Random random;
 
-        internal ModifierContext(List<SpawnRequest> pendingSpawns, uint seed = 1u)
+        internal ModifierContext(
+            List<SpawnRequest> pendingSpawns,
+            List<(TargetId id, Vector3 position)> homingCandidates,
+            uint seed = 1u)
         {
             this.pendingSpawns = pendingSpawns ?? throw new ArgumentNullException(nameof(pendingSpawns));
+            this.homingCandidates = homingCandidates ?? throw new ArgumentNullException(nameof(homingCandidates));
             random = Unity.Mathematics.Random.CreateFromIndex(seed);
         }
 
@@ -46,6 +51,50 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public HitInfo Hit { get; internal set; }
 
         public bool CancelDespawn { get; set; }
+
+        /// <summary>Seconds this stage is advancing. Homing uses it with degrees per second.</summary>
+        public float DeltaTime { get; internal set; }
+
+        /// <summary>Lock for this instance. Homing writes here after a successful acquire.</summary>
+        public HomingTarget HomingTarget { get; set; }
+
+        public int HomingCandidateCount => homingCandidates.Count;
+
+        public bool TryGetHomingCandidate(int index, out TargetId id, out Vector3 position)
+        {
+            if (index < 0 || index >= homingCandidates.Count)
+            {
+                id = default;
+                position = default;
+                return false;
+            }
+
+            (TargetId candidateId, Vector3 candidatePosition) = homingCandidates[index];
+            id = candidateId;
+            position = candidatePosition;
+            return true;
+        }
+
+        public bool TryGetHomingTargetPosition(HomingTarget target, out Vector3 position)
+        {
+            if (!target.IsAssigned)
+            {
+                position = default;
+                return false;
+            }
+
+            for (int i = 0; i < homingCandidates.Count; i++)
+            {
+                if (!homingCandidates[i].id.Equals(target.Id))
+                    continue;
+
+                position = homingCandidates[i].position;
+                return true;
+            }
+
+            position = default;
+            return false;
+        }
 
         /// <summary>Queues an instance of an explicit child Recipe. Spawned after the current instance finishes this stage.</summary>
         public void RequestSpawn(Recipe recipe, Vector3 position, Vector3 direction)
@@ -107,7 +156,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             float radius,
             int multiplyGenerationsLeft,
             bool hasHit,
-            in HitInfo hit)
+            in HitInfo hit,
+            float deltaTime,
+            HomingTarget homingTarget)
         {
             MultiplyGenerationsLeft = multiplyGenerationsLeft;
             InstanceId = instanceId;
@@ -121,6 +172,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             HasHit = hasHit;
             Hit = hit;
             CancelDespawn = false;
+            DeltaTime = deltaTime;
+            HomingTarget = homingTarget;
         }
 
         internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
@@ -129,6 +182,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             projectile.RemainingLifetime = RemainingLifetime;
             projectile.RemainingPierce = RemainingPierce;
             projectile.RemainingBounce = RemainingBounce;
+            projectile.HomingHasTarget = HomingTarget.IsAssigned;
+            projectile.HomingTargetId = HomingTarget.Id;
             velocity.Value = new Unity.Mathematics.float3(Velocity.x, Velocity.y, Velocity.z);
         }
     }
