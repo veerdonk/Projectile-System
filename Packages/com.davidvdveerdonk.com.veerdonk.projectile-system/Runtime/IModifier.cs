@@ -68,29 +68,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             });
         }
 
-        /// <summary>Direction inside a cone around <paramref name="direction"/>, drawn from the world seed.</summary>
-        public Vector3 RandomInCone(Vector3 direction, float maxAngleDegrees)
-        {
-            if (direction.sqrMagnitude < 1e-12f)
-                direction = Vector3.forward;
-            else
-                direction.Normalize();
-
-            if (maxAngleDegrees <= 0f)
-                return direction;
-
-            Vector3 tangent = Vector3.Cross(direction, Vector3.up);
-            if (tangent.sqrMagnitude < 1e-8f)
-                tangent = Vector3.Cross(direction, Vector3.right);
-            tangent.Normalize();
-
-            float angle = NextFloat(0f, maxAngleDegrees);
-            float spin = NextFloat(0f, 360f);
-            Quaternion rotation = Quaternion.AngleAxis(spin, direction) * Quaternion.AngleAxis(angle, tangent);
-            return rotation * direction;
-        }
-
-        float NextFloat(float minInclusive, float maxExclusive)
+        /// <summary>Draws from the world seed. Same seed and same call order give the same sequence.</summary>
+        public float NextFloat(float minInclusive, float maxExclusive)
         {
             Unity.Mathematics.Random rng = random;
             float value = rng.NextFloat(minInclusive, maxExclusive);

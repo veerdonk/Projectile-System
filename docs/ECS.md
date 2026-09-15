@@ -68,9 +68,9 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Ecs/ProjectileSimulationSystem.cs` | Stages, hits, pool return, views; one live snapshot after expire |
 | `Runtime/Pierce.cs` | `OnHit` Target: consume remaining pierce, cancel despawn |
 | `Runtime/Bounce.cs` | `OnHit` World: consume remaining bounce, reflect velocity, cancel despawn |
-| `Runtime/Multiply.cs` | Explicit child Recipe; OnHit / OnExpire / OnInterval. Count > 1 uses a seeded cone around hit normal or travel |
+| `Runtime/Multiply.cs` | Explicit child Recipe; OnHit / OnExpire / OnInterval. Count > 1 cones around hit normal or travel |
 | `Runtime/Multicast.cs` | `OnSpawn`: total instances is `n`; extras use an explicit sibling Recipe and cannot multicast again |
-| `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (seeded cone) is the v1 default |
+| `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math; `Multiply` samples it too |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views |
 | `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap; ignore last collider so pierce/bounce can leave the surface |
 | `Runtime/ProjectileView.cs` | Presentation adapter (MonoBehaviour) |

@@ -51,7 +51,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             for (int i = 0; i < n; i++)
             {
                 Vector3 spawnDirection = spread
-                    ? context.RandomInCone(direction, SpreadDegrees)
+                    ? RandomConePattern.Sample(context, direction, SpreadDegrees)
                     : direction;
                 Vector3 spawnPosition = context.HasHit
                     ? OffsetOffSurface(position, spawnDirection, ChildRecipe.Radius)
