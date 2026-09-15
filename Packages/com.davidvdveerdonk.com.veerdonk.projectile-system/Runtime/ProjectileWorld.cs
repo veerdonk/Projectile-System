@@ -15,8 +15,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         readonly IHitQuery hitQuery;
         readonly RecipeStore recipes = new RecipeStore();
         readonly System.Collections.Generic.List<SpawnRequest> pendingSpawns = new System.Collections.Generic.List<SpawnRequest>();
-        readonly System.Collections.Generic.List<(TargetId id, Vector3 position)> homingCandidates =
-            new System.Collections.Generic.List<(TargetId id, Vector3 position)>();
+        readonly HomingCatalog homingCatalog = new HomingCatalog();
         readonly ModifierContext modifierContext;
         readonly SimulationBridge bridge;
         World ecsWorld;
@@ -41,7 +40,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         ProjectileWorld(IHitQuery hitQuery, bool createViews, Transform poolParent, uint seed = 1u)
         {
             this.hitQuery = hitQuery ?? throw new ArgumentNullException(nameof(hitQuery));
-            modifierContext = new ModifierContext(pendingSpawns, homingCandidates, seed);
+            modifierContext = new ModifierContext(pendingSpawns, homingCatalog, seed);
             ecsWorld = new World("ProjectileSimulation");
             pool = new ProjectilePool(ecsWorld, poolParent, createViews);
 
@@ -134,26 +133,13 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public void SetHomingCandidate(TargetId id, Vector3 position)
         {
             ThrowIfDisposed();
-            for (int i = 0; i < homingCandidates.Count; i++)
-            {
-                if (!homingCandidates[i].id.Equals(id))
-                    continue;
-
-                homingCandidates[i] = (id, position);
-                return;
-            }
-
-            homingCandidates.Add((id, position));
+            homingCatalog.Set(id, position);
         }
 
         public void RemoveHomingCandidate(TargetId id)
         {
             ThrowIfDisposed();
-            for (int i = homingCandidates.Count - 1; i >= 0; i--)
-            {
-                if (homingCandidates[i].id.Equals(id))
-                    homingCandidates.RemoveAt(i);
-            }
+            homingCatalog.Remove(id);
         }
 
         internal bool TryGetState(ProjectileId id, out Vector3 position, out Vector3 velocity, out Recipe recipe)

@@ -73,7 +73,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Multicast.cs` | `OnSpawn`: total instances is `n`; extras use an explicit sibling Recipe and only multicast again if `Recipe.MulticastGenerations` pays for it |
 | `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math; `Multiply` samples it too |
 | `Runtime/Homing.cs` | `OnTick`: steer at n degrees/second toward a lock. Acquires once via `IHomingAcquisition` when spawn did not assign a target |
-| `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest candidate in front of travel |
+| `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest candidate in front of travel |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views |
 | `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap; ignore last collider so pierce/bounce can leave the surface |
 | `Runtime/ProjectileView.cs` | Presentation adapter (MonoBehaviour) |

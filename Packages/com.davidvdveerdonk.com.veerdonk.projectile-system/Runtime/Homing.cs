@@ -33,7 +33,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 context.HomingTarget = target;
             }
 
-            if (!context.TryGetHomingTargetPosition(target, out Vector3 targetPosition))
+            if (!context.HomingCatalog.TryGetPosition(target, out Vector3 targetPosition))
                 return;
 
             Vector3 toTarget = targetPosition - context.Position;

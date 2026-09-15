@@ -1,7 +1,78 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
+    /// <summary>
+    /// Live poses Homing can lock onto. Games publish them through
+    /// <see cref="IProjectileWorld.SetHomingCandidate"/>; acquisition and steering only read ids and positions.
+    /// </summary>
+    public sealed class HomingCatalog
+    {
+        readonly List<(TargetId id, Vector3 position)> poses = new List<(TargetId id, Vector3 position)>();
+
+        public int Count => poses.Count;
+
+        public void Set(TargetId id, Vector3 position)
+        {
+            for (int i = 0; i < poses.Count; i++)
+            {
+                if (!poses[i].id.Equals(id))
+                    continue;
+
+                poses[i] = (id, position);
+                return;
+            }
+
+            poses.Add((id, position));
+        }
+
+        public void Remove(TargetId id)
+        {
+            for (int i = poses.Count - 1; i >= 0; i--)
+            {
+                if (poses[i].id.Equals(id))
+                    poses.RemoveAt(i);
+            }
+        }
+
+        public bool TryGet(int index, out TargetId id, out Vector3 position)
+        {
+            if (index < 0 || index >= poses.Count)
+            {
+                id = default;
+                position = default;
+                return false;
+            }
+
+            (TargetId poseId, Vector3 posePosition) = poses[index];
+            id = poseId;
+            position = posePosition;
+            return true;
+        }
+
+        public bool TryGetPosition(in HomingTarget target, out Vector3 position)
+        {
+            if (!target.IsAssigned)
+            {
+                position = default;
+                return false;
+            }
+
+            for (int i = 0; i < poses.Count; i++)
+            {
+                if (!poses[i].id.Equals(target.Id))
+                    continue;
+
+                position = poses[i].position;
+                return true;
+            }
+
+            position = default;
+            return false;
+        }
+    }
+
     /// <summary>
     /// Picks a homing target for an instance that did not receive one on <see cref="SpawnRequest"/>.
     /// </summary>
@@ -35,13 +106,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 return false;
             }
 
+            HomingCatalog catalog = context.HomingCatalog;
             TargetId bestId = default;
             float bestSqrDistance = float.PositiveInfinity;
             bool found = false;
-            int count = context.HomingCandidateCount;
+            int count = catalog.Count;
             for (int i = 0; i < count; i++)
             {
-                if (!context.TryGetHomingCandidate(i, out TargetId id, out Vector3 position))
+                if (!catalog.TryGet(i, out TargetId id, out Vector3 position))
                     continue;
 
                 Vector3 toTarget = position - context.Position;

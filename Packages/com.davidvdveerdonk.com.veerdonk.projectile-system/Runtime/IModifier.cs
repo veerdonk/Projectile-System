@@ -17,16 +17,15 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     public sealed class ModifierContext
     {
         readonly List<SpawnRequest> pendingSpawns;
-        readonly List<(TargetId id, Vector3 position)> homingCandidates;
         Unity.Mathematics.Random random;
 
         internal ModifierContext(
             List<SpawnRequest> pendingSpawns,
-            List<(TargetId id, Vector3 position)> homingCandidates,
+            HomingCatalog homingCatalog,
             uint seed = 1u)
         {
             this.pendingSpawns = pendingSpawns ?? throw new ArgumentNullException(nameof(pendingSpawns));
-            this.homingCandidates = homingCandidates ?? throw new ArgumentNullException(nameof(homingCandidates));
+            HomingCatalog = homingCatalog ?? throw new ArgumentNullException(nameof(homingCatalog));
             random = Unity.Mathematics.Random.CreateFromIndex(seed);
         }
 
@@ -52,49 +51,13 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public bool CancelDespawn { get; set; }
 
-        /// <summary>Seconds this stage is advancing. Homing uses it with degrees per second.</summary>
+        /// <summary>Seconds this stage is advancing.</summary>
         public float DeltaTime { get; internal set; }
 
         /// <summary>Lock for this instance. Homing writes here after a successful acquire.</summary>
         public HomingTarget HomingTarget { get; set; }
 
-        public int HomingCandidateCount => homingCandidates.Count;
-
-        public bool TryGetHomingCandidate(int index, out TargetId id, out Vector3 position)
-        {
-            if (index < 0 || index >= homingCandidates.Count)
-            {
-                id = default;
-                position = default;
-                return false;
-            }
-
-            (TargetId candidateId, Vector3 candidatePosition) = homingCandidates[index];
-            id = candidateId;
-            position = candidatePosition;
-            return true;
-        }
-
-        public bool TryGetHomingTargetPosition(HomingTarget target, out Vector3 position)
-        {
-            if (!target.IsAssigned)
-            {
-                position = default;
-                return false;
-            }
-
-            for (int i = 0; i < homingCandidates.Count; i++)
-            {
-                if (!homingCandidates[i].id.Equals(target.Id))
-                    continue;
-
-                position = homingCandidates[i].position;
-                return true;
-            }
-
-            position = default;
-            return false;
-        }
+        public HomingCatalog HomingCatalog { get; }
 
         /// <summary>Queues an instance of an explicit child Recipe. Spawned after the current instance finishes this stage.</summary>
         public void RequestSpawn(Recipe recipe, Vector3 position, Vector3 direction)
