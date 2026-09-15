@@ -33,6 +33,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public float RemainingLifetime { get; set; }
 
+        public int RemainingPierce { get; set; }
+
+        public int RemainingBounce { get; set; }
+
         public float Radius { get; internal set; }
 
         public bool HasHit { get; internal set; }
@@ -61,6 +65,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Vector3 velocity,
             float speed,
             float remainingLifetime,
+            int remainingPierce,
+            int remainingBounce,
             float radius,
             bool hasHit,
             in HitInfo hit)
@@ -70,6 +76,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Velocity = velocity;
             Speed = speed;
             RemainingLifetime = remainingLifetime;
+            RemainingPierce = remainingPierce;
+            RemainingBounce = remainingBounce;
             Radius = radius;
             HasHit = hasHit;
             Hit = hit;
@@ -80,6 +88,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         {
             projectile.Speed = Speed;
             projectile.RemainingLifetime = RemainingLifetime;
+            projectile.RemainingPierce = RemainingPierce;
+            projectile.RemainingBounce = RemainingBounce;
             velocity.Value = new Unity.Mathematics.float3(Velocity.x, Velocity.y, Velocity.z);
         }
     }

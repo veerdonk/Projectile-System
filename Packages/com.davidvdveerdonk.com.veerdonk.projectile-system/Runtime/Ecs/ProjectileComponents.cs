@@ -10,6 +10,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public float Speed;
         public float Radius;
         public float RemainingLifetime;
+        public int RemainingPierce;
+        public int RemainingBounce;
     }
 
     struct ProjectilePosition : IComponentData

@@ -144,6 +144,34 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             return false;
         }
 
+        internal bool TryGetRemaining(ProjectileId id, out int remainingPierce, out int remainingBounce)
+        {
+            ThrowIfDisposed();
+            EntityManager em = ecsWorld.EntityManager;
+            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
+            try
+            {
+                for (int i = 0; i < entities.Length; i++)
+                {
+                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
+                    if (new ProjectileId(projectile.Id) != id)
+                        continue;
+
+                    remainingPierce = projectile.RemainingPierce;
+                    remainingBounce = projectile.RemainingBounce;
+                    return true;
+                }
+            }
+            finally
+            {
+                entities.Dispose();
+            }
+
+            remainingPierce = 0;
+            remainingBounce = 0;
+            return false;
+        }
+
         internal bool TryGetActiveAt(int index, out ProjectileId id, out Vector3 position, out Vector3 velocity, out Recipe recipe)
         {
             ThrowIfDisposed();
@@ -221,6 +249,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             int recipeIndex = recipes.GetOrAdd(recipe);
             Entity entity = pool.Rent(recipeIndex, recipe, out ProjectileView view);
             int idValue = nextId++;
+            ReadHitRemaining(recipe, out int remainingPierce, out int remainingBounce);
 
             float3 position = new float3(request.Position.x, request.Position.y, request.Position.z);
             float3 velocity = new float3(direction.x, direction.y, direction.z) * recipe.Speed;
@@ -232,7 +261,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 RecipeIndex = recipeIndex,
                 Speed = recipe.Speed,
                 Radius = recipe.Radius,
-                RemainingLifetime = recipe.LifetimeSeconds
+                RemainingLifetime = recipe.LifetimeSeconds,
+                RemainingPierce = remainingPierce,
+                RemainingBounce = remainingBounce
             });
             em.SetComponentData(entity, new ProjectilePosition { Value = position });
             em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });
@@ -257,6 +288,28 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         {
             if (disposed)
                 throw new ObjectDisposedException(nameof(ProjectileWorld));
+        }
+
+        static void ReadHitRemaining(Recipe recipe, out int remainingPierce, out int remainingBounce)
+        {
+            remainingPierce = 0;
+            remainingBounce = 0;
+            IModifier[] onHit = recipe.OnHit;
+            if (onHit == null)
+                return;
+
+            for (int i = 0; i < onHit.Length; i++)
+            {
+                switch (onHit[i])
+                {
+                    case Pierce pierce:
+                        remainingPierce = pierce.Count > 0 ? pierce.Count : 0;
+                        break;
+                    case Bounce bounce:
+                        remainingBounce = bounce.Count > 0 ? bounce.Count : 0;
+                        break;
+                }
+            }
         }
 
         static Vector3 ToVector3(float3 value)

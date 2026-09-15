@@ -47,5 +47,38 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 Assert.AreEqual(0f, velocity.z, 0.0001f);
             }
         }
+
+        [Test]
+        public void Multiply0_OnHit_DoesNotSpawnChild()
+        {
+            Recipe child = SimulationTestHelper.CreateRecipe("child-unused", speed: 8f, lifetime: 2f);
+            Recipe parent = SimulationTestHelper.CreateRecipe(
+                "parent-multiply-zero",
+                speed: 20f,
+                lifetime: 5f,
+                onHit: new IModifier[] { new Multiply(0, child) });
+
+            var hits = new ScriptedHitQuery();
+            var world = new ProjectileWorld(hits, createViews: false);
+            using (world)
+            {
+                world.Prewarm(parent, 4);
+                world.Prewarm(child, 4);
+                int availableBefore = world.AvailableCount;
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = parent,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                hits.Queue(HitKind.Target, new Vector3(0f, 0f, 1f), Vector3.up, new TargetId(1));
+                world.Tick(0.1f);
+
+                Assert.AreEqual(0, world.ActiveCount);
+                Assert.AreEqual(availableBefore, world.AvailableCount);
+            }
+        }
     }
 }

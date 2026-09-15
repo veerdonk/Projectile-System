@@ -14,7 +14,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - Camera looking down the lane
 - Spawn point with a visible gizmo
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
-- A wall (`World`) for bounce proofs (needed by phase 2; can exist earlier)
+- Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1)
 - Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu)
 - On-screen readout: last spawn request, active instances, pool available count, dummy HP
 
@@ -29,8 +29,8 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 1 | Lifetime-only Recipe | Dies at 3s, no child |
 | 1 | OnHit-spawn Recipe | Child appears at hit point along normal |
 | 1b | Same three Recipes as phase 1 | Same proofs; instances are ECS entities under the same HUD |
-| 2 | Pierce(2) | Three targets: first two live-through, third kills the instance |
-| 2 | Bounce(1) | Reflects off wall, then dies on dummy |
+| 2 | Pierce(2) (key **4**) | Three +Z dummies: first two live-through, third kills the instance |
+| 2 | Bounce(1) (key **5**) | Fires toward the side wall `(1,0,1)`, reflects, then dies on DummyBounce |
 | 3 | Multiply on interval | Extra instances at 0.5s |
 | 3 | Multiply on expire | Child when parent dies |
 | 4 | Multicast(3) | Three instances immediately |

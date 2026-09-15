@@ -18,6 +18,13 @@ namespace Sandbox
         public int Hp => hp;
         public TargetId TargetId => new TargetId(targetId);
 
+        public void Configure(int id, int maxHpValue = 10)
+        {
+            targetId = id;
+            maxHp = maxHpValue;
+            hp = maxHpValue;
+        }
+
         public void Bind(IProjectileWorld world)
         {
             Unbind();
