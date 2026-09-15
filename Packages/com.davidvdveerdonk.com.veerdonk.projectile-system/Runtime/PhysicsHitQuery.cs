@@ -22,7 +22,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 ~0,
                 QueryTriggerInteraction.Ignore);
 
-            if (TryPickOverlap(instanceId, origin, -direction, overlapCount, ignore, out hit, out Collider hitCollider))
+            Vector3 incoming = direction.sqrMagnitude > 1e-12f ? direction.normalized : Vector3.forward;
+
+            if (TryPickOverlap(instanceId, origin, incoming, overlapCount, ignore, out hit, out Collider hitCollider))
             {
                 ignoreColliderByInstance[instanceId] = hitCollider;
                 return true;
@@ -35,7 +37,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 return false;
             }
 
-            Vector3 dir = direction.normalized;
+            Vector3 dir = incoming;
             int castCount = Physics.SphereCastNonAlloc(
                 origin,
                 radius,
@@ -45,7 +47,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 ~0,
                 QueryTriggerInteraction.Ignore);
 
-            if (TryPickCast(instanceId, dir, castCount, ignore, out hit, out hitCollider))
+            if (TryPickCast(instanceId, origin, dir, castCount, ignore, out hit, out hitCollider))
             {
                 ignoreColliderByInstance[instanceId] = hitCollider;
                 return true;
@@ -55,10 +57,19 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             return false;
         }
 
+        public void CopyIgnore(ProjectileId from, ProjectileId to)
+        {
+            if (from == to)
+                return;
+            if (!ignoreColliderByInstance.TryGetValue(from, out Collider collider) || collider == null)
+                return;
+            ignoreColliderByInstance[to] = collider;
+        }
+
         bool TryPickOverlap(
             ProjectileId instanceId,
             Vector3 origin,
-            Vector3 fallbackNormal,
+            Vector3 incoming,
             int count,
             Collider ignore,
             out HitInfo hit,
@@ -81,7 +92,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                     continue;
 
                 best = distSq;
-                hit = BuildHit(instanceId, collider, point, origin - point, fallbackNormal);
+                hit = BuildHit(instanceId, collider, origin, incoming, point, origin - point);
                 hitCollider = collider;
                 found = true;
             }
@@ -91,7 +102,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         bool TryPickCast(
             ProjectileId instanceId,
-            Vector3 fallbackNormal,
+            Vector3 origin,
+            Vector3 incoming,
             int count,
             Collider ignore,
             out HitInfo hit,
@@ -113,7 +125,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                     continue;
 
                 best = rayHit.distance;
-                hit = BuildHit(instanceId, collider, rayHit.point, rayHit.normal, fallbackNormal);
+                hit = BuildHit(instanceId, collider, origin, incoming, rayHit.point, rayHit.normal);
                 hitCollider = collider;
                 found = true;
             }
@@ -159,16 +171,19 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             return (closest - origin).sqrMagnitude <= skin * skin;
         }
 
-        static HitInfo BuildHit(ProjectileId instanceId, Collider collider, Vector3 point, Vector3 normal, Vector3 fallbackNormal)
+        static HitInfo BuildHit(
+            ProjectileId instanceId,
+            Collider collider,
+            Vector3 origin,
+            Vector3 incoming,
+            Vector3 point,
+            Vector3 reportedNormal)
         {
-            if (normal.sqrMagnitude < 1e-10f)
-                normal = fallbackNormal.sqrMagnitude < 1e-10f ? Vector3.up : fallbackNormal;
-
             var info = new HitInfo
             {
                 InstanceId = instanceId,
                 Point = point,
-                Normal = normal.normalized
+                Normal = SurfaceNormal(collider, origin, incoming, point, reportedNormal)
             };
 
             var damageable = collider.GetComponentInParent<IDamageable>();
@@ -183,6 +198,35 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             }
 
             return info;
+        }
+
+        static Vector3 SurfaceNormal(
+            Collider collider,
+            Vector3 origin,
+            Vector3 incoming,
+            Vector3 point,
+            Vector3 reported)
+        {
+            Vector3 incomingDir = incoming.sqrMagnitude > 1e-12f ? incoming.normalized : Vector3.forward;
+            float rayLength = Vector3.Distance(origin, point) + 1f;
+            if (collider != null && collider.Raycast(new Ray(origin, incomingDir), out RaycastHit surface, rayLength))
+                return surface.normal;
+
+            Vector3 normal = reported;
+            if (normal.sqrMagnitude < 1e-10f && collider != null)
+            {
+                Vector3 fromSurface = origin - collider.ClosestPoint(origin);
+                if (fromSurface.sqrMagnitude > 1e-10f)
+                    normal = fromSurface;
+            }
+
+            if (normal.sqrMagnitude < 1e-10f)
+                normal = -incomingDir;
+
+            normal.Normalize();
+            if (Vector3.Dot(normal, incomingDir) > 0f)
+                normal = -normal;
+            return normal;
         }
     }
 }

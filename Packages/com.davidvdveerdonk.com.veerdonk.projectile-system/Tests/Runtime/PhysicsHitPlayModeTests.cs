@@ -77,6 +77,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Tests
                     world.Prewarm(parent, 4);
                     world.Prewarm(child, 4);
 
+                    HitInfo? seen = null;
+                    int hitCount = 0;
+                    world.Hit += info =>
+                    {
+                        seen = info;
+                        hitCount++;
+                    };
+
                     world.Spawn(new SpawnRequest
                     {
                         Recipe = parent,
@@ -87,9 +95,79 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Tests
                     Physics.SyncTransforms();
                     yield return null;
 
-                    TickUntil(world, 1f, w => w.ActiveCount == 1);
+                    TickUntil(world, 1f, w => seen.HasValue && w.ActiveCount == 1);
 
                     Assert.AreEqual(1, world.ActiveCount);
+                    Assert.AreEqual(1, hitCount);
+                    Assert.IsTrue(seen.HasValue);
+                    Assert.Greater(Vector3.Dot(seen.Value.Normal.normalized, Vector3.back), 0.9f);
+                    Assert.IsTrue(world.TryGetActiveAt(0, out _, out _, out Vector3 velocity, out Recipe recipe));
+                    Assert.AreEqual(child.Id, recipe.Id);
+                    Vector3 childDir = velocity.normalized;
+                    Assert.Greater(Vector3.Dot(childDir, seen.Value.Normal.normalized), 0.9f);
+                    Assert.Less(Vector3.Dot(childDir, Vector3.forward), 0f);
+
+                    for (int i = 0; i < 12; i++)
+                        world.Tick(1f / 60f);
+
+                    Assert.AreEqual(1, world.ActiveCount);
+                    Assert.AreEqual(1, hitCount);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
+            }
+            finally
+            {
+                if (dummy != null)
+                    Object.Destroy(dummy);
+                if (poolRoot != null)
+                    Object.Destroy(poolRoot);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator OnHitMultiply3_DoesNotRehitSameTarget()
+        {
+            GameObject dummy = null;
+            GameObject poolRoot = null;
+            try
+            {
+                dummy = CreateDummy(new Vector3(0f, 0f, 4f), new TargetId(1), scale: 2f);
+                poolRoot = new GameObject("TestPool");
+                var world = new ProjectileWorld(poolRoot.transform);
+                try
+                {
+                    Recipe child = CreateRecipe("child-3", speed: 8f, lifetime: 2f);
+                    Recipe parent = CreateRecipe("parent-3", speed: 20f, lifetime: 5f);
+                    parent.OnHit = new IModifier[] { new Multiply(3, child) };
+                    world.Prewarm(parent, 4);
+                    world.Prewarm(child, 8);
+
+                    int hitCount = 0;
+                    world.Hit += _ => hitCount++;
+
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = parent,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward
+                    });
+
+                    Physics.SyncTransforms();
+                    yield return null;
+
+                    TickUntil(world, 1f, w => hitCount > 0 && w.ActiveCount == 3);
+
+                    Assert.AreEqual(3, world.ActiveCount);
+                    Assert.AreEqual(1, hitCount);
+
+                    for (int i = 0; i < 12; i++)
+                        world.Tick(1f / 60f);
+
+                    Assert.AreEqual(3, world.ActiveCount);
+                    Assert.AreEqual(1, hitCount);
                 }
                 finally
                 {

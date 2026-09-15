@@ -39,9 +39,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 Assert.IsTrue(world.TryGetActiveAt(0, out ProjectileId childId, out Vector3 position, out Vector3 velocity, out Recipe recipe));
                 Assert.AreNotEqual(parentId, childId);
                 Assert.AreEqual(child.Id, recipe.Id);
-                Assert.AreEqual(point.x, position.x, 0.0001f);
-                Assert.AreEqual(point.y, position.y, 0.0001f);
-                Assert.AreEqual(point.z, position.z, 0.0001f);
+                Vector3 expected = SimulationTestHelper.OffSurface(point, normal, child.Radius);
+                Assert.AreEqual(expected.x, position.x, 0.0001f);
+                Assert.AreEqual(expected.y, position.y, 0.0001f);
+                Assert.AreEqual(expected.z, position.z, 0.0001f);
                 Assert.AreEqual(0f, velocity.x, 0.0001f);
                 Assert.AreEqual(child.Speed, velocity.y, 0.0001f);
                 Assert.AreEqual(0f, velocity.z, 0.0001f);

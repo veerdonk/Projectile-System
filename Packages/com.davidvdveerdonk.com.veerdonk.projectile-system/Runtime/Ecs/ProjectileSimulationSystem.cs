@@ -54,6 +54,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Projectile projectile = em.GetComponentData<Projectile>(entity);
                 Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
                 RunStage(recipe.OnTick, entity, hasHit: false, default);
+                RunIntervals(entity, dt);
             }
 
             new IntegrateJob { Dt = dt }.ScheduleParallel();
@@ -129,7 +130,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 }
             }
 
-            RunStage(recipe.OnExpire, entity, hasHit: false, default);
+            RunStage(recipe.OnExpire, entity, hasHit: runOnHit, hit);
 
             int id = em.GetComponentData<Projectile>(entity).Id;
             int recipeIndex = em.GetComponentData<Projectile>(entity).RecipeIndex;
@@ -152,17 +153,87 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 view.SetPose(position, vel);
         }
 
+        void RunIntervals(Entity entity, float dt)
+        {
+            EntityManager em = EntityManager;
+            Projectile projectile = em.GetComponentData<Projectile>(entity);
+            Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
+            IModifier[] modifiers = recipe.OnInterval;
+            if (modifiers == null || modifiers.Length == 0)
+                return;
+
+            float elapsed = projectile.ElapsedSeconds;
+            float previous = elapsed - dt;
+            bool bound = false;
+            for (int i = 0; i < modifiers.Length; i++)
+            {
+                if (modifiers[i] is not Multiply multiply)
+                    continue;
+
+                int fires = IntervalCrossings(previous, elapsed, multiply.IntervalSeconds);
+                if (fires <= 0)
+                    continue;
+
+                if (!bound)
+                {
+                    BindContext(entity, hasHit: false, default);
+                    bound = true;
+                }
+
+                for (int f = 0; f < fires; f++)
+                    multiply.Apply(Bridge.ModifierContext);
+            }
+
+            if (!bound)
+                return;
+
+            ProjectileVelocity velocity = em.GetComponentData<ProjectileVelocity>(entity);
+            Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
+            em.SetComponentData(entity, projectile);
+            em.SetComponentData(entity, velocity);
+        }
+
+        static int IntervalCrossings(float previousElapsed, float elapsed, float interval)
+        {
+            if (interval <= 0f || elapsed <= previousElapsed)
+                return 0;
+
+            int before = (int)math.floor(previousElapsed / interval);
+            int after = (int)math.floor(elapsed / interval);
+            int fires = after - before;
+            return fires > 0 ? fires : 0;
+        }
+
         void RunStage(IModifier[] modifiers, Entity entity, bool hasHit, in HitInfo hit)
         {
             Bridge.ModifierContext.CancelDespawn = false;
             if (modifiers == null || modifiers.Length == 0)
                 return;
 
+            BindContext(entity, hasHit, hit);
+
+            for (int i = 0; i < modifiers.Length; i++)
+            {
+                IModifier modifier = modifiers[i];
+                if (modifier == null)
+                    continue;
+                modifier.Apply(Bridge.ModifierContext);
+            }
+
+            EntityManager em = EntityManager;
+            Projectile projectile = em.GetComponentData<Projectile>(entity);
+            ProjectileVelocity velocity = em.GetComponentData<ProjectileVelocity>(entity);
+            Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
+            em.SetComponentData(entity, projectile);
+            em.SetComponentData(entity, velocity);
+        }
+
+        void BindContext(Entity entity, bool hasHit, in HitInfo hit)
+        {
             EntityManager em = EntityManager;
             Projectile projectile = em.GetComponentData<Projectile>(entity);
             ProjectilePosition position = em.GetComponentData<ProjectilePosition>(entity);
             ProjectileVelocity velocity = em.GetComponentData<ProjectileVelocity>(entity);
-
             Bridge.ModifierContext.Bind(
                 new ProjectileId(projectile.Id),
                 ToVector3(position.Value),
@@ -174,18 +245,6 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 projectile.Radius,
                 hasHit,
                 hit);
-
-            for (int i = 0; i < modifiers.Length; i++)
-            {
-                IModifier modifier = modifiers[i];
-                if (modifier == null)
-                    continue;
-                modifier.Apply(Bridge.ModifierContext);
-            }
-
-            Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
-            em.SetComponentData(entity, projectile);
-            em.SetComponentData(entity, velocity);
         }
 
         static Vector3 ToVector3(float3 value)

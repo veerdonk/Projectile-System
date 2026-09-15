@@ -28,15 +28,15 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         {
         }
 
-        internal ProjectileWorld(IHitQuery hitQuery, bool createViews)
-            : this(hitQuery, createViews, null)
+        internal ProjectileWorld(IHitQuery hitQuery, bool createViews, uint seed = 1u)
+            : this(hitQuery, createViews, null, seed)
         {
         }
 
-        ProjectileWorld(IHitQuery hitQuery, bool createViews, Transform poolParent)
+        ProjectileWorld(IHitQuery hitQuery, bool createViews, Transform poolParent, uint seed = 1u)
         {
             this.hitQuery = hitQuery ?? throw new ArgumentNullException(nameof(hitQuery));
-            modifierContext = new ModifierContext(pendingSpawns);
+            modifierContext = new ModifierContext(pendingSpawns, seed);
             ecsWorld = new World("ProjectileSimulation");
             pool = new ProjectilePool(ecsWorld, poolParent, createViews);
 
@@ -262,6 +262,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Speed = recipe.Speed,
                 Radius = recipe.Radius,
                 RemainingLifetime = recipe.LifetimeSeconds,
+                ElapsedSeconds = 0f,
                 RemainingPierce = remainingPierce,
                 RemainingBounce = remainingBounce
             });
@@ -270,6 +271,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             em.SetComponentData(entity, new ProjectileCandidate { Value = position });
 
             view?.Bind(request.Position, recipe.Radius);
+            hitQuery.CopyIgnore(request.InheritIgnoreFrom, new ProjectileId(idValue));
             simulation.RunSpawnStages(entity);
             return new ProjectileId(idValue);
         }

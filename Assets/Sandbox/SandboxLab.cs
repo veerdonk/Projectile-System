@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 2 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
+    /// Phase 3 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -45,6 +45,8 @@ namespace Sandbox
         Recipe onHitRecipe;
         Recipe pierceRecipe;
         Recipe bounceRecipe;
+        Recipe intervalRecipe;
+        Recipe expireRecipe;
         Recipe childRecipe;
         int selectedRecipe;
         string lastRecipeId;
@@ -86,6 +88,10 @@ namespace Sandbox
                     selectedRecipe = 3;
                 if (keyboard.digit5Key.wasPressedThisFrame)
                     selectedRecipe = 4;
+                if (keyboard.digit6Key.wasPressedThisFrame)
+                    selectedRecipe = 5;
+                if (keyboard.digit7Key.wasPressedThisFrame)
+                    selectedRecipe = 6;
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
@@ -103,9 +109,9 @@ namespace Sandbox
         void OnGUI()
         {
             const float width = 420f;
-            GUILayout.BeginArea(new Rect(16f, 16f, width, 420f), GUI.skin.box);
-            GUILayout.Label("Projectile lab — phase 2 (pierce / bounce)");
-            GUILayout.Label("Space fires the selected Recipe. 1–5 select. Dummy loses HP on Target hits.");
+            GUILayout.BeginArea(new Rect(16f, 16f, width, 520f), GUI.skin.box);
+            GUILayout.Label("Projectile lab — phase 3 (multiply)");
+            GUILayout.Label("Space fires the selected Recipe. 1–7 select. Dummy loses HP on Target hits.");
 
             if (GUILayout.Button("Fire straight", GUILayout.Height(28f)))
             {
@@ -119,7 +125,7 @@ namespace Sandbox
                 Fire(lifetimeRecipe);
             }
 
-            if (GUILayout.Button("Fire OnHit spawn", GUILayout.Height(28f)))
+            if (GUILayout.Button("Fire Multiply on hit", GUILayout.Height(28f)))
             {
                 selectedRecipe = 2;
                 Fire(onHitRecipe);
@@ -135,6 +141,18 @@ namespace Sandbox
             {
                 selectedRecipe = 4;
                 Fire(bounceRecipe);
+            }
+
+            if (GUILayout.Button("Fire Multiply interval", GUILayout.Height(28f)))
+            {
+                selectedRecipe = 5;
+                Fire(intervalRecipe);
+            }
+
+            if (GUILayout.Button("Fire Multiply on expire", GUILayout.Height(28f)))
+            {
+                selectedRecipe = 6;
+                Fire(expireRecipe);
             }
 
             GUILayout.Space(6f);
@@ -208,6 +226,10 @@ namespace Sandbox
                     return pierceRecipe;
                 case 4:
                     return bounceRecipe;
+                case 5:
+                    return intervalRecipe;
+                case 6:
+                    return expireRecipe;
                 default:
                     return straightRecipe;
             }
@@ -219,11 +241,15 @@ namespace Sandbox
             straightRecipe = CreateRecipe("straight", speed: 20f, lifetime: 5f);
             lifetimeRecipe = CreateRecipe("lifetime", speed: 4f, lifetime: 3f);
             onHitRecipe = CreateRecipe("onhit-parent", speed: 20f, lifetime: 5f);
-            onHitRecipe.OnHit = new IModifier[] { new Multiply(1, childRecipe) };
+            onHitRecipe.OnHit = new IModifier[] { new Multiply(3, childRecipe) };
             pierceRecipe = CreateRecipe("pierce", speed: 20f, lifetime: 5f);
             pierceRecipe.OnHit = new IModifier[] { new Pierce(2) };
             bounceRecipe = CreateRecipe("bounce", speed: 20f, lifetime: 5f);
             bounceRecipe.OnHit = new IModifier[] { new Bounce(1) };
+            intervalRecipe = CreateRecipe("interval", speed: 10f, lifetime: 5f);
+            intervalRecipe.OnInterval = new IModifier[] { new Multiply(2, childRecipe, intervalSeconds: 0.5f) };
+            expireRecipe = CreateRecipe("expire", speed: 4f, lifetime: 1f);
+            expireRecipe.OnExpire = new IModifier[] { new Multiply(1, childRecipe) };
 
             var poolRoot = new GameObject("ProjectilePool");
             poolRoot.transform.SetParent(transform, false);
@@ -231,9 +257,11 @@ namespace Sandbox
             world.Prewarm(straightRecipe, PrewarmCount);
             world.Prewarm(lifetimeRecipe, PrewarmCount);
             world.Prewarm(onHitRecipe, PrewarmCount);
-            world.Prewarm(childRecipe, PrewarmCount);
+            world.Prewarm(childRecipe, 32);
             world.Prewarm(pierceRecipe, PrewarmCount);
             world.Prewarm(bounceRecipe, PrewarmCount);
+            world.Prewarm(intervalRecipe, PrewarmCount);
+            world.Prewarm(expireRecipe, PrewarmCount);
 
             BindDummies();
         }

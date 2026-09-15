@@ -33,5 +33,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             queued = null;
             return true;
         }
+
+        public void CopyIgnore(ProjectileId from, ProjectileId to)
+        {
+        }
     }
 }
