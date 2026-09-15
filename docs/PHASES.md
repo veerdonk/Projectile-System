@@ -127,6 +127,24 @@ Keep phase 1 behaviour. Move live instances onto Entities.
 
 **Stop.**
 
+## Phase 6 — Modifier combinations
+
+Prove that named modifiers from phases 2–5 still do their jobs when they share a Recipe. Combinations may already work; **tests are still required**. Fix bugs those tests find. Do not add modifiers, public types, or a second composition model.
+
+**In scope**
+
+- One Recipe with `Pierce(1)` on `OnHit` and `Homing(100)` on `OnTick`: pierce the first `Target`, stay live, keep steering toward `SpawnRequest.HomingTarget` (a second dummy). No retarget API.
+- One Recipe with `Bounce(2)` and `Multiply(2)` on `OnHit` (explicit child Recipe): each of two `World` hits reflects the parent and spawns two children. Children do not inherit Bounce/Multiply ([ADR-002](DECISIONS.md)).
+- Edit Mode tests for both scenarios (scripted hits). Assert remaining counts, that the parent stays live after the absorbed hits, child spawn count (2 per bounce), and that homing still turns after pierce.
+- Sandbox Recipes and Play Mode proofs for both scenarios. Add a second World wall only if the current wall cannot produce two bounces.
+- Confirm existing list rules: the full `OnHit` list runs even when Pierce/Bounce sets `CancelDespawn`; a surviving instance still runs `OnTick` on later ticks. See [ARCHITECTURE.md](ARCHITECTURE.md) invariants.
+
+**Out of scope:** new modifiers; homing retarget or new `SpawnRequest` fields; cartesian product of every modifier pair; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire Pierce(1)+Homing(100): first dummy is pierced, instance curves into the homing dummy. Fire Bounce(2)+Multiply(2): two wall hits, two extra instances per bounce, parent still alive.
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
