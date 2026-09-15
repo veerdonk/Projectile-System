@@ -30,7 +30,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
             if (distance <= 1e-8f || direction.sqrMagnitude <= 1e-12f)
             {
-                ignoreColliderByInstance.Remove(instanceId);
+                RememberOrClearIgnore(instanceId, ignore, origin, radius, castCount: 0);
                 hit = default;
                 return false;
             }
@@ -51,7 +51,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 return true;
             }
 
-            ignoreColliderByInstance.Remove(instanceId);
+            RememberOrClearIgnore(instanceId, ignore, origin, radius, castCount);
             return false;
         }
 
@@ -119,6 +119,44 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             }
 
             return found;
+        }
+
+        void RememberOrClearIgnore(ProjectileId instanceId, Collider ignore, Vector3 origin, float radius, int castCount)
+        {
+            if (ignore == null)
+            {
+                ignoreColliderByInstance.Remove(instanceId);
+                return;
+            }
+
+            if (Overlaps(ignore, origin, radius) || CastIncludes(castCount, ignore))
+            {
+                ignoreColliderByInstance[instanceId] = ignore;
+                return;
+            }
+
+            ignoreColliderByInstance.Remove(instanceId);
+        }
+
+        bool CastIncludes(int count, Collider ignore)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (castBuffer[i].collider == ignore)
+                    return true;
+            }
+
+            return false;
+        }
+
+        static bool Overlaps(Collider collider, Vector3 origin, float radius)
+        {
+            if (collider == null || !collider.enabled)
+                return false;
+
+            Vector3 closest = collider.ClosestPoint(origin);
+            float skin = radius + 0.01f;
+            return (closest - origin).sqrMagnitude <= skin * skin;
         }
 
         static HitInfo BuildHit(ProjectileId instanceId, Collider collider, Vector3 point, Vector3 normal, Vector3 fallbackNormal)
