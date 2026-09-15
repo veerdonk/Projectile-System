@@ -49,6 +49,8 @@ SandboxLab.Update
 
 Spawn (`OnSpawn` / `OnTravel`) runs in `ProjectileWorld` when an entity is rented, not inside the Burst job.
 
+Phase 1b still snapshots live entities three times in `ProjectileSimulationSystem` (expire, then `OnTick`, then move/hit). **Phase 2:** after expire, keep one list of remaining entities and reuse it for `OnTick` and move/hit; skip an entity if a hit already disabled it. Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural change).
+
 ## Files
 
 | File | Role |

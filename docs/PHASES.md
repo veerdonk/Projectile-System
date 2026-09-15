@@ -83,6 +83,7 @@ Keep phase 1 behaviour. Move live instances onto Entities.
 - Remaining counts on the instance; despawn when the relevant count cannot absorb the hit
 - Scenarios: Pierce(2), Bounce(1) then target
 - Tests for remaining counts and reflection
+- Snapshot live entities **once** after expire in `ProjectileSimulationSystem` and reuse that list for `OnTick` and move/hit (skip if a hit already disabled the entity). Do not query-copy-dispose three times; pierce/bounce will despawn mid-move. See [ECS.md](ECS.md) “One tick”
 
 **Out of scope:** multiply, multicast, homing, interval
 
