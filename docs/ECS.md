@@ -9,7 +9,7 @@ How this package uses DOTS. Not a Unity ECS tutorial. Read this if you already k
 | **DOTS** | A stack of libraries, not one feature | Entities + Burst + Collections + Mathematics. We use a slice. |
 | **`World`** | Unit of work / a private database, **not** the scene | Created and disposed by `ProjectileWorld`. Isolated from Unity’s default ECS world. Not in the Player Loop. |
 | **Entity** | A row id | One live (or pooled) instance. Not a GameObject. |
-| **`IComponentData`** | Columns on that row; structs in contiguous chunks | `Projectile`, `ProjectilePosition`, `ProjectileVelocity`, `ProjectileCandidate` |
+| **`IComponentData`** | Columns on that row; structs in contiguous chunks | `Projectile` (including remaining pierce/bounce), `ProjectilePosition`, `ProjectileVelocity`, `ProjectileCandidate` |
 | **`Disabled`** | Soft-deleted / pooled row | Default queries skip it. Rent = enable; return = disable. No `Destroy` on despawn. |
 | **System** | A pipeline stage over a query, not `Update` on each object | `LifetimeSystem` (Burst) then `ProjectileSimulationSystem` (managed) |
 | **Burst** | AOT compiler for jobs over those structs (no GC, no managed refs) | Lifetime decrement + candidate position only |
@@ -38,18 +38,21 @@ SandboxLab.Update
        → SimulationSystemGroup.Update
             1. LifetimeSystem              Burst: remaining lifetime -= dt
             2. ProjectileSimulationSystem  managed:
-                 expire if lifetime <= 0 (OnExpire, return to pool)
-                 OnTick modifiers
+                 snapshot entities whose lifetime <= 0; expire them (OnExpire, return to pool)
+                 snapshot remaining live entities **once**
+                 OnTick modifiers (same list)
                  Burst integrate: candidate = pos + vel * dt
+                 move/hit on the same list; skip if a hit already disabled the entity
                  IHitQuery.TryCast (ScriptedHitQuery in Edit Mode, PhysicsHitQuery in Play Mode)
-                 on hit: Hit event, OnHit, despawn unless CancelDespawn
+                 on hit: Hit event, OnHit, despawn unless Pierce/Bounce CancelDespawn
+                 CancelDespawn: keep remaining counts, place at hit point along current velocity
                  else: Position = Candidate, sync ProjectileView
        → flush RequestSpawn queue (child Recipes)
 ```
 
-Spawn (`OnSpawn` / `OnTravel`) runs in `ProjectileWorld` when an entity is rented, not inside the Burst job.
+Spawn (`OnSpawn` / `OnTravel`) runs in `ProjectileWorld` when an entity is rented, not inside the Burst job. Remaining pierce/bounce are copied from `OnHit` `Pierce` / `Bounce` modifiers onto the `Projectile` row at rent.
 
-Phase 1b still snapshots live entities three times in `ProjectileSimulationSystem` (expire, then `OnTick`, then move/hit). **Phase 2:** after expire, keep one list of remaining entities and reuse it for `OnTick` and move/hit; skip an entity if a hit already disabled it. Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural change).
+Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural change). After expire, one list is reused for `OnTick` and move/hit so a pierce/bounce kill mid-move cannot skip later entities.
 
 ## Files
 
@@ -59,9 +62,11 @@ Phase 1b still snapshots live entities three times in `ProjectileSimulationSyste
 | `Runtime/Ecs/ProjectileComponents.cs` | Component structs + delta-time singleton |
 | `Runtime/Ecs/RecipeStore.cs` | RecipeIndex ↔ Recipe |
 | `Runtime/Ecs/LifetimeSystem.cs` | Burst lifetime job |
-| `Runtime/Ecs/ProjectileSimulationSystem.cs` | Stages, hits, pool return, views |
+| `Runtime/Ecs/ProjectileSimulationSystem.cs` | Stages, hits, pool return, views; one live snapshot after expire |
+| `Runtime/Pierce.cs` | `OnHit` Target: consume remaining pierce, cancel despawn |
+| `Runtime/Bounce.cs` | `OnHit` World: consume remaining bounce, reflect velocity, cancel despawn |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views |
-| `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap |
+| `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap; ignore last collider so pierce/bounce can leave the surface |
 | `Runtime/ProjectileView.cs` | Presentation adapter (MonoBehaviour) |
 
 `Dispose()` exists because an Entities `World` allocates native containers. Treat it like disposing a host that owns unmanaged memory: sandbox `OnDestroy`, tests `using` / `finally`.

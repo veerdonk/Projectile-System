@@ -41,30 +41,33 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Despawn(expire[i], runOnHit: false, default);
             expire.Dispose();
 
-            var tickList = new NativeList<Entity>(Allocator.Temp);
+            var live = new NativeList<Entity>(Allocator.Temp);
             foreach (var (_, entity) in SystemAPI.Query<RefRO<Projectile>>().WithEntityAccess())
-                tickList.Add(entity);
+                live.Add(entity);
 
-            for (int i = 0; i < tickList.Length; i++)
+            for (int i = 0; i < live.Length; i++)
             {
-                Entity entity = tickList[i];
+                Entity entity = live[i];
+                if (!em.Exists(entity) || !em.IsEnabled(entity))
+                    continue;
+
                 Projectile projectile = em.GetComponentData<Projectile>(entity);
                 Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
                 RunStage(recipe.OnTick, entity, hasHit: false, default);
             }
 
-            tickList.Dispose();
-
             new IntegrateJob { Dt = dt }.ScheduleParallel();
             Dependency.Complete();
 
-            var moveList = new NativeList<Entity>(Allocator.Temp);
-            foreach (var (_, entity) in SystemAPI.Query<RefRO<Projectile>>().WithEntityAccess())
-                moveList.Add(entity);
+            for (int i = 0; i < live.Length; i++)
+            {
+                Entity entity = live[i];
+                if (!em.Exists(entity) || !em.IsEnabled(entity))
+                    continue;
+                TryMoveOrHit(entity);
+            }
 
-            for (int i = 0; i < moveList.Length; i++)
-                TryMoveOrHit(moveList[i]);
-            moveList.Dispose();
+            live.Dispose();
         }
 
         internal void RunSpawnStages(Entity entity)
@@ -121,13 +124,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 RunStage(recipe.OnHit, entity, hasHit: true, hit);
                 if (Bridge.ModifierContext.CancelDespawn)
                 {
-                    if (Bridge.Pool.TryGetView(entity, out ProjectileView view))
-                    {
-                        ProjectilePosition position = em.GetComponentData<ProjectilePosition>(entity);
-                        ProjectileVelocity velocity = em.GetComponentData<ProjectileVelocity>(entity);
-                        view.SetPose(ToVector3(position.Value), ToVector3(velocity.Value));
-                    }
-
+                    ContinueAfterHit(entity, hit);
                     return;
                 }
             }
@@ -140,8 +137,24 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Bridge.Expired?.Invoke(new ExpireInfo { InstanceId = new ProjectileId(id) });
         }
 
+        void ContinueAfterHit(Entity entity, in HitInfo hit)
+        {
+            EntityManager em = EntityManager;
+            Projectile projectile = em.GetComponentData<Projectile>(entity);
+            ProjectileVelocity velocity = em.GetComponentData<ProjectileVelocity>(entity);
+            Vector3 vel = ToVector3(velocity.Value);
+            Vector3 travel = vel.sqrMagnitude > 1e-12f ? vel.normalized : hit.Normal;
+            Vector3 position = hit.Point + travel * (projectile.Radius + 0.01f);
+            float3 p = new float3(position.x, position.y, position.z);
+            em.SetComponentData(entity, new ProjectilePosition { Value = p });
+            em.SetComponentData(entity, new ProjectileCandidate { Value = p });
+            if (Bridge.Pool.TryGetView(entity, out ProjectileView view))
+                view.SetPose(position, vel);
+        }
+
         void RunStage(IModifier[] modifiers, Entity entity, bool hasHit, in HitInfo hit)
         {
+            Bridge.ModifierContext.CancelDespawn = false;
             if (modifiers == null || modifiers.Length == 0)
                 return;
 
@@ -156,6 +169,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 ToVector3(velocity.Value),
                 projectile.Speed,
                 projectile.RemainingLifetime,
+                projectile.RemainingPierce,
+                projectile.RemainingBounce,
                 projectile.Radius,
                 hasHit,
                 hit);
