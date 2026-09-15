@@ -55,6 +55,16 @@ namespace Sandbox
         Recipe multicastExtraRecipe;
         int selectedRecipe;
         string lastRecipeId;
+        Vector2 hudScroll;
+
+        int multiplyHitCount = 3;
+        int pierceCount = 2;
+        int bounceCount = 1;
+        int multiplyIntervalCount = 2;
+        int multiplyExpireCount = 1;
+        int multicastCount = 3;
+        int homingStrong = 100;
+        int homingWeak = 10;
 
         int requestCount;
         Vector3 lastRequestPosition;
@@ -122,70 +132,23 @@ namespace Sandbox
 
         void OnGUI()
         {
-            const float width = 420f;
-            GUILayout.BeginArea(new Rect(16f, 16f, width, 600f), GUI.skin.box);
+            const float width = 440f;
+            float height = Mathf.Min(760f, Screen.height - 32f);
+            GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
+            hudScroll = GUILayout.BeginScrollView(hudScroll);
             GUILayout.Label("Projectile lab — phase 5 (homing)");
-            GUILayout.Label("Space fires the selected Recipe. 1–9 and 0 select. Dummy loses HP on Target hits.");
+            GUILayout.Label("Space fires the selected Recipe. 1–9 and 0 select. - / + changes n for the next shot.");
 
-            if (GUILayout.Button("Fire straight", GUILayout.Height(28f)))
-            {
-                selectedRecipe = 0;
-                Fire(straightRecipe);
-            }
-
-            if (GUILayout.Button("Fire lifetime (3s)", GUILayout.Height(28f)))
-            {
-                selectedRecipe = 1;
-                Fire(lifetimeRecipe);
-            }
-
-            if (GUILayout.Button("Fire Multiply on hit", GUILayout.Height(28f)))
-            {
-                selectedRecipe = 2;
-                Fire(onHitRecipe);
-            }
-
-            if (GUILayout.Button("Fire Pierce(2)", GUILayout.Height(28f)))
-            {
-                selectedRecipe = 3;
-                Fire(pierceRecipe);
-            }
-
-            if (GUILayout.Button("Fire Bounce(1)", GUILayout.Height(28f)))
-            {
-                selectedRecipe = 4;
-                Fire(bounceRecipe);
-            }
-
-            if (GUILayout.Button("Fire Multiply interval", GUILayout.Height(28f)))
-            {
-                selectedRecipe = 5;
-                Fire(intervalRecipe);
-            }
-
-            if (GUILayout.Button("Fire Multiply on expire", GUILayout.Height(28f)))
-            {
-                selectedRecipe = 6;
-                Fire(expireRecipe);
-            }
-
-            if (GUILayout.Button("Fire Multicast(3)", GUILayout.Height(28f)))
-            {
-                selectedRecipe = 7;
-                Fire(multicastRecipe);
-            }
-
-            if (GUILayout.Button("Fire Homing(100)", GUILayout.Height(28f)))
-            {
-                selectedRecipe = 8;
-                Fire(strongHomingRecipe);
-            }
-
-            if (GUILayout.Button("Fire Homing(10)", GUILayout.Height(28f)))
-            {
-                selectedRecipe = 9;
-                Fire(weakHomingRecipe);
-            }
+            FireButton("Fire straight", 0, straightRecipe);
+            FireButton("Fire lifetime (3s)", 1, lifetimeRecipe);
+            FireButtonWithMagnitude("Multiply on hit", 2, onHitRecipe, ref multiplyHitCount, 0, 8);
+            FireButtonWithMagnitude("Pierce", 3, pierceRecipe, ref pierceCount, 0, 8);
+            FireButtonWithMagnitude("Bounce", 4, bounceRecipe, ref bounceCount, 0, 8);
+            FireButtonWithMagnitude("Multiply interval", 5, intervalRecipe, ref multiplyIntervalCount, 0, 8);
+            FireButtonWithMagnitude("Multiply on expire", 6, expireRecipe, ref multiplyExpireCount, 0, 8);
+            FireButtonWithMagnitude("Multicast", 7, multicastRecipe, ref multicastCount, 1, 8);
+            FireButtonWithMagnitude("Homing A", 8, strongHomingRecipe, ref homingStrong, 0, 300, 10);
+            FireButtonWithMagnitude("Homing B", 9, weakHomingRecipe, ref homingWeak, 0, 300, 10);
 
             GUILayout.Space(6f);
             GUILayout.Label(hasRequest
@@ -200,7 +163,40 @@ namespace Sandbox
                     GUILayout.Label($"{dummy.name} HP: {dummy.Hp}/{dummy.MaxHp}");
             }
 
+            GUILayout.EndScrollView();
             GUILayout.EndArea();
+        }
+
+        void FireButton(string title, int slot, Recipe recipe)
+        {
+            if (!GUILayout.Button(title, GUILayout.Height(28f)))
+                return;
+
+            selectedRecipe = slot;
+            Fire(recipe);
+        }
+
+        void FireButtonWithMagnitude(
+            string name,
+            int slot,
+            Recipe recipe,
+            ref int magnitude,
+            int min,
+            int max,
+            int step = 1)
+        {
+            GUILayout.BeginHorizontal();
+            bool fire = GUILayout.Button($"Fire {name}({magnitude})", GUILayout.Height(28f));
+            if (GUILayout.Button("-", GUILayout.Width(28), GUILayout.Height(28)))
+                magnitude = Mathf.Max(min, magnitude - step);
+            if (GUILayout.Button("+", GUILayout.Width(28), GUILayout.Height(28)))
+                magnitude = Mathf.Min(max, magnitude + step);
+            GUILayout.EndHorizontal();
+            if (!fire)
+                return;
+
+            selectedRecipe = slot;
+            Fire(recipe);
         }
 
         [ContextMenu("Fire")]
@@ -223,6 +219,8 @@ namespace Sandbox
                 Debug.LogWarning("SandboxLab: world or recipe missing; cannot fire.", this);
                 return;
             }
+
+            ApplyMagnitudes();
 
             lastRequestPosition = spawnPoint.Position;
             lastRequestDirection = FireDirection(recipe);
@@ -288,22 +286,15 @@ namespace Sandbox
             straightRecipe = CreateRecipe("straight", speed: 20f, lifetime: 5f);
             lifetimeRecipe = CreateRecipe("lifetime", speed: 4f, lifetime: 3f);
             onHitRecipe = CreateRecipe("onhit-parent", speed: 20f, lifetime: 5f);
-            onHitRecipe.OnHit = new IModifier[] { new Multiply(3, childRecipe) };
             pierceRecipe = CreateRecipe("pierce", speed: 20f, lifetime: 5f);
-            pierceRecipe.OnHit = new IModifier[] { new Pierce(2) };
             bounceRecipe = CreateRecipe("bounce", speed: 20f, lifetime: 5f);
-            bounceRecipe.OnHit = new IModifier[] { new Bounce(1) };
             intervalRecipe = CreateRecipe("interval", speed: 10f, lifetime: 5f);
-            intervalRecipe.OnInterval = new IModifier[] { new Multiply(2, childRecipe, intervalSeconds: 0.5f) };
             expireRecipe = CreateRecipe("expire", speed: 4f, lifetime: 1f);
-            expireRecipe.OnExpire = new IModifier[] { new Multiply(1, childRecipe) };
             multicastExtraRecipe = CreateRecipe("multicast-extra", speed: 18f, lifetime: 5f);
             multicastRecipe = CreateRecipe("multicast", speed: 18f, lifetime: 5f);
-            multicastRecipe.OnSpawn = new IModifier[] { new Multicast(3, multicastExtraRecipe) };
             strongHomingRecipe = CreateRecipe("homing-strong", speed: 20f, lifetime: 5f);
-            strongHomingRecipe.OnTick = new IModifier[] { new Homing(100f) };
             weakHomingRecipe = CreateRecipe("homing-weak", speed: 20f, lifetime: 5f);
-            weakHomingRecipe.OnTick = new IModifier[] { new Homing(10f) };
+            ApplyMagnitudes();
 
             var poolRoot = new GameObject("ProjectilePool");
             poolRoot.transform.SetParent(transform, false);
@@ -320,6 +311,26 @@ namespace Sandbox
             world.Prewarm(weakHomingRecipe, PrewarmCount);
 
             BindDummies();
+        }
+
+        void ApplyMagnitudes()
+        {
+            if (onHitRecipe != null)
+                onHitRecipe.OnHit = new IModifier[] { new Multiply(multiplyHitCount, childRecipe) };
+            if (pierceRecipe != null)
+                pierceRecipe.OnHit = new IModifier[] { new Pierce(pierceCount) };
+            if (bounceRecipe != null)
+                bounceRecipe.OnHit = new IModifier[] { new Bounce(bounceCount) };
+            if (intervalRecipe != null)
+                intervalRecipe.OnInterval = new IModifier[] { new Multiply(multiplyIntervalCount, childRecipe, intervalSeconds: 0.5f) };
+            if (expireRecipe != null)
+                expireRecipe.OnExpire = new IModifier[] { new Multiply(multiplyExpireCount, childRecipe) };
+            if (multicastRecipe != null)
+                multicastRecipe.OnSpawn = new IModifier[] { new Multicast(multicastCount, multicastExtraRecipe) };
+            if (strongHomingRecipe != null)
+                strongHomingRecipe.OnTick = new IModifier[] { new Homing(homingStrong) };
+            if (weakHomingRecipe != null)
+                weakHomingRecipe.OnTick = new IModifier[] { new Homing(homingWeak) };
         }
 
         static Recipe CreateRecipe(string id, float speed, float lifetime, float radius = 0.25f)

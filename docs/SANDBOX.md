@@ -16,7 +16,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
 - Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1)
 - Phase 6: reuse an off-lane dummy as the Pierce(1)+Homing(100) target; add a second World wall only if two Bounce(2)+Multiply(2) hits cannot be shown on the existing wall
-- Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu)
+- Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s)
 - On-screen readout: last spawn request, active instances, pool available count, dummy HP
 
 ## How to prove a phase
