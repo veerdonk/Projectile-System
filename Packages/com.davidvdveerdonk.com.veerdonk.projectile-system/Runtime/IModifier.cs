@@ -50,6 +50,29 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         /// <summary>Queues an instance of an explicit child Recipe. Spawned after the current instance finishes this stage.</summary>
         public void RequestSpawn(Recipe recipe, Vector3 position, Vector3 direction)
         {
+            Enqueue(recipe, position, direction, default, default);
+        }
+
+        /// <summary>Multicast expansions the extras queued from this stage may still run. Set before <c>OnSpawn</c>.</summary>
+        internal int MulticastGenerationsForExtras { get; set; }
+
+        /// <summary>Multiply expansions this instance may still run, itself included. Bound per stage.</summary>
+        internal int MultiplyGenerationsLeft { get; set; }
+
+        internal bool AllowsMultiply => MultiplyGenerationsLeft > 0;
+
+        internal void RequestMulticastExtra(Recipe recipe, Vector3 position, Vector3 direction)
+        {
+            Enqueue(recipe, position, direction, ChainBudget.Inherit(MulticastGenerationsForExtras), default);
+        }
+
+        internal void RequestMultiplyChild(Recipe recipe, Vector3 position, Vector3 direction)
+        {
+            Enqueue(recipe, position, direction, default, ChainBudget.Inherit(MultiplyGenerationsLeft - 1));
+        }
+
+        void Enqueue(Recipe recipe, Vector3 position, Vector3 direction, ChainBudget multicast, ChainBudget multiply)
+        {
             if (recipe == null)
                 throw new ArgumentNullException(nameof(recipe));
 
@@ -58,33 +81,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Recipe = recipe,
                 Position = position,
                 Direction = direction,
-                InheritIgnoreFrom = InstanceId
+                InheritIgnoreFrom = InstanceId,
+                MulticastChain = multicast,
+                MultiplyChain = multiply
             });
         }
 
-        internal Vector3 SpreadAround(Vector3 direction, float maxAngleRadians)
-        {
-            if (direction.sqrMagnitude < 1e-12f)
-                direction = Vector3.forward;
-            else
-                direction.Normalize();
-
-            if (maxAngleRadians <= 0f)
-                return direction;
-
-            Vector3 tangent = Vector3.Cross(direction, Vector3.up);
-            if (tangent.sqrMagnitude < 1e-8f)
-                tangent = Vector3.Cross(direction, Vector3.right);
-            tangent.Normalize();
-
-            float angle = NextFloat(0f, maxAngleRadians);
-            float spin = NextFloat(0f, Mathf.PI * 2f);
-            Quaternion rotation = Quaternion.AngleAxis(spin * Mathf.Rad2Deg, direction)
-                * Quaternion.AngleAxis(angle * Mathf.Rad2Deg, tangent);
-            return rotation * direction;
-        }
-
-        float NextFloat(float minInclusive, float maxExclusive)
+        /// <summary>Draws from the world seed. Same seed and same call order give the same sequence.</summary>
+        public float NextFloat(float minInclusive, float maxExclusive)
         {
             Unity.Mathematics.Random rng = random;
             float value = rng.NextFloat(minInclusive, maxExclusive);
@@ -101,9 +105,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             int remainingPierce,
             int remainingBounce,
             float radius,
+            int multiplyGenerationsLeft,
             bool hasHit,
             in HitInfo hit)
         {
+            MultiplyGenerationsLeft = multiplyGenerationsLeft;
             InstanceId = instanceId;
             Position = position;
             Velocity = velocity;

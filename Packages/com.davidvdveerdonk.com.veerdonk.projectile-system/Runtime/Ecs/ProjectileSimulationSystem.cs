@@ -71,11 +71,12 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             live.Dispose();
         }
 
-        internal void RunSpawnStages(Entity entity)
+        internal void RunSpawnStages(Entity entity, int multicastGenerationsLeft)
         {
             Projectile projectile = EntityManager.GetComponentData<Projectile>(entity);
             Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
-            RunStage(recipe.OnSpawn, entity, hasHit: false, default);
+            Bridge.ModifierContext.MulticastGenerationsForExtras = multicastGenerationsLeft - 1;
+            RunStage(recipe.OnSpawn, entity, hasHit: false, default, skipMulticast: multicastGenerationsLeft <= 0);
             RunStage(recipe.OnTravel, entity, hasHit: false, default);
         }
 
@@ -159,7 +160,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Projectile projectile = em.GetComponentData<Projectile>(entity);
             Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
             IModifier[] modifiers = recipe.OnInterval;
-            if (modifiers == null || modifiers.Length == 0)
+            if (modifiers == null || modifiers.Length == 0 || projectile.MultiplyGenerationsLeft <= 0)
                 return;
 
             float elapsed = projectile.ElapsedSeconds;
@@ -204,7 +205,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             return fires > 0 ? fires : 0;
         }
 
-        void RunStage(IModifier[] modifiers, Entity entity, bool hasHit, in HitInfo hit)
+        void RunStage(IModifier[] modifiers, Entity entity, bool hasHit, in HitInfo hit, bool skipMulticast = false)
         {
             Bridge.ModifierContext.CancelDespawn = false;
             if (modifiers == null || modifiers.Length == 0)
@@ -216,6 +217,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             {
                 IModifier modifier = modifiers[i];
                 if (modifier == null)
+                    continue;
+                if (skipMulticast && modifier is Multicast)
+                    continue;
+                if (modifier is Multiply && !Bridge.ModifierContext.AllowsMultiply)
                     continue;
                 modifier.Apply(Bridge.ModifierContext);
             }
@@ -243,6 +248,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 projectile.RemainingPierce,
                 projectile.RemainingBounce,
                 projectile.Radius,
+                projectile.MultiplyGenerationsLeft,
                 hasHit,
                 hit);
         }

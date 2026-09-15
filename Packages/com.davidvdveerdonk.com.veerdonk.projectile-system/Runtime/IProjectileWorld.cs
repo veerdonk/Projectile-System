@@ -29,6 +29,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public Vector3 Direction;
         public HomingTarget HomingTarget;
         internal ProjectileId InheritIgnoreFrom;
+        internal ChainBudget MulticastChain;
+        internal ChainBudget MultiplyChain;
     }
 
     /// <summary>Opaque handle for a live instance.</summary>

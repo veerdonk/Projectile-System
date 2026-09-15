@@ -13,6 +13,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public float ElapsedSeconds;
         public int RemainingPierce;
         public int RemainingBounce;
+        public int MultiplyGenerationsLeft;
     }
 
     struct ProjectilePosition : IComponentData

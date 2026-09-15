@@ -34,7 +34,7 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 2 | Bounce(1) (key **5**) | Fires toward the side wall `(1,0,1)`, reflects, then dies on DummyBounce |
 | 3 | Multiply on interval (key **6**) | Extra instances every 0.5s, roughly along travel |
 | 3 | Multiply on expire (key **7**) | Child when the parent dies at 1s (before the dummy) |
-| 4 | Multicast(3) | Three instances immediately |
+| 4 | Multicast(3) (key **8**) | Three instances leave the spawn point immediately in a small random cone |
 | 5 | Homing(100) vs Homing(10) | Strong hits, weak misses |
 | 6 | Pierce(1)+Homing(100) | First dummy on the lane is pierced; instance curves into the off-lane homing dummy |
 | 6 | Bounce(2)+Multiply(2) | Two World hits; two extra instances appear at each bounce; parent stays live |

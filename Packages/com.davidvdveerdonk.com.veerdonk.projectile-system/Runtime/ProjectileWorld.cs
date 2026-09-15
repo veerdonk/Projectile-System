@@ -9,6 +9,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// <summary>Default <see cref="IProjectileWorld"/>: ECS instances, kinematic move, PhysX hits, entity recycle.</summary>
     public sealed class ProjectileWorld : IProjectileWorld, IDisposable
     {
+        const int MaxPrewarmChainDepth = 8;
+        const int MaxPrewarmPerRecipe = 512;
+
         readonly IHitQuery hitQuery;
         readonly RecipeStore recipes = new RecipeStore();
         readonly System.Collections.Generic.List<SpawnRequest> pendingSpawns = new System.Collections.Generic.List<SpawnRequest>();
@@ -86,12 +89,25 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             }
         }
 
-        /// <summary>Creates inactive pooled entities (and views when enabled) for <paramref name="recipe"/>.</summary>
+        /// <summary>
+        /// Creates inactive pooled entities (and views when enabled) for <paramref name="recipe"/> and for the Recipes
+        /// its spawn modifiers chain into, following the multicast and multiply generations those Recipes allow.
+        /// Child counts estimate how many are in the air at once; the pool still creates on demand beyond them.
+        /// </summary>
         public void Prewarm(Recipe recipe, int count)
         {
             ThrowIfDisposed();
-            int index = recipes.GetOrAdd(recipe);
-            pool.Prewarm(index, recipe, count);
+            if (recipe == null)
+                throw new ArgumentNullException(nameof(recipe));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
+            PrewarmChain(
+                recipe,
+                count,
+                ChainBudget.Start(recipe.MulticastGenerations),
+                ChainBudget.Start(recipe.MultiplyGenerations),
+                depth: 0);
         }
 
         public ProjectileId Spawn(in SpawnRequest request)
@@ -250,6 +266,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Entity entity = pool.Rent(recipeIndex, recipe, out ProjectileView view);
             int idValue = nextId++;
             ReadHitRemaining(recipe, out int remainingPierce, out int remainingBounce);
+            int multicastLeft = request.MulticastChain.Resolve(recipe.MulticastGenerations);
+            int multiplyLeft = request.MultiplyChain.Resolve(recipe.MultiplyGenerations);
 
             float3 position = new float3(request.Position.x, request.Position.y, request.Position.z);
             float3 velocity = new float3(direction.x, direction.y, direction.z) * recipe.Speed;
@@ -264,7 +282,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 RemainingLifetime = recipe.LifetimeSeconds,
                 ElapsedSeconds = 0f,
                 RemainingPierce = remainingPierce,
-                RemainingBounce = remainingBounce
+                RemainingBounce = remainingBounce,
+                MultiplyGenerationsLeft = multiplyLeft
             });
             em.SetComponentData(entity, new ProjectilePosition { Value = position });
             em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });
@@ -272,7 +291,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
             view?.Bind(request.Position, recipe.Radius);
             hitQuery.CopyIgnore(request.InheritIgnoreFrom, new ProjectileId(idValue));
-            simulation.RunSpawnStages(entity);
+            simulation.RunSpawnStages(entity, multicastLeft);
             return new ProjectileId(idValue);
         }
 
@@ -290,6 +309,85 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         {
             if (disposed)
                 throw new ObjectDisposedException(nameof(ProjectileWorld));
+        }
+
+        void PrewarmChain(Recipe recipe, int count, int multicastLeft, int multiplyLeft, int depth)
+        {
+            if (recipe == null || count <= 0)
+                return;
+            if (count > MaxPrewarmPerRecipe)
+                count = MaxPrewarmPerRecipe;
+
+            int index = recipes.GetOrAdd(recipe);
+            pool.Prewarm(index, recipe, count);
+
+            if (depth >= MaxPrewarmChainDepth)
+                return;
+
+            if (multicastLeft > 0)
+                PrewarmMulticastExtras(recipe, count, multicastLeft, depth);
+
+            if (multiplyLeft > 0)
+            {
+                PrewarmMultiplyChildren(recipe, recipe.OnInterval, count, multiplyLeft, depth, onInterval: true);
+                PrewarmMultiplyChildren(recipe, recipe.OnHit, count, multiplyLeft, depth, onInterval: false);
+                PrewarmMultiplyChildren(recipe, recipe.OnExpire, count, multiplyLeft, depth, onInterval: false);
+            }
+        }
+
+        void PrewarmMulticastExtras(Recipe recipe, int count, int multicastLeft, int depth)
+        {
+            IModifier[] onSpawn = recipe.OnSpawn;
+            if (onSpawn == null)
+                return;
+
+            for (int i = 0; i < onSpawn.Length; i++)
+            {
+                if (onSpawn[i] is not Multicast multicast || multicast.Count <= 1)
+                    continue;
+
+                Recipe extra = multicast.ExtraRecipe;
+                PrewarmChain(
+                    extra,
+                    count * (multicast.Count - 1),
+                    multicastLeft - 1,
+                    ChainBudget.Start(extra.MultiplyGenerations),
+                    depth + 1);
+            }
+        }
+
+        void PrewarmMultiplyChildren(Recipe recipe, IModifier[] modifiers, int count, int multiplyLeft, int depth, bool onInterval)
+        {
+            if (modifiers == null)
+                return;
+
+            for (int i = 0; i < modifiers.Length; i++)
+            {
+                if (modifiers[i] is not Multiply multiply || multiply.Count <= 0)
+                    continue;
+
+                Recipe child = multiply.ChildRecipe;
+                int perParent = onInterval
+                    ? multiply.Count * IntervalSpawnsInFlight(recipe, child, multiply.IntervalSeconds)
+                    : multiply.Count;
+                PrewarmChain(
+                    child,
+                    count * perParent,
+                    ChainBudget.Start(child.MulticastGenerations),
+                    multiplyLeft - 1,
+                    depth + 1);
+            }
+        }
+
+        /// <summary>Interval children one parent has in the air at once: spawns over a child lifetime, capped by the parent's.</summary>
+        static int IntervalSpawnsInFlight(Recipe parent, Recipe child, float intervalSeconds)
+        {
+            if (intervalSeconds <= 0f)
+                return 1;
+
+            float window = Mathf.Min(parent.LifetimeSeconds, child.LifetimeSeconds);
+            int spawns = Mathf.CeilToInt(window / intervalSeconds);
+            return spawns > 1 ? spawns : 1;
         }
 
         static void ReadHitRemaining(Recipe recipe, out int remainingPierce, out int remainingBounce)

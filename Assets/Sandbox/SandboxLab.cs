@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 3 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
+    /// Phase 4 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -47,7 +47,9 @@ namespace Sandbox
         Recipe bounceRecipe;
         Recipe intervalRecipe;
         Recipe expireRecipe;
+        Recipe multicastRecipe;
         Recipe childRecipe;
+        Recipe multicastExtraRecipe;
         int selectedRecipe;
         string lastRecipeId;
 
@@ -92,6 +94,8 @@ namespace Sandbox
                     selectedRecipe = 5;
                 if (keyboard.digit7Key.wasPressedThisFrame)
                     selectedRecipe = 6;
+                if (keyboard.digit8Key.wasPressedThisFrame)
+                    selectedRecipe = 7;
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
@@ -110,8 +114,8 @@ namespace Sandbox
         {
             const float width = 420f;
             GUILayout.BeginArea(new Rect(16f, 16f, width, 520f), GUI.skin.box);
-            GUILayout.Label("Projectile lab — phase 3 (multiply)");
-            GUILayout.Label("Space fires the selected Recipe. 1–7 select. Dummy loses HP on Target hits.");
+            GUILayout.Label("Projectile lab — phase 4 (multicast)");
+            GUILayout.Label("Space fires the selected Recipe. 1–8 select. Dummy loses HP on Target hits.");
 
             if (GUILayout.Button("Fire straight", GUILayout.Height(28f)))
             {
@@ -153,6 +157,12 @@ namespace Sandbox
             {
                 selectedRecipe = 6;
                 Fire(expireRecipe);
+            }
+
+            if (GUILayout.Button("Fire Multicast(3)", GUILayout.Height(28f)))
+            {
+                selectedRecipe = 7;
+                Fire(multicastRecipe);
             }
 
             GUILayout.Space(6f);
@@ -230,6 +240,8 @@ namespace Sandbox
                     return intervalRecipe;
                 case 6:
                     return expireRecipe;
+                case 7:
+                    return multicastRecipe;
                 default:
                     return straightRecipe;
             }
@@ -250,6 +262,9 @@ namespace Sandbox
             intervalRecipe.OnInterval = new IModifier[] { new Multiply(2, childRecipe, intervalSeconds: 0.5f) };
             expireRecipe = CreateRecipe("expire", speed: 4f, lifetime: 1f);
             expireRecipe.OnExpire = new IModifier[] { new Multiply(1, childRecipe) };
+            multicastExtraRecipe = CreateRecipe("multicast-extra", speed: 18f, lifetime: 5f);
+            multicastRecipe = CreateRecipe("multicast", speed: 18f, lifetime: 5f);
+            multicastRecipe.OnSpawn = new IModifier[] { new Multicast(3, multicastExtraRecipe) };
 
             var poolRoot = new GameObject("ProjectilePool");
             poolRoot.transform.SetParent(transform, false);
@@ -257,11 +272,11 @@ namespace Sandbox
             world.Prewarm(straightRecipe, PrewarmCount);
             world.Prewarm(lifetimeRecipe, PrewarmCount);
             world.Prewarm(onHitRecipe, PrewarmCount);
-            world.Prewarm(childRecipe, 32);
             world.Prewarm(pierceRecipe, PrewarmCount);
             world.Prewarm(bounceRecipe, PrewarmCount);
             world.Prewarm(intervalRecipe, PrewarmCount);
             world.Prewarm(expireRecipe, PrewarmCount);
+            world.Prewarm(multicastRecipe, PrewarmCount);
 
             BindDummies();
         }

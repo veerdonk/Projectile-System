@@ -9,7 +9,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// </summary>
     public sealed class Multiply : IModifier
     {
-        const float SpreadRadians = 12f * Mathf.Deg2Rad;
+        const float SpreadDegrees = 12f;
         const float SurfaceSkin = 0.01f;
 
         public Multiply(int count, Recipe childRecipe, float intervalSeconds = 0f)
@@ -51,12 +51,12 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             for (int i = 0; i < n; i++)
             {
                 Vector3 spawnDirection = spread
-                    ? context.SpreadAround(direction, SpreadRadians)
+                    ? RandomConePattern.Sample(context, direction, SpreadDegrees)
                     : direction;
                 Vector3 spawnPosition = context.HasHit
                     ? OffsetOffSurface(position, spawnDirection, ChildRecipe.Radius)
                     : position;
-                context.RequestSpawn(ChildRecipe, spawnPosition, spawnDirection);
+                context.RequestMultiplyChild(ChildRecipe, spawnPosition, spawnDirection);
             }
         }
 
