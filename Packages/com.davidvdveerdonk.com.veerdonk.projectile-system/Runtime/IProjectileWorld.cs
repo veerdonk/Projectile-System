@@ -29,7 +29,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public Vector3 Direction;
         public HomingTarget HomingTarget;
         internal ProjectileId InheritIgnoreFrom;
-        internal bool SuppressMulticast;
+        internal bool FromMulticast;
+
+        /// <summary>Multicast expansions this instance may still run, itself included. Only read when <see cref="FromMulticast"/>.</summary>
+        internal int MulticastGenerationsLeft;
     }
 
     /// <summary>Opaque handle for a live instance.</summary>

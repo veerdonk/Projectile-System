@@ -47,7 +47,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 if (i == 0)
                     context.Velocity = direction * speed;
                 else
-                    context.RequestSpawn(ExtraRecipe, context.Position, direction, suppressMulticast: true);
+                    context.RequestMulticastExtra(ExtraRecipe, context.Position, direction);
             }
         }
 

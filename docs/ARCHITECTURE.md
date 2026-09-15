@@ -67,7 +67,7 @@ Magnitude meaning is per modifier (count vs strength) as in [REQUIREMENTS.md](RE
 
 **Child Recipes:** each spawn modifier carries the Recipe to spawn. Phase 1 `OnHit` spawn takes that Recipe in the modifier. Later modifiers decide their own copy rules; default remains “explicit Recipe, no inherit.”
 
-**Multicast:** `Multicast(n)` on `OnSpawn` requests `n-1` extra instances from an explicit sibling Recipe. Extra instances must **not** run `Multicast` again; the spawn path skips `Multicast` for them, so a sibling Recipe that carries one cannot explode. Directions for all `n` slots, the original included, come from an `IMulticastPattern` ([DECISIONS.md](DECISIONS.md) ADR-006); v1 ships `RandomConePattern`.
+**Multicast:** `Multicast(n)` on `OnSpawn` requests `n-1` extra instances from an explicit sibling Recipe. By default extra instances do **not** run `Multicast` again: the spawn path skips it for them, so a sibling Recipe that carries one cannot explode. `Recipe.MulticastGenerations` buys further generations, counted down per extra so a chain always terminates ([DECISIONS.md](DECISIONS.md) ADR-007). Directions for all `n` slots, the original included, come from an `IMulticastPattern` ([DECISIONS.md](DECISIONS.md) ADR-006); v1 ships `RandomConePattern`.
 
 ## Hit pipeline
 

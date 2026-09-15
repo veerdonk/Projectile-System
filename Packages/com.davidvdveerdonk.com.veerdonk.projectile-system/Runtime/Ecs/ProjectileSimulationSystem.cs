@@ -71,11 +71,12 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             live.Dispose();
         }
 
-        internal void RunSpawnStages(Entity entity, bool skipMulticast)
+        internal void RunSpawnStages(Entity entity, int multicastGenerationsLeft)
         {
             Projectile projectile = EntityManager.GetComponentData<Projectile>(entity);
             Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
-            RunStage(recipe.OnSpawn, entity, hasHit: false, default, skipMulticast);
+            Bridge.ModifierContext.MulticastGenerationsForExtras = multicastGenerationsLeft - 1;
+            RunStage(recipe.OnSpawn, entity, hasHit: false, default, skipMulticast: multicastGenerationsLeft <= 0);
             RunStage(recipe.OnTravel, entity, hasHit: false, default);
         }
 

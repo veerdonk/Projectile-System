@@ -50,10 +50,18 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         /// <summary>Queues an instance of an explicit child Recipe. Spawned after the current instance finishes this stage.</summary>
         public void RequestSpawn(Recipe recipe, Vector3 position, Vector3 direction)
         {
-            RequestSpawn(recipe, position, direction, suppressMulticast: false);
+            Enqueue(recipe, position, direction, fromMulticast: false);
         }
 
-        internal void RequestSpawn(Recipe recipe, Vector3 position, Vector3 direction, bool suppressMulticast)
+        /// <summary>Multicast expansions the extras queued from this stage may still run. Set before <c>OnSpawn</c>.</summary>
+        internal int MulticastGenerationsForExtras { get; set; }
+
+        internal void RequestMulticastExtra(Recipe recipe, Vector3 position, Vector3 direction)
+        {
+            Enqueue(recipe, position, direction, fromMulticast: true);
+        }
+
+        void Enqueue(Recipe recipe, Vector3 position, Vector3 direction, bool fromMulticast)
         {
             if (recipe == null)
                 throw new ArgumentNullException(nameof(recipe));
@@ -64,7 +72,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Position = position,
                 Direction = direction,
                 InheritIgnoreFrom = InstanceId,
-                SuppressMulticast = suppressMulticast
+                FromMulticast = fromMulticast,
+                MulticastGenerationsLeft = fromMulticast ? MulticastGenerationsForExtras : 0
             });
         }
 

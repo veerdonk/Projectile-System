@@ -272,7 +272,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
             view?.Bind(request.Position, recipe.Radius);
             hitQuery.CopyIgnore(request.InheritIgnoreFrom, new ProjectileId(idValue));
-            simulation.RunSpawnStages(entity, request.SuppressMulticast);
+            simulation.RunSpawnStages(entity, MulticastGenerationsLeft(request, recipe));
             return new ProjectileId(idValue);
         }
 
@@ -290,6 +290,15 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         {
             if (disposed)
                 throw new ObjectDisposedException(nameof(ProjectileWorld));
+        }
+
+        /// <summary>A multicast extra spends the budget its parent handed it; anything else starts a fresh chain.</summary>
+        static int MulticastGenerationsLeft(in SpawnRequest request, Recipe recipe)
+        {
+            if (request.FromMulticast)
+                return request.MulticastGenerationsLeft;
+
+            return recipe.MulticastGenerations > 0 ? 1 + recipe.MulticastGenerations : 1;
         }
 
         static void ReadHitRemaining(Recipe recipe, out int remainingPierce, out int remainingBounce)

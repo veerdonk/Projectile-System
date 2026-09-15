@@ -79,6 +79,62 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void Multicast3_OneGeneration_ExpandsOneMoreRoundThenStops()
+        {
+            Recipe extra = SimulationTestHelper.CreateRecipe("gen-extra", speed: 12f, lifetime: 2f);
+            Recipe parent = SimulationTestHelper.CreateRecipe("gen-parent", speed: 20f, lifetime: 5f);
+            extra.OnSpawn = new IModifier[] { new Multicast(3, extra) };
+            parent.OnSpawn = new IModifier[] { new Multicast(3, extra) };
+            parent.MulticastGenerations = 1;
+
+            var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false);
+            using (world)
+            {
+                world.Prewarm(parent, 4);
+                world.Prewarm(extra, 16);
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = parent,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                Assert.AreEqual(7, world.ActiveCount);
+
+                world.Tick(0.1f);
+
+                Assert.AreEqual(7, world.ActiveCount);
+            }
+        }
+
+        [Test]
+        public void Multicast3_GenerationsOnTheExtraRecipe_DoNotExtendTheChain()
+        {
+            Recipe extra = SimulationTestHelper.CreateRecipe("budget-extra", speed: 12f, lifetime: 2f);
+            Recipe parent = SimulationTestHelper.CreateRecipe("budget-parent", speed: 20f, lifetime: 5f);
+            extra.OnSpawn = new IModifier[] { new Multicast(3, extra) };
+            extra.MulticastGenerations = 5;
+            parent.OnSpawn = new IModifier[] { new Multicast(3, extra) };
+
+            var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false);
+            using (world)
+            {
+                world.Prewarm(parent, 4);
+                world.Prewarm(extra, 16);
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = parent,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                Assert.AreEqual(3, world.ActiveCount);
+            }
+        }
+
+        [Test]
         public void Multicast3_SpawnedDirectly_StillMulticasts()
         {
             Recipe extra = SimulationTestHelper.CreateRecipe("direct-extra", speed: 12f, lifetime: 2f);
