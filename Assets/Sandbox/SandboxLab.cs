@@ -1,11 +1,11 @@
+using Davidvdveerdonk.ComVeerdonkProjectileSystem;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 0 lab driver: lane objects, fire control, and pool-count readout.
-    /// Does not simulate projectiles; Fire only makes a spawn request visible.
+    /// Phase 1 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -14,6 +14,7 @@ namespace Sandbox
         public const string MarkerName = "Marker";
         public const string DummyName = "DummyTarget";
         public const string WallName = "WorldWall";
+        const int PrewarmCount = 8;
 
         static readonly Vector3 CameraPosition = new Vector3(-12f, 8f, -5f);
         static readonly Vector3 CameraLookAt = new Vector3(0f, 1.2f, 12f);
@@ -23,15 +24,19 @@ namespace Sandbox
         [SerializeField] Transform worldWall;
         [SerializeField] Transform requestMarker;
 
+        ProjectileWorld world;
+        Recipe straightRecipe;
+        Recipe lifetimeRecipe;
+        Recipe onHitRecipe;
+        Recipe childRecipe;
+        int selectedRecipe;
+        string lastRecipeId;
+
         int requestCount;
         Vector3 lastRequestPosition;
         Vector3 lastRequestDirection;
         bool hasRequest;
         float requestFlashUntil;
-
-        // Placeholders until phase 1 pooling exists.
-        int activeInstances;
-        int poolAvailable;
 
         void Awake()
         {
@@ -39,13 +44,33 @@ namespace Sandbox
             BindChildren();
             ApplyLaneColors();
             AimCameraAtLane();
+            BuildWorld();
+        }
+
+        void OnDestroy()
+        {
+            dummyTarget?.Unbind();
+            world?.Dispose();
+            world = null;
         }
 
         void Update()
         {
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
-                Fire();
+            if (keyboard != null)
+            {
+                if (keyboard.digit1Key.wasPressedThisFrame)
+                    selectedRecipe = 0;
+                if (keyboard.digit2Key.wasPressedThisFrame)
+                    selectedRecipe = 1;
+                if (keyboard.digit3Key.wasPressedThisFrame)
+                    selectedRecipe = 2;
+                if (keyboard.spaceKey.wasPressedThisFrame)
+                    Fire(SelectedRecipe());
+            }
+
+            if (world != null)
+                world.Tick(Time.deltaTime);
 
             if (requestMarker != null)
             {
@@ -57,19 +82,34 @@ namespace Sandbox
         void OnGUI()
         {
             const float width = 420f;
-            GUILayout.BeginArea(new Rect(16f, 16f, width, 220f), GUI.skin.box);
-            GUILayout.Label("Projectile lab — phase 0");
-            GUILayout.Label("Press Space or Fire. A spawn request is recorded; nothing flies yet.");
+            GUILayout.BeginArea(new Rect(16f, 16f, width, 320f), GUI.skin.box);
+            GUILayout.Label("Projectile lab — phase 1b (hybrid ECS)");
+            GUILayout.Label("Space fires the selected Recipe. 1/2/3 select. Dummy loses HP on Target hits.");
 
-            if (GUILayout.Button("Fire", GUILayout.Height(28f)))
-                Fire();
+            if (GUILayout.Button("Fire straight", GUILayout.Height(28f)))
+            {
+                selectedRecipe = 0;
+                Fire(straightRecipe);
+            }
+
+            if (GUILayout.Button("Fire lifetime (3s)", GUILayout.Height(28f)))
+            {
+                selectedRecipe = 1;
+                Fire(lifetimeRecipe);
+            }
+
+            if (GUILayout.Button("Fire OnHit spawn", GUILayout.Height(28f)))
+            {
+                selectedRecipe = 2;
+                Fire(onHitRecipe);
+            }
 
             GUILayout.Space(6f);
             GUILayout.Label(hasRequest
-                ? $"Last spawn request #{requestCount}\n  pos {lastRequestPosition}\n  dir {lastRequestDirection}"
+                ? $"Last spawn request #{requestCount}\n  pos {lastRequestPosition}\n  dir {lastRequestDirection}\n  recipe {lastRecipeId}"
                 : "Last spawn request: (none)");
-            GUILayout.Label($"Active instances: {activeInstances}");
-            GUILayout.Label($"Pool available: {poolAvailable}");
+            GUILayout.Label($"Active instances: {(world != null ? world.ActiveCount : 0)}");
+            GUILayout.Label($"Pool available: {(world != null ? world.AvailableCount : 0)}");
             if (dummyTarget != null)
                 GUILayout.Label($"Dummy HP: {dummyTarget.Hp}/{dummyTarget.MaxHp}");
             GUILayout.EndArea();
@@ -78,6 +118,11 @@ namespace Sandbox
         [ContextMenu("Fire")]
         public void Fire()
         {
+            Fire(SelectedRecipe());
+        }
+
+        void Fire(Recipe recipe)
+        {
             BindChildren();
             if (spawnPoint == null)
             {
@@ -85,18 +130,76 @@ namespace Sandbox
                 return;
             }
 
+            if (world == null || recipe == null)
+            {
+                Debug.LogWarning("SandboxLab: world or recipe missing; cannot fire.", this);
+                return;
+            }
+
             lastRequestPosition = spawnPoint.Position;
             lastRequestDirection = spawnPoint.Direction;
+            lastRecipeId = recipe.Id;
             requestCount++;
             hasRequest = true;
             requestFlashUntil = Time.unscaledTime + 1.5f;
             if (requestMarker != null)
                 requestMarker.gameObject.SetActive(true);
 
+            world.Spawn(new SpawnRequest
+            {
+                Recipe = recipe,
+                Position = lastRequestPosition,
+                Direction = lastRequestDirection
+            });
+
             Debug.DrawRay(lastRequestPosition, lastRequestDirection * 6f, Color.yellow, 3f);
             Debug.Log(
-                $"Sandbox spawn request #{requestCount} pos={lastRequestPosition} dir={lastRequestDirection}",
+                $"Sandbox spawn request #{requestCount} recipe={recipe.Id} pos={lastRequestPosition} dir={lastRequestDirection}",
                 this);
+        }
+
+        Recipe SelectedRecipe()
+        {
+            switch (selectedRecipe)
+            {
+                case 1:
+                    return lifetimeRecipe;
+                case 2:
+                    return onHitRecipe;
+                default:
+                    return straightRecipe;
+            }
+        }
+
+        void BuildWorld()
+        {
+            childRecipe = CreateRecipe("onhit-child", speed: 8f, lifetime: 2f, radius: 0.2f);
+            straightRecipe = CreateRecipe("straight", speed: 20f, lifetime: 5f);
+            lifetimeRecipe = CreateRecipe("lifetime", speed: 4f, lifetime: 3f);
+            onHitRecipe = CreateRecipe("onhit-parent", speed: 20f, lifetime: 5f);
+            onHitRecipe.OnHit = new IModifier[] { new Multiply(1, childRecipe) };
+
+            var poolRoot = new GameObject("ProjectilePool");
+            poolRoot.transform.SetParent(transform, false);
+            world = new ProjectileWorld(poolRoot.transform);
+            world.Prewarm(straightRecipe, PrewarmCount);
+            world.Prewarm(lifetimeRecipe, PrewarmCount);
+            world.Prewarm(onHitRecipe, PrewarmCount);
+            world.Prewarm(childRecipe, PrewarmCount);
+
+            dummyTarget?.Bind(world);
+        }
+
+        static Recipe CreateRecipe(string id, float speed, float lifetime, float radius = 0.25f)
+        {
+            return new Recipe
+            {
+                Id = id,
+                Speed = speed,
+                Radius = radius,
+                LifetimeSeconds = lifetime,
+                PresentationId = "sphere"
+            };
         }
 
         public void BindChildren()

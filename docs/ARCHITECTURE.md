@@ -1,6 +1,8 @@
 # Architecture
 
-Simulation state is **plain C# data**. MonoBehaviours are thin adapters (pool identity, colliders, presentation). Adapters can be replaced with Entities later without rewriting Recipes, modifiers, or hit rules.
+Simulation state is **ECS components** in a package-owned Entities `World`. MonoBehaviours are thin adapters (colliders, presentation). Hits stay PhysX; views stay GameObjects. Recipes and modifiers stay managed classes. Unity Physics and Entities Graphics can replace those adapters later without rewriting Recipes, modifiers, or `IProjectileWorld`.
+
+How to read the ECS pieces: [ECS.md](ECS.md). Decision: [DECISIONS.md](DECISIONS.md) ADR-005.
 
 Do not add a second composition model. Stage lists are the only one ([DECISIONS.md](DECISIONS.md)).
 
@@ -9,11 +11,11 @@ Do not add a second composition model. Stage lists are the only one ([DECISIONS.
 | Layer | Lives in | Responsibility |
 | --- | --- | --- |
 | Definition | ScriptableObjects / serializable data | Recipe: base stats + six ordered modifier lists |
-| Simulation | Plain structs/classes, **no** `UnityEngine.Object` fields | Position, velocity, remaining lifetime, pierce/bounce remaining, interval clocks |
-| Movement | Swappable solver | Kinematic first; optional Rigidbody later |
-| Hits | Query + callback pipeline | SphereCast / overlap; `HitInfo` events, not `OnCollisionEnter` |
-| Presentation | Views bound to instance id | Mesh, trail, VFX; may be disabled in tests |
-| Pooling | Package runtime | Rent / return by Recipe id |
+| Simulation | Internal `IComponentData` in an isolated Entities `World` | Position, velocity, remaining lifetime, pierce/bounce remaining, interval clocks. No `UnityEngine.Object` fields |
+| Movement | Swappable solver | Kinematic first (Burst integrate); optional Rigidbody later |
+| Hits | Query + callback pipeline | PhysX SphereCast / overlap; `HitInfo` events, not `OnCollisionEnter` |
+| Presentation | Views bound to instance id | Mesh, trail, VFX GameObjects; may be disabled in tests |
+| Pooling | Package runtime | Rent / return by Recipe id: enable/disable entities; recycle views |
 
 ## Six stage lists
 
@@ -114,7 +116,7 @@ interface IProjectileWorld
 }
 ```
 
-Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for example from one `Update`). Instances do not have their own `Update`.
+Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for example from one `Update`). Instances do not have their own `Update`. `ProjectileWorld` is `IDisposable` (dispose the Entities `World`).
 
 ## Invariants
 
@@ -122,7 +124,8 @@ Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for exa
 - Spawn never uses `Instantiate` outside the pool
 - Presentation / views must not write simulation state
 - Modifiers in a list run in list order
-- Simulation types have no `MonoBehaviour`, `GameObject`, or other `UnityEngine.Object` fields
+- Simulation components have no `MonoBehaviour`, `GameObject`, or other `UnityEngine.Object` fields
+- The simulation `World` is package-owned, not `DefaultGameObjectInjectionWorld`, and is not ticked from the Player Loop
 - No `FindObjectOfType` (or equivalent global search) in the runtime package
 - Deterministic given the same Recipe, spawn pose, `dt` sequence, and seed (interval spread may use a seed on the world)
 
@@ -130,7 +133,8 @@ Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for exa
 
 ```text
 Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/
-  Runtime/     simulation, recipes, modifiers, pooling, world  (asmdef)
+  Runtime/     façade, recipes, modifiers, pooling, PhysX query  (asmdef)
+  Runtime/Ecs/ internal components, RecipeStore, systems
   Editor/      authoring later
   Tests/Runtime
   Tests/Editor
@@ -150,11 +154,15 @@ New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a
 - Input System and URP stay in the sandbox
 - Runtime package: no `UnityEditor` namespace, no camera / input / UI
 
-## DOTS-ready (what it means now)
+## Hybrid ECS (ADR-005)
 
-- Sim state is blittable-friendly structs/classes without Unity object refs
-- Systems are `Tick` methods over arrays/lists of instances, not component `Update`
-- Do **not** add `com.unity.entities` until the “later” phase
+- Live instances are entities with blittable components; `Tick` updates a package-owned `World`
+- Burst: lifetime and kinematic candidate position only
+- Hits: 3D PhysX via `IHitQuery` (not Unity Physics)
+- Views: GameObject `ProjectileView` (not Entities Graphics)
+- Recipe / `IModifier` stay managed; entity holds `RecipeIndex`
+- Do **not** add Unity Physics, Entities Graphics, baking, or Player Loop bootstrap without an ADR
+- Map for readers new to ECS: [ECS.md](ECS.md)
 
 ## Tests
 

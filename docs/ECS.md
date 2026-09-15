@@ -1,0 +1,67 @@
+# Hybrid ECS map
+
+How this package uses DOTS. Not a Unity ECS tutorial. Read this if you already know MonoBehaviours and ordinary C#. Spec and API: [ARCHITECTURE.md](ARCHITECTURE.md). Decision: [DECISIONS.md](DECISIONS.md) ADR-005.
+
+## Map
+
+| Piece | Familiar analogue | In this package |
+| --- | --- | --- |
+| **DOTS** | A stack of libraries, not one feature | Entities + Burst + Collections + Mathematics. We use a slice. |
+| **`World`** | Unit of work / a private database, **not** the scene | Created and disposed by `ProjectileWorld`. Isolated from Unity’s default ECS world. Not in the Player Loop. |
+| **Entity** | A row id | One live (or pooled) instance. Not a GameObject. |
+| **`IComponentData`** | Columns on that row; structs in contiguous chunks | `Projectile`, `ProjectilePosition`, `ProjectileVelocity`, `ProjectileCandidate` |
+| **`Disabled`** | Soft-deleted / pooled row | Default queries skip it. Rent = enable; return = disable. No `Destroy` on despawn. |
+| **System** | A pipeline stage over a query, not `Update` on each object | `LifetimeSystem` (Burst) then `ProjectileSimulationSystem` (managed) |
+| **Burst** | AOT compiler for jobs over those structs (no GC, no managed refs) | Lifetime decrement + candidate position only |
+| **`float3`** | `Vector3` for jobs (`Unity.Mathematics`) | Internal. Public API stays `Vector3`. |
+| **Recipe / `IModifier`** | Ordinary classes (definition layer) | Cannot live on `IComponentData`. Entity holds `RecipeIndex`; `RecipeStore` looks up the Recipe. |
+
+`IProjectileWorld` is still the façade. Sandbox, tests, and games call `Spawn` / `Tick` and listen to `Hit` / `Expired`. They do not create entities.
+
+## What we did not take
+
+| Left out | Why |
+| --- | --- |
+| Unity Physics | Dummy, wall, and Play Mode hits stay PhysX colliders + `IDamageable`. |
+| Entities Graphics | Visible spheres stay `ProjectileView` GameObjects. Tests can run with views off. |
+| Baking / SubScenes | Recipes are C# objects, not baked authoring prefabs. |
+| Default ECS world / Player Loop | Tests need an isolated `World`. Sandbox already ticks from one `Update`. |
+
+Those can become later adapters without rewriting Recipes, stage lists, or `IProjectileWorld`.
+
+## One tick
+
+```text
+SandboxLab.Update
+  → IProjectileWorld.Tick(dt)
+       → write SimDeltaTime singleton
+       → SimulationSystemGroup.Update
+            1. LifetimeSystem              Burst: remaining lifetime -= dt
+            2. ProjectileSimulationSystem  managed:
+                 expire if lifetime <= 0 (OnExpire, return to pool)
+                 OnTick modifiers
+                 Burst integrate: candidate = pos + vel * dt
+                 IHitQuery.TryCast (ScriptedHitQuery in Edit Mode, PhysicsHitQuery in Play Mode)
+                 on hit: Hit event, OnHit, despawn unless CancelDespawn
+                 else: Position = Candidate, sync ProjectileView
+       → flush RequestSpawn queue (child Recipes)
+```
+
+Spawn (`OnSpawn` / `OnTravel`) runs in `ProjectileWorld` when an entity is rented, not inside the Burst job.
+
+Phase 1b still snapshots live entities three times in `ProjectileSimulationSystem` (expire, then `OnTick`, then move/hit). **Phase 2:** after expire, keep one list of remaining entities and reuse it for `OnTick` and move/hit; skip an entity if a hit already disabled it. Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural change).
+
+## Files
+
+| File | Role |
+| --- | --- |
+| `Runtime/ProjectileWorld.cs` | Façade: owns the ECS `World`, `Tick`, `Spawn`, `Dispose` |
+| `Runtime/Ecs/ProjectileComponents.cs` | Component structs + delta-time singleton |
+| `Runtime/Ecs/RecipeStore.cs` | RecipeIndex ↔ Recipe |
+| `Runtime/Ecs/LifetimeSystem.cs` | Burst lifetime job |
+| `Runtime/Ecs/ProjectileSimulationSystem.cs` | Stages, hits, pool return, views |
+| `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views |
+| `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap |
+| `Runtime/ProjectileView.cs` | Presentation adapter (MonoBehaviour) |
+
+`Dispose()` exists because an Entities `World` allocates native containers. Treat it like disposing a host that owns unmanaged memory: sandbox `OnDestroy`, tests `using` / `finally`.

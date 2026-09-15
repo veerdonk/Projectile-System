@@ -2,6 +2,20 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-005 — Hybrid ECS for live instances
+
+- **Date:** 2026-09-14
+- **Decision:** Live instance state lives in an isolated Entities `World` owned by `ProjectileWorld`. Components are blittable (`IComponentData`). Inactive instances use the built-in `Disabled` tag (entity recycle). Burst jobs run lifetime and kinematic integrate only. Hits stay 3D PhysX via `IHitQuery`. Presentation stays GameObject `ProjectileView`. Recipe and `IModifier` stay managed classes; the entity stores a `RecipeIndex`, not a Recipe reference. `IProjectileWorld` remains the only public façade. ECS types are internal. `ProjectileWorld` is `IDisposable` because the Entities `World` holds native allocations.
+- **Why:** Instance identity, tick ownership, and pooling do not convert from `List<LiveProjectile>` later without a rewrite. Recipes, hit rules, and dummy HP do. Hybrid matches v1 counts (tens to hundreds of live instances). Unity Physics and Entities Graphics are later adapters, not phase 1b work.
+- **Consequences:** Package depends on `com.unity.entities` (Burst, Collections, Mathematics come with it). Do not add Unity Physics, Entities Graphics, baking, SubScenes, `ICustomBootstrap`, or `DefaultGameObjectInjectionWorld`. Do not put the simulation `World` in the Player Loop; sandbox and tests call `Tick`. `Runtime/Ecs/` holds internal components and systems. Teaching map: [ECS.md](ECS.md).
+
+## ADR-004 — IDamageable is a Target marker, not HP
+
+- **Date:** 2026-09-14
+- **Decision:** The runtime package defines `IDamageable` with an opaque `TargetId` only. A PhysX hit whose collider has `IDamageable` is `HitKind.Target`; all other colliders are `HitKind.World`. The world does not call damage methods or change HP. Sandbox (or the game) implements `IDamageable` and applies HP from `IProjectileWorld.Hit`.
+- **Why:** Games need a package-level way to mark Target colliders without layer-mask setup. HP still does not belong in the package.
+- **Consequences:** `PhysicsHitQuery` uses `GetComponentInParent<IDamageable>()`. The v1 non-goal is HP application, not the marker interface.
+
 ## ADR-003 — Lifetime is recipe data, not a Timer modifier
 
 - **Date:** 2026-09-14

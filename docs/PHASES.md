@@ -42,7 +42,7 @@ Fly, lifetime expire, `Target` hit, pool, `OnHit` spawn with an **explicit child
 - Edit Mode tests: move, expire, hit despawn, pool counts, child spawn pose
 - Play Mode: fire, hit cube, pool count unchanged; fire OnHit-spawn Recipe; fire lifetime-only Recipe
 
-**Out of scope:** pierce, bounce, multiply interval, multicast, homing, editor windows, DOTS, VFX beyond a primitive mesh
+**Out of scope:** pierce, bounce, multiply interval, multicast, homing, editor windows, Unity Physics, Entities Graphics, VFX beyond a primitive mesh
 
 **Golden path**
 
@@ -51,7 +51,28 @@ Fly, lifetime expire, `Target` hit, pool, `OnHit` spawn with an **explicit child
 3. It returns to the pool
 4. An `OnHit` spawn modifier fires a second instance from the explicit child Recipe
 
-**Stop.** Human refines names and feel before phase 2.
+**Stop.** Human refines names and feel before phase 1b.
+
+## Phase 1b — Hybrid ECS
+
+Keep phase 1 behaviour. Move live instances onto Entities.
+
+**In scope**
+
+- ADR-005 and [ECS.md](ECS.md)
+- Isolated Entities `World` owned by `ProjectileWorld` (`IDisposable`)
+- Blittable instance components; entity recycle via `Disabled`
+- Burst lifetime + kinematic candidate position
+- PhysX `IHitQuery` and GameObject views unchanged
+- Recipe / `IModifier` stay managed (`RecipeIndex` on the entity)
+- Existing Edit Mode and Play Mode tests; dispose worlds
+- Sandbox still fires the three Recipes
+
+**Out of scope:** pierce, bounce, multiply interval, multicast, homing, Unity Physics, Entities Graphics, baking, Player Loop bootstrap
+
+**Proof:** same as phase 1. Plus: Edit Mode tests pass against the ECS world; sandbox `OnDestroy` disposes.
+
+**Stop.** Walk through the ECS pieces for the human ([ECS.md](ECS.md)). Do not start phase 2.
 
 ## Phase 2 — Pierce and bounce
 
@@ -62,6 +83,7 @@ Fly, lifetime expire, `Target` hit, pool, `OnHit` spawn with an **explicit child
 - Remaining counts on the instance; despawn when the relevant count cannot absorb the hit
 - Scenarios: Pierce(2), Bounce(1) then target
 - Tests for remaining counts and reflection
+- Snapshot live entities **once** after expire in `ProjectileSimulationSystem` and reuse that list for `OnTick` and move/hit (skip if a hit already disabled the entity). Do not query-copy-dispose three times; pierce/bounce will despawn mid-move. See [ECS.md](ECS.md) “One tick”
 
 **Out of scope:** multiply, multicast, homing, interval
 
@@ -101,13 +123,13 @@ Fly, lifetime expire, `Target` hit, pool, `OnHit` spawn with an **explicit child
 - Strong `Homing(100)` hits; weak `Homing(10)` misses in the sandbox layout
 - Document what `n` means (degrees per second or equivalent) in code comments once chosen
 
-**Out of scope:** editor tooling, DOTS, extra modifiers
+**Out of scope:** editor tooling, Unity Physics, Entities Graphics, extra modifiers
 
 **Stop.**
 
 ## Later (not scheduled)
 
-- ECS / DOTS adapters
+- Unity Physics and/or Entities Graphics adapters
 - Editor Recipe authoring
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Package samples vs sandbox split cleanup
