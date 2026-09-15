@@ -123,7 +123,8 @@ Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for exa
 - After return to the pool, an instance must not tick, hit, or raise events
 - Spawn never uses `Instantiate` outside the pool
 - Presentation / views must not write simulation state
-- Modifiers in a list run in list order
+- Modifiers in a list run in list order. `CancelDespawn` does not skip the rest of that list (so `Bounce` and `Multiply` on the same `OnHit` list both run)
+- An instance that cancelled despawn stays live and still runs `OnTick` on later ticks (so `Pierce` then `Homing` compose without a retarget API)
 - Simulation components have no `MonoBehaviour`, `GameObject`, or other `UnityEngine.Object` fields
 - The simulation `World` is package-owned, not `DefaultGameObjectInjectionWorld`, and is not ticked from the Player Loop
 - No `FindObjectOfType` (or equivalent global search) in the runtime package

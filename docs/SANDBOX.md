@@ -15,6 +15,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - Spawn point with a visible gizmo
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
 - Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1)
+- Phase 6: reuse an off-lane dummy as the Pierce(1)+Homing(100) target; add a second World wall only if two Bounce(2)+Multiply(2) hits cannot be shown on the existing wall
 - Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu)
 - On-screen readout: last spawn request, active instances, pool available count, dummy HP
 
@@ -35,6 +36,8 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 3 | Multiply on expire (key **7**) | Child when the parent dies at 1s (before the dummy) |
 | 4 | Multicast(3) | Three instances immediately |
 | 5 | Homing(100) vs Homing(10) | Strong hits, weak misses |
+| 6 | Pierce(1)+Homing(100) | First dummy on the lane is pierced; instance curves into the off-lane homing dummy |
+| 6 | Bounce(2)+Multiply(2) | Two World hits; two extra instances appear at each bounce; parent stays live |
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.
 

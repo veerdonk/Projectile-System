@@ -135,6 +135,18 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** the instance travels
 - **Then:** it turns toward the target but misses at sandbox distances
 
+### Phase 6 — Pierce(1) then home to a second dummy
+
+- **Given:** `Pierce(1)` on `OnHit` and `Homing(100)` on `OnTick`; a first dummy on the initial trajectory; `SpawnRequest.HomingTarget` is a second dummy that is not on the remaining straight-line path
+- **When:** the instance records a `Target` hit on the first dummy
+- **Then:** Pierce cancels despawn; later ticks still run Homing toward that same homing target; the instance hits the second dummy
+
+### Phase 6 — Bounce(2) and Multiply(2) on each wall
+
+- **Given:** `Bounce(2)` and `Multiply(2)` on `OnHit` with an explicit child Recipe
+- **When:** the instance records two `World` hits
+- **Then:** each hit reflects the parent and does not despawn it; each of those hits also spawns two child instances from the child Recipe (four children total after two walls)
+
 ## Product constraints
 
 - Sandbox uses URP
