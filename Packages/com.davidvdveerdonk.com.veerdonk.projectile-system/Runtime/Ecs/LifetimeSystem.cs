@@ -29,6 +29,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         void Execute(ref Projectile projectile)
         {
             projectile.RemainingLifetime -= Dt;
+            projectile.ElapsedSeconds += Dt;
         }
     }
 }

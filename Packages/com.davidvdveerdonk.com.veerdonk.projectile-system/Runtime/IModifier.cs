@@ -17,10 +17,12 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     public sealed class ModifierContext
     {
         readonly List<SpawnRequest> pendingSpawns;
+        Unity.Mathematics.Random random;
 
-        internal ModifierContext(List<SpawnRequest> pendingSpawns)
+        internal ModifierContext(List<SpawnRequest> pendingSpawns, uint seed = 1u)
         {
             this.pendingSpawns = pendingSpawns ?? throw new ArgumentNullException(nameof(pendingSpawns));
+            random = Unity.Mathematics.Random.CreateFromIndex(seed);
         }
 
         public ProjectileId InstanceId { get; internal set; }
@@ -55,8 +57,39 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             {
                 Recipe = recipe,
                 Position = position,
-                Direction = direction
+                Direction = direction,
+                InheritIgnoreFrom = InstanceId
             });
+        }
+
+        internal Vector3 SpreadAround(Vector3 direction, float maxAngleRadians)
+        {
+            if (direction.sqrMagnitude < 1e-12f)
+                direction = Vector3.forward;
+            else
+                direction.Normalize();
+
+            if (maxAngleRadians <= 0f)
+                return direction;
+
+            Vector3 tangent = Vector3.Cross(direction, Vector3.up);
+            if (tangent.sqrMagnitude < 1e-8f)
+                tangent = Vector3.Cross(direction, Vector3.right);
+            tangent.Normalize();
+
+            float angle = NextFloat(0f, maxAngleRadians);
+            float spin = NextFloat(0f, Mathf.PI * 2f);
+            Quaternion rotation = Quaternion.AngleAxis(spin * Mathf.Rad2Deg, direction)
+                * Quaternion.AngleAxis(angle * Mathf.Rad2Deg, tangent);
+            return rotation * direction;
+        }
+
+        float NextFloat(float minInclusive, float maxExclusive)
+        {
+            Unity.Mathematics.Random rng = random;
+            float value = rng.NextFloat(minInclusive, maxExclusive);
+            random = rng;
+            return value;
         }
 
         internal void Bind(

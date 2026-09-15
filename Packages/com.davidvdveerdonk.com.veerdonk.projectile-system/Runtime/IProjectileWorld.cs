@@ -28,6 +28,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public Vector3 Position;
         public Vector3 Direction;
         public HomingTarget HomingTarget;
+        internal ProjectileId InheritIgnoreFrom;
     }
 
     /// <summary>Opaque handle for a live instance.</summary>

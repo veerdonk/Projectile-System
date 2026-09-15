@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
@@ -10,7 +11,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             float speed = 10f,
             float lifetime = 10f,
             float radius = 0.25f,
-            IModifier[] onHit = null)
+            IModifier[] onHit = null,
+            IModifier[] onInterval = null,
+            IModifier[] onExpire = null)
         {
             return new Recipe
             {
@@ -19,8 +22,30 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 Radius = radius,
                 LifetimeSeconds = lifetime,
                 PresentationId = "sphere",
-                OnHit = onHit ?? Array.Empty<IModifier>()
+                OnHit = onHit ?? Array.Empty<IModifier>(),
+                OnInterval = onInterval ?? Array.Empty<IModifier>(),
+                OnExpire = onExpire ?? Array.Empty<IModifier>()
             };
+        }
+
+        public static List<(ProjectileId id, Vector3 position, Vector3 velocity, Recipe recipe)> CollectActive(
+            ProjectileWorld world)
+        {
+            var results = new List<(ProjectileId id, Vector3 position, Vector3 velocity, Recipe recipe)>();
+            for (int i = 0; ; i++)
+            {
+                if (!world.TryGetActiveAt(i, out ProjectileId id, out Vector3 position, out Vector3 velocity, out Recipe recipe))
+                    break;
+                results.Add((id, position, velocity, recipe));
+            }
+
+            return results;
+        }
+
+        public static Vector3 OffSurface(Vector3 point, Vector3 direction, float radius)
+        {
+            Vector3 along = direction.sqrMagnitude > 1e-12f ? direction.normalized : Vector3.up;
+            return point + along * (radius + 0.01f);
         }
 
         public static (ProjectileWorld world, ScriptedHitQuery hits) CreateWorld(Recipe recipe, int prewarm = 4)
