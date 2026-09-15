@@ -272,7 +272,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
             view?.Bind(request.Position, recipe.Radius);
             hitQuery.CopyIgnore(request.InheritIgnoreFrom, new ProjectileId(idValue));
-            simulation.RunSpawnStages(entity);
+            simulation.RunSpawnStages(entity, request.SuppressMulticast);
             return new ProjectileId(idValue);
         }
 

@@ -53,7 +53,7 @@ SandboxLab.Update
        → flush RequestSpawn queue (child Recipes)
 ```
 
-Spawn (`OnSpawn` / `OnTravel`) runs in `ProjectileWorld` when an entity is rented, not inside the Burst job. Remaining pierce/bounce are copied from `OnHit` `Pierce` / `Bounce` modifiers onto the `Projectile` row at rent. `ElapsedSeconds` starts at 0 and is incremented in the Burst lifetime job; `OnInterval` uses that clock, not a second remaining-lifetime field.
+Spawn (`OnSpawn` / `OnTravel`) runs in `ProjectileWorld` when an entity is rented, not inside the Burst job. `Multicast` runs there too: it re-aims the rented entity through the modifier context and queues its extras, which `Spawn` flushes before it returns, so all `n` instances exist before the next `Tick`. Those queued requests carry `SuppressMulticast`, so the extra's `OnSpawn` list runs with `Multicast` skipped. Remaining pierce/bounce are copied from `OnHit` `Pierce` / `Bounce` modifiers onto the `Projectile` row at rent. `ElapsedSeconds` starts at 0 and is incremented in the Burst lifetime job; `OnInterval` uses that clock, not a second remaining-lifetime field.
 
 Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural change). After expire, one list is reused for `OnTick`, `OnInterval`, and move/hit so a pierce/bounce kill mid-move cannot skip later entities.
 
@@ -69,6 +69,8 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Pierce.cs` | `OnHit` Target: consume remaining pierce, cancel despawn |
 | `Runtime/Bounce.cs` | `OnHit` World: consume remaining bounce, reflect velocity, cancel despawn |
 | `Runtime/Multiply.cs` | Explicit child Recipe; OnHit / OnExpire / OnInterval. Count > 1 uses a seeded cone around hit normal or travel |
+| `Runtime/Multicast.cs` | `OnSpawn`: total instances is `n`; extras use an explicit sibling Recipe and cannot multicast again |
+| `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (seeded cone) is the v1 default |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views |
 | `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap; ignore last collider so pierce/bounce can leave the surface |
 | `Runtime/ProjectileView.cs` | Presentation adapter (MonoBehaviour) |

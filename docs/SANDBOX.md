@@ -33,7 +33,7 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 2 | Bounce(1) (key **5**) | Fires toward the side wall `(1,0,1)`, reflects, then dies on DummyBounce |
 | 3 | Multiply on interval (key **6**) | Extra instances every 0.5s, roughly along travel |
 | 3 | Multiply on expire (key **7**) | Child when the parent dies at 1s (before the dummy) |
-| 4 | Multicast(3) | Three instances immediately |
+| 4 | Multicast(3) (key **8**) | Three instances leave the spawn point immediately in a small random cone |
 | 5 | Homing(100) vs Homing(10) | Strong hits, weak misses |
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.

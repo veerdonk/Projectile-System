@@ -50,6 +50,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         /// <summary>Queues an instance of an explicit child Recipe. Spawned after the current instance finishes this stage.</summary>
         public void RequestSpawn(Recipe recipe, Vector3 position, Vector3 direction)
         {
+            RequestSpawn(recipe, position, direction, suppressMulticast: false);
+        }
+
+        internal void RequestSpawn(Recipe recipe, Vector3 position, Vector3 direction, bool suppressMulticast)
+        {
             if (recipe == null)
                 throw new ArgumentNullException(nameof(recipe));
 
@@ -58,18 +63,20 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Recipe = recipe,
                 Position = position,
                 Direction = direction,
-                InheritIgnoreFrom = InstanceId
+                InheritIgnoreFrom = InstanceId,
+                SuppressMulticast = suppressMulticast
             });
         }
 
-        internal Vector3 SpreadAround(Vector3 direction, float maxAngleRadians)
+        /// <summary>Direction inside a cone around <paramref name="direction"/>, drawn from the world seed.</summary>
+        public Vector3 RandomInCone(Vector3 direction, float maxAngleDegrees)
         {
             if (direction.sqrMagnitude < 1e-12f)
                 direction = Vector3.forward;
             else
                 direction.Normalize();
 
-            if (maxAngleRadians <= 0f)
+            if (maxAngleDegrees <= 0f)
                 return direction;
 
             Vector3 tangent = Vector3.Cross(direction, Vector3.up);
@@ -77,10 +84,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 tangent = Vector3.Cross(direction, Vector3.right);
             tangent.Normalize();
 
-            float angle = NextFloat(0f, maxAngleRadians);
-            float spin = NextFloat(0f, Mathf.PI * 2f);
-            Quaternion rotation = Quaternion.AngleAxis(spin * Mathf.Rad2Deg, direction)
-                * Quaternion.AngleAxis(angle * Mathf.Rad2Deg, tangent);
+            float angle = NextFloat(0f, maxAngleDegrees);
+            float spin = NextFloat(0f, 360f);
+            Quaternion rotation = Quaternion.AngleAxis(spin, direction) * Quaternion.AngleAxis(angle, tangent);
             return rotation * direction;
         }
 
