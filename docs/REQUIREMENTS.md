@@ -30,7 +30,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
   - **Strength** for homing (how hard it turns)
-  - **Scale** for speed (multiplier: `Speed(2)` doubles current speed, `Speed(0.5)` halves it)
+  - **Scale** for speed, damage, critical chance, mana cost, spread, effect radius, and size (multiplier: `Speed(2)` doubles, `Speed(0.5)` halves; same for `Damage`, `Critical`, `Mana`, `Spread`, `EffectRadius`, `Size`)
 
 ### Named modifiers (v1)
 
@@ -40,6 +40,12 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
 - **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`)
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
+- **Damage(n)** — scale instance damage by `n`. Same stages as `Speed(n)`. Package still does not apply HP
+- **Critical(n)** — scale instance critical chance by `n`, then clamp to `[0, 1]`. Same stages as `Speed(n)`. Package still does not roll a crit
+- **Mana(n)** — scale the instance mana-cost copy by `n`. Same stages as `Speed(n)`. Does not change `Recipe.ManaCost` or spend mana
+- **Spread(n)** — scale `SpreadDegrees` by `n`. Same stages as `Speed(n)`. Jitter still applies only to the original shot
+- **EffectRadius(n)** — scale instance effect radius by `n`. Same stages as `Speed(n)`. Package still does not run AoE queries
+- **Size(n)** — scale `Radius` by `n`. Same stages as `Speed(n)`. There is no separate size field
 - **ApplyStatus** — `OnHit` + `Target`: request an `IStatusEffect` on the hit Target. The package does not simulate the effect (see [DECISIONS.md](DECISIONS.md) ADR-011)
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
 
@@ -211,6 +217,42 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** a Recipe with `ManaCost = 12`
 - **When:** the Recipe is spawned and ticked
 - **Then:** `Recipe.ManaCost` is still 12; the package does not change or spend it
+
+### Phase 10 — Damage(2) at spawn
+
+- **Given:** a Recipe with `Damage = 5` and `Damage(2)` on `OnTravel`
+- **When:** the instance records a `Target` hit
+- **Then:** `HitInfo.Damage` is 10 and the sandbox dummy loses 10 HP
+
+### Phase 10 — OnHit Damage(2) after pierce
+
+- **Given:** `Pierce(1)` then `Damage(2)` on `OnHit`; Recipe `Damage = 5`
+- **When:** the instance records two `Target` hits
+- **Then:** the first `Hit.Damage` is 5 (OnHit has not run yet); the second `Hit.Damage` is 10
+
+### Phase 10 — Mana(0.5) does not rewrite the Recipe
+
+- **Given:** a Recipe with `ManaCost = 12` and `Mana(0.5)` on `OnTravel`
+- **When:** the instance is spawned
+- **Then:** instance mana cost is 6; `Recipe.ManaCost` is still 12
+
+### Phase 11 — Size(2) at spawn
+
+- **Given:** a Recipe with `Radius = 0.25` and `Size(2)` on `OnTravel`
+- **When:** the instance is spawned
+- **Then:** instance radius is 0.5
+
+### Phase 11 — Spread(2) widens the original cone
+
+- **Given:** a Recipe with `SpreadDegrees = 10` and `Spread(2)` on `OnTravel`
+- **When:** the instance is spawned
+- **Then:** jitter uses 20 degrees; multicast extras still use the multicast pattern
+
+### Phase 11 — EffectRadius(2) at spawn
+
+- **Given:** a Recipe with `EffectRadius = 1` and `EffectRadius(2)` on `OnTravel`
+- **When:** the instance records a hit
+- **Then:** `HitInfo.EffectRadius` is 2
 
 ## Product constraints
 

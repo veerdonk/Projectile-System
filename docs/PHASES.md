@@ -185,7 +185,7 @@ Apply a status effect on `HitKind.Target`. Do not simulate burn, poison, or shoc
 
 ## Phase 9 — Combat and cast stats
 
-Store game numbers on the Recipe (and on the instance when they can change in flight). Do **not** add a modifier per field. Later `Damage(n)` / `Size(n)` modifiers will mutate these fields the way `Speed(n)` mutates `Speed`. ADR-012.
+Store game numbers on the Recipe (and on the instance when they can change in flight). Do **not** add a modifier per field. Phases 10–11 add `Damage(n)` / `Size(n)` and the other scale modifiers. ADR-012.
 
 **In scope**
 
@@ -198,9 +198,47 @@ Store game numbers on the Recipe (and on the instance when they can change in fl
 - Edit Mode tests: `Hit.Damage` matches Recipe; zero spread is deterministic; nonzero spread changes direction; `ManaCost` readable on Recipe, unchanged by `Tick`
 - Sandbox HUD shows selected Recipe damage, crit, mana, spread, radius, effect radius. Dummy HP subtracts `Hit.Damage`
 
-**Out of scope:** `Damage(n)` / `Crit(n)` / `Size(n)` modifiers; rolling crit; AoE overlap queries; spending mana; editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** rolling crit; AoE overlap queries; spending mana; `Damage(n)` / `Size(n)` modifiers (phases 10–11); editor tooling; Unity Physics; Entities Graphics
 
 **Proof:** fire a Recipe with Damage 5 — dummy loses 5 HP. HUD shows mana/spread/radius. A spread Recipe leaves the muzzle off the exact spawn direction.
+
+**Stop.**
+
+## Phase 10 — Damage, critical, and mana modifiers
+
+`Damage(n)`, `Critical(n)`, and `Mana(n)` scale the instance stats from phase 9 the way `Speed(n)` scales speed (`n > 1` up, `0 < n < 1` down, `n <= 0` no-op). ADR-013. Do not apply HP, roll crit, or spend mana.
+
+**In scope**
+
+- `Damage(n)` / `Critical(n)` / `Mana(n)` on `OnTravel` (start), `OnInterval` (progressive), and `OnHit` (after bounce/pierce). Not `OnSpawn`
+- Copy `ManaCost` onto the instance at spawn so `Mana(n)` mutates that copy, not the shared Recipe. `Recipe.ManaCost` stays the authored fire-time cost
+- Clamp critical chance to `[0, 1]` after a scale
+- `OnTravel` scales run before the first move, so the first `Hit` sees them. `OnHit` scales run after the current `Hit` event; later pierce/bounce hits see the new values
+- Edit Mode tests: OnTravel `Damage(2)` doubles `Hit.Damage`; OnHit `Damage(2)` plus Pierce(1) leaves the first hit unscaled and doubles the second; `Mana(0.5)` halves instance mana cost and leaves `Recipe.ManaCost` unchanged; `Critical(2)` clamps at 1
+- Sandbox Recipes: Damage(2) on travel (dummy loses more HP); Mana(2) HUD shows instance cost after fire without changing the Recipe readout
+
+**Out of scope:** spread / size / effect-radius modifiers (phase 11); rolling crit; spending mana; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire Damage(2) on travel — dummy loses twice the Recipe damage. Fire Pierce + OnHit Damage(2) — first dummy takes base damage, second takes double.
+
+**Stop.**
+
+## Phase 11 — Spread, effect radius, and size modifiers
+
+`Spread(n)`, `EffectRadius(n)`, and `Size(n)` scale the remaining phase 9 stats. `Size(n)` scales `Radius` — still no second size field.
+
+**In scope**
+
+- `Spread(n)` / `EffectRadius(n)` / `Size(n)` on `OnTravel`, `OnInterval`, and `OnHit`. Same scale contract as `Speed(n)` / phase 10. Not `OnSpawn`
+- Apply original-shot spread jitter **after** `OnTravel` so `Spread(n)` on travel is included. Multicast extras still use ADR-006 patterns; do not double-apply
+- `Size(n)` must be able to write `Radius` on `ModifierContext` (phase 9 may have left it read-only). SphereCast and the view scale with the new radius
+- `OnHit` `EffectRadius(n)` / `Size(n)` follow the same Hit-then-OnHit timing as phase 10
+- Edit Mode tests: OnTravel `Size(2)` doubles radius; OnTravel `Spread(2)` widens jitter vs the Recipe cone; OnTravel `EffectRadius(2)` doubles `HitInfo.EffectRadius`; `n <= 0` is a no-op
+- Sandbox Recipes: Size(2) looks and hits larger; Spread(2) leaves the muzzle farther off-axis than the phase 9 spread Recipe
+
+**Out of scope:** AoE overlap queries; `Damage(n)` (phase 10); editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire Size(2) — sphere is larger and contacts sooner. Fire Spread(2) — more off-axis than the unscaled spread Recipe.
 
 **Stop.**
 

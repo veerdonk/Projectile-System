@@ -24,17 +24,17 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 | Stage | When it runs | Typical modifiers |
 | --- | --- | --- |
 | `OnSpawn` | Once when the instance is created | `Multicast(n)` |
-| `OnTravel` | Once after spawn, before the first move | `Speed(n)` (start faster/slower), size, direction |
+| `OnTravel` | Once after spawn, before the first move | `Speed(n)`, `Damage(n)`, `Critical(n)`, `Mana(n)`, `Spread(n)`, `EffectRadius(n)`, `Size(n)` |
 | `OnTick` | Every `ProjectileWorld.Tick` | `Homing(n)` |
-| `OnInterval` | When that modifier’s elapsed interval elapses during flight | `Multiply(n)` every 0.5s, `Speed(n)` every 0.5s |
-| `OnHit` | On each hit from the pipeline | Damage event, `Pierce`, `Bounce`, `Multiply` spawn, `Speed(n)`, `ApplyStatus` |
+| `OnInterval` | When that modifier’s elapsed interval elapses during flight | `Multiply(n)` every 0.5s; scale modifiers every 0.5s |
+| `OnHit` | On each hit from the pipeline | `Pierce`, `Bounce`, `Multiply` spawn, scale modifiers, `ApplyStatus` |
 | `OnExpire` | When the instance is ending | `Multiply` on death |
 
 **Hit then expire:** a hit that despawns the instance runs `OnHit` first, then `OnExpire`.
 
 **Pierce / bounce** are `OnHit` modifiers. They may **cancel despawn** (see Hit pipeline). Pierce inspects `HitInfo.Kind` (`Target` only). Bounce reflects any hit.
 
-`OnTravel` is one-shot setup. Continuous steering is `OnTick`. Periodic spawn or speed change is `OnInterval`, not `OnTravel`. `Speed(n)` on `OnTravel` is the spawn-time start scale; do not put it on `OnSpawn`.
+`OnTravel` is one-shot setup. Continuous steering is `OnTick`. Periodic spawn or stat scale is `OnInterval`, not `OnTravel`. `Speed(n)` (and the other scale modifiers) on `OnTravel` is the spawn-time start scale; do not put them on `OnSpawn`.
 
 ## Recipe
 

@@ -2,12 +2,19 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-013 — Stat modifiers are scales, like Speed
+
+- **Date:** 2026-09-16
+- **Decision:** `Damage(n)`, `Critical(n)`, `Mana(n)`, `Spread(n)`, `EffectRadius(n)`, and `Size(n)` use the same scale contract as `Speed(n)`: `n > 1` increases, `0 < n < 1` decreases, `n <= 0` is a no-op. They run on `OnTravel`, `OnInterval`, and `OnHit`, not `OnSpawn`. `Size(n)` scales `Radius`. `Critical(n)` clamps the result to `[0, 1]`. `ManaCost` is copied onto the instance at spawn so `Mana(n)` mutates that copy; `Recipe.ManaCost` stays the authored fire-time cost and the package still does not spend mana. Spread jitter for the original shot runs **after** `OnTravel` so a travel `Spread(n)` is included; multicast extras still use `IMulticastPattern` (ADR-006). `OnHit` scales do not rewrite the `Hit` event that already fired; later pierce/bounce hits see the new instance values.
+- **Why:** Phase 9 stored the numbers. Phase 10–11 need a way to change them without a second composition model or mutating a shared Recipe. Speed already proved the scale-on-three-stages pattern. Mana cannot live only on the Recipe once a modifier exists, or every live instance would rewrite the authored cost.
+- **Consequences:** Six new public modifier types. `ModifierContext.Radius` must be writable. Views and SphereCast follow `Size`. Do not roll crit, run AoE queries, or spend mana. Do not add additive (`+5` damage) variants in these phases.
+
 ## ADR-012 — Combat and cast numbers are Recipe stats
 
 - **Date:** 2026-09-16
 - **Decision:** Damage, critical chance, mana cost, spread, effect radius, and size are **authored stats**, not named modifiers. They live on `Recipe` next to `Speed`, `Radius`, and `LifetimeSeconds`. Size **is** `Radius` — do not add a second field. Damage, crit chance, effect radius, and radius copy onto the live instance at spawn and onto `HitInfo` at contact so a later modifier can mutate them the way `Speed(n)` mutates `Speed`. `ManaCost` stays on the Recipe only; the package never spends it. `SpreadDegrees` jitters the original spawn direction; multicast extras still take directions from `IMulticastPattern` (ADR-006). This phase does not add `Damage(n)` / `Size(n)` modifiers.
 - **Why:** A straight shot must have damage without putting `Damage(10)` on a stage list. Modifiers are behaviors with a magnitude; they should *change* stats, not *be* the only place a stat exists. That is already how speed works: `Recipe.Speed` from phase 1, `Speed(n)` later. Mana and crit application are game combat (ADR-004); storing the numbers is enough for a game to read them.
-- **Consequences:** `HitInfo` grows combat fields. Default `Damage` is 1 so sandbox HP that used to subtract 1 per hit keeps working. Default crit, mana, spread, and effect radius are 0. `ModifierContext` must expose the mutable combat stats or a later modifier cannot write them. Do not roll crit, run AoE queries, or spend mana in the package. OnHit damage modifiers, if added later, would not affect the `Hit` event that already fired.
+- **Consequences:** `HitInfo` grows combat fields. Default `Damage` is 1 so sandbox HP that used to subtract 1 per hit keeps working. Default crit, mana, spread, and effect radius are 0. `ModifierContext` must expose the mutable combat stats or a later modifier cannot write them. Do not roll crit, run AoE queries, or spend mana in the package. OnHit damage modifiers, if added later, would not affect the `Hit` event that already fired. Scale modifiers for these fields are phases 10–11 (ADR-013).
 
 ## ADR-011 — Status is a hit request, not package combat
 
