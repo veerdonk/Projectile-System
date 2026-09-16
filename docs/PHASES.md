@@ -96,7 +96,7 @@ Keep phase 1 behaviour. Move live instances onto Entities.
 - `Multiply(n)` with an explicit child Recipe
 - `OnInterval` (e.g. every 0.5s)
 - `OnHit` and `OnExpire` multiply (killing hit: `OnHit` then `OnExpire`)
-- Child directions: a small random cone is allowed (seed it). Phase 11 replaces this with `Multiply.Spread` meters between spawn points
+- Child directions: a small random cone is allowed (seed it). Phase 11 replaces this with `IMultiplyPattern` spawn positions
 
 **Out of scope:** multicast, homing
 
@@ -186,7 +186,7 @@ Apply a status effect on `HitKind.Target`. Do not simulate burn, poison, or shoc
 
 ## Phase 9 — Combat and cast stats
 
-Store game numbers on the Recipe (and on the instance when they can change in flight). Do **not** add a modifier per field. Phases 10–11 add scale modifiers. ADR-013. **Spread is not a Recipe stat** — it belongs on `Multiply` (phase 11 / ADR-014).
+Store game numbers on the Recipe (and on the instance when they can change in flight). Do **not** add a modifier per field. Phase 10 adds combat scale modifiers; phase 11 reworks Multiply layout; phase 12 scales size / effect radius / multiply spread. ADR-013. **Spread is not a Recipe stat** — it belongs on `Multiply` (phase 11 / ADR-015).
 
 **In scope**
 
@@ -198,7 +198,7 @@ Store game numbers on the Recipe (and on the instance when they can change in fl
 - Edit Mode tests: `Hit.Damage` matches Recipe; `ManaCost` readable on Recipe, unchanged by `Tick`
 - Sandbox HUD shows selected Recipe damage, crit, mana, radius, effect radius. Dummy HP subtracts `Hit.Damage`
 
-**Out of scope:** rolling crit; AoE overlap queries; spending mana; `Damage(n)` / `Size(n)` / Multiply `Spread` (phases 10–11); original-shot direction jitter; editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** rolling crit; AoE overlap queries; spending mana; `Damage(n)` (phase 10); Multiply patterns / `Spread` (phase 11); `Size(n)` / `EffectRadius(n)` / `Spread(n)` (phase 12); original-shot direction jitter; editor tooling; Unity Physics; Entities Graphics
 
 **Proof:** fire a Recipe with Damage 5 — dummy loses 5 HP. HUD shows mana/radius.
 
@@ -217,30 +217,81 @@ Store game numbers on the Recipe (and on the instance when they can change in fl
 - Edit Mode tests: OnTravel `Damage(2)` doubles `Hit.Damage`; OnHit `Damage(2)` plus Pierce(1) leaves the first hit unscaled and doubles the second; `Mana(0.5)` halves instance mana cost and leaves `Recipe.ManaCost` unchanged; `Critical(2)` clamps at 1
 - Sandbox Recipes: Damage(2) on travel (dummy loses more HP); Mana(2) HUD shows instance cost after fire without changing the Recipe readout
 
-**Out of scope:** spread / size / effect-radius modifiers (phase 11); rolling crit; spending mana; editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** Multiply patterns (phase 11); `Spread(n)` / `Size(n)` / `EffectRadius(n)` (phase 12); rolling crit; spending mana; editor tooling; Unity Physics; Entities Graphics
 
 **Proof:** fire Damage(2) on travel — dummy loses twice the Recipe damage. Fire Pierce + OnHit Damage(2) — first dummy takes base damage, second takes double.
 
 **Stop.**
 
-## Phase 11 — Spread, effect radius, and size modifiers
+## Phase 11 — Multiply patterns and spread
 
-`EffectRadius(n)` and `Size(n)` scale the remaining phase 9 stats. `Size(n)` scales `Radius` — still no second size field. `Spread(n)` scales `Multiply.Spread`, the meters between child spawn points. ADR-014. Do not jitter the original shot.
+Rework `Multiply` so children spawn on an `IMultiplyPattern` instead of a 12° random cone. `Multiply.Spread` is meters between pips (0 stacks). Children still travel along the parent direction or hit normal — the pattern places **positions**, it does not aim. ADR-015. Match `IMulticastPattern`: one method, index + count, no unused editor types.
 
 **In scope**
 
-- `Multiply.Spread`: world-unit **distance between child spawn points** on a line perpendicular to travel (interval/expire) or the hit normal (OnHit), centered on the parent or hit. Default `0` stacks children on that point. This replaces Multiply's hardcoded 12° random cone
-- Copy that authored spacing onto the instance (scale default 1). `Spread(n)` multiplies it the way `Speed(n)` multiplies speed
+- `IMultiplyPattern.GetOffset(context, forward, spread, index, count)` → world-space offset from the parent/hit point. Plane basis: `right = normalize(cross(forward, world up))` (fallback `world right`), `up = cross(right, forward)`. Local +X is right, +Y is up
+- `Multiply(count, childRecipe, spread = 0, pattern = null)`. Null pattern is `SquarePattern`. `Spread = 0` returns zero offsets for every pattern
+- Three implementations: `SquarePattern`, `CirclePattern`, `RandomCirclePattern`. Drop `RandomConePattern` from Multiply
+- Layouts below (units of `spread`, origin at parent/hit). Edit Mode tests for each named count, plus `Spread = 0` stacks, plus OnHit vs OnInterval origin/forward
+- Sandbox: cycle Square / Circle / RandomCircle on Multiply Recipes; **Spread** meters row (not the later `Spread(n)` scale)
+
+**SquarePattern** (dice pips, then fill a 3×3, then grow the grid)
+
+3×3 lattice cell size is `spread` (`s`). Coords: `(-s,s) (0,s) (s,s)` / `(-s,0) (0,0) (s,0)` / `(-s,-s) (0,-s) (s,-s)`.
+
+| n | Layout |
+| --- | --- |
+| 1 | Center `(0,0)` |
+| 2 | Horizontal pair `(-s/2, 0)`, `(s/2, 0)` — distance `s` |
+| 3 | Line `(-s, 0)`, `(0, 0)`, `(s, 0)` |
+| 4 | Four corners of the 3×3 |
+| 5 | Four corners + center (die 5) |
+| 6 | Two columns of three (die 6): left and right lattice columns |
+| 7 | 6 + center → **H** |
+| 8 | 7 + top-center `(0, s)` |
+| 9 | Full 3×3 (8 + bottom-center) |
+
+`n > 9`: odd-sized grids 5×5, 7×7, … Cell size stays `s`. Fill the new Chebyshev ring `r = 2, 3, …` in this order: cardinal middles `(0,±r)`, `(±r,0)`; then toward the corners (for `k = 1 .. r-1`, the eight edge cells `(±k,±r)` and `(±r,±k)`); then the four corners `(±r,±r)`. First extra pip is top-middle of the 5×5.
+
+**CirclePattern**
+
+| n | Layout |
+| --- | --- |
+| 1 | Center (same as square) |
+| 2 | Horizontal pair (same as square) |
+| 3 | Equilateral triangle, side `s`, centroid at origin, point up |
+| 4 | That triangle + center |
+| 5–10 | Center + `n-1` equally spaced on a ring, first pip up. Adjacent **chord** is `s`, so radius `s / (2 sin(π / ringCount))` |
+
+`n > 10`: keep the n=10 pose (center + 9). Fill an **inner** ring of up to 6 pips at radius `s`, equally spaced, first pip up. Then start a new **outside** ring: `m` pips equally spaced, chord `s` (radius `s / (2 sin(π / m))` for `m ≥ 2`; `m = 1` sits up at previous outer radius `+ s`). That outside ring is full at 12; then ring 3, and so on (capacity `6k` on ring `k ≥ 2`). Never shrink an outer ring inside a previous one — if the chord formula would, use previous outer radius `+ s`.
+
+**RandomCirclePattern**
+
+Disk in the same plane, radius `= spread` (count does not grow the disk). `n = 1` at the origin. `n > 1`: uniform in the disk (world seed via `NextFloat`). `spread = 0` stacks.
+
+**Out of scope:** `Spread(n)` / `Size(n)` / `EffectRadius(n)` (phase 12); line / arc / cross / triangle patterns; a pattern editor or unused `OffsetPattern` class; original-shot jitter; changing `IMulticastPattern`; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire Square 5 — die 5 on the dummy. Square 7 — H. Square 9 — 3×3. Circle 3 — triangle. Circle 6 — center + pentagon. RandomCircle — scatter inside a disk of radius Spread. Spread 0 — stacked.
+
+**Stop.** A visual pattern editor is **more** work than these three types (Editor window, assets, preview). Do not pivot this phase into one. `IMultiplyPattern` is the same extension shape as `IMulticastPattern`; an editor later authors a new implementation (local offset list × spread). Unbounded `n > 9` / `n > 10` still needs the overflow rules above, which a static offset list cannot replace.
+
+## Phase 12 — Effect radius, size, and spread scale modifiers
+
+`EffectRadius(n)` and `Size(n)` scale the remaining phase 9 stats. `Size(n)` scales `Radius` — still no second size field. `Spread(n)` scales the instance copy of `Multiply.Spread`. ADR-014. Do not jitter the original shot.
+
+**In scope**
+
+- Copy authored `Multiply.Spread` onto the instance at spawn (default scale 1) so `Spread(n)` mutates that copy. Multiply patterns read the instance value, not only the modifier field
 - `Spread(n)` / `EffectRadius(n)` / `Size(n)` on `OnTravel`, `OnInterval`, and `OnHit`. Same scale contract as `Speed(n)` / phase 10. Not `OnSpawn`
-- Multicast extras still use ADR-006 patterns. Do not add original-shot direction jitter
+- Multicast extras still use ADR-006 patterns
 - `Size(n)` must be able to write `Radius` on `ModifierContext` (phase 9 may have left it read-only). SphereCast and the view scale with the new radius
 - `OnHit` `EffectRadius(n)` / `Size(n)` follow the same Hit-then-OnHit timing as phase 10
-- Edit Mode tests: OnTravel `Size(2)` doubles radius; `Multiply(2)` with `Spread = 2` places children 2 m apart; OnTravel `Spread(2)` with that Multiply places them 4 m apart; `Spread = 0` stacks; OnTravel `EffectRadius(2)` doubles `HitInfo.EffectRadius`; `n <= 0` is a no-op
-- Sandbox Recipes: Size(2) looks and hits larger; Multiply Spread 2 vs 0 (apart vs stacked); Spread(2) on travel doubles that spacing
+- Edit Mode tests: OnTravel `Size(2)` doubles radius; OnTravel `Spread(2)` with `Multiply(2)` Square `Spread = 2` places the pair 4 m apart; `Spread = 0` still stacks; OnTravel `EffectRadius(2)` doubles `HitInfo.EffectRadius`; `n <= 0` is a no-op
+- Sandbox Recipes: Size(2) looks and hits larger; Spread(2) on travel doubles Square pip spacing
 
-**Out of scope:** AoE overlap queries; `Damage(n)` (phase 10); original-shot direction jitter; editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** AoE overlap queries; `Damage(n)` (phase 10); new multiply patterns (phase 11); original-shot direction jitter; editor tooling; Unity Physics; Entities Graphics
 
-**Proof:** fire Size(2) — sphere is larger and contacts sooner. Fire Multiply with Spread 2 — children spawn 2 m apart. Fire Spread(2) on travel with that Multiply — 4 m apart.
+**Proof:** fire Size(2) — sphere is larger and contacts sooner. Fire Spread(2) on travel with Square Multiply Spread 2 — pips 4 m apart.
 
 **Stop.**
 
@@ -248,6 +299,7 @@ Store game numbers on the Recipe (and on the instance when they can change in fl
 
 - Unity Physics and/or Entities Graphics adapters
 - Editor Recipe authoring
+- Multiply patterns: line, arc, cross, triangle; a pattern editor that authors an `IMultiplyPattern`
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Package samples vs sandbox split cleanup
 - Rename the UPM id if the double `com.davidvdveerdonk.com.veerdonk` prefix should go

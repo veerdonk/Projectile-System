@@ -76,7 +76,7 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Prewarm:** `Prewarm(recipe, count)` also prewarms the Recipes those modifiers chain into, using the same generations ([DECISIONS.md](DECISIONS.md) ADR-008). Do not hand-prewarm the children as well. Directions for all `n` slots, the original included, come from an `IMulticastPattern` ([DECISIONS.md](DECISIONS.md) ADR-006); v1 ships `RandomConePattern`.
 
-**Multiply spread:** `Multiply` authors `Spread` as meters between child spawn points, on a line perpendicular to travel or the hit normal and centered on that point ([DECISIONS.md](DECISIONS.md) ADR-014). `Spread = 0` stacks. `Spread(n)` scales that instance spacing. The original shot is not jittered.
+**Multiply spread:** `Multiply` authors `Spread` as meters between adjacent pips on an `IMultiplyPattern` ([DECISIONS.md](DECISIONS.md) ADR-015). Default `SquarePattern`. `Spread = 0` stacks. Children keep travel / hit-normal direction. `Spread(n)` scales the instance copy of that spacing (phase 12). The original shot is not jittered.
 
 ## Hit pipeline
 
@@ -140,6 +140,13 @@ struct StatusInfo
 interface IStatusEffect { string Id { get; } }
 
 interface IStatusReceiver { void Apply(IStatusEffect effect); }
+
+interface IMultiplyPattern
+{
+    // World offset from parent/hit for child index of count.
+    // Plane perpendicular to forward. spread=0 → zero.
+    Vector3 GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count);
+}
 ```
 
 Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for example from one `Update`). Instances do not have their own `Update`. `ProjectileWorld` is `IDisposable` (dispose the Entities `World`).
