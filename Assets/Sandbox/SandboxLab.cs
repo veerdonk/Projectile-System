@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 10 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
+    /// Phase 11 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -88,6 +88,8 @@ namespace Sandbox
         float pierceDamageScale = 2f;
         float travelManaScale = 2f;
         float intervalSeconds = 0.5f;
+        float multiplySpread = 2f;
+        int multiplyPatternIndex;
 
         int requestCount;
         Vector3 lastRequestPosition;
@@ -187,16 +189,16 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 10 (damage, critical, and mana scales)");
+            GUILayout.Label("Projectile lab — phase 11 (multiply patterns and spread)");
             GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, and H select. - / + changes n for the next shot.");
 
             FireButton("Fire straight", 0, straightRecipe);
             FireButton("Fire lifetime (3s)", 1, lifetimeRecipe);
-            FireButtonWithMagnitude("Multiply on hit", 2, onHitRecipe, ref multiplyHitCount, 0, 8);
+            FireButtonWithMagnitude("Multiply on hit", 2, onHitRecipe, ref multiplyHitCount, 0, 16);
             FireButtonWithMagnitude("Pierce", 3, pierceRecipe, ref pierceCount, 0, 8);
             FireButtonWithMagnitude("Bounce", 4, bounceRecipe, ref bounceCount, 0, 8);
-            FireButtonWithMagnitude("Multiply interval", 5, intervalRecipe, ref multiplyIntervalCount, 0, 8);
-            FireButtonWithMagnitude("Multiply on expire", 6, expireRecipe, ref multiplyExpireCount, 0, 8);
+            FireButtonWithMagnitude("Multiply interval", 5, intervalRecipe, ref multiplyIntervalCount, 0, 16);
+            FireButtonWithMagnitude("Multiply on expire", 6, expireRecipe, ref multiplyExpireCount, 0, 16);
             FireButtonWithMagnitude("Multicast", 7, multicastRecipe, ref multicastCount, 1, 8);
             FireButtonWithMagnitude("Homing A", 8, strongHomingRecipe, ref homingStrong, 0, 300, 10);
             FireButtonWithMagnitude("Homing B", 9, weakHomingRecipe, ref homingWeak, 0, 300, 10);
@@ -213,6 +215,8 @@ namespace Sandbox
             FireButtonWithScale("Pierce then Damage", 20, pierceDamageRecipe, ref pierceDamageScale, 0.25f, 8f, 0.25f);
             FireButtonWithScale("Mana on travel", 21, travelManaRecipe, ref travelManaScale, 0.25f, 8f, 0.25f);
             ScaleRow($"Interval {intervalSeconds:0.##}s (keys 6 and T)", ref intervalSeconds, 0.1f, 3f, 0.1f);
+            CycleMultiplyPatternRow();
+            ScaleRow($"Multiply spread {multiplySpread:0.##}m", ref multiplySpread, 0f, 8f, 0.5f);
 
             GUILayout.Space(6f);
             Recipe selected = SelectedRecipe();
@@ -311,6 +315,46 @@ namespace Sandbox
             if (GUILayout.Button("+", GUILayout.Width(28), GUILayout.Height(28)))
                 value = Mathf.Min(max, value + step);
             GUILayout.EndHorizontal();
+        }
+
+        void CycleMultiplyPatternRow()
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"Multiply pattern: {MultiplyPatternName(multiplyPatternIndex)}", GUILayout.Height(28f));
+            if (GUILayout.Button("Cycle", GUILayout.Width(64), GUILayout.Height(28)))
+                multiplyPatternIndex = (multiplyPatternIndex + 1) % 3;
+            GUILayout.EndHorizontal();
+        }
+
+        static string MultiplyPatternName(int index)
+        {
+            switch (index)
+            {
+                case 1:
+                    return "Circle";
+                case 2:
+                    return "RandomCircle";
+                default:
+                    return "Square";
+            }
+        }
+
+        IMultiplyPattern SelectedMultiplyPattern()
+        {
+            switch (multiplyPatternIndex)
+            {
+                case 1:
+                    return new CirclePattern();
+                case 2:
+                    return new RandomCirclePattern();
+                default:
+                    return new SquarePattern();
+            }
+        }
+
+        Multiply CreateMultiply(int count)
+        {
+            return new Multiply(count, childRecipe, multiplySpread, SelectedMultiplyPattern());
         }
 
         [ContextMenu("Fire")]
@@ -449,7 +493,6 @@ namespace Sandbox
             pierceHomingRecipe.OnHit = new IModifier[] { new Pierce(1) };
             pierceHomingRecipe.OnTick = new IModifier[] { new Homing(300f) };
             bounceMultiplyRecipe = CreateRecipe("bounce-multiply", speed: 20f, lifetime: 5f);
-            bounceMultiplyRecipe.OnHit = new IModifier[] { new Bounce(2), new Multiply(2, childRecipe) };
             travelSpeedRecipe = CreateRecipe("speed-travel", speed: 20f, lifetime: 5f);
             intervalSpeedRecipe = CreateRecipe("speed-interval", speed: 20f, lifetime: 5f);
             bounceSpeedRecipe = CreateRecipe("bounce-speed", speed: 20f, lifetime: 5f);
@@ -511,7 +554,7 @@ namespace Sandbox
         void ApplyMagnitudes()
         {
             if (onHitRecipe != null)
-                onHitRecipe.OnHit = new IModifier[] { new Multiply(multiplyHitCount, childRecipe) };
+                onHitRecipe.OnHit = new IModifier[] { CreateMultiply(multiplyHitCount) };
             if (pierceRecipe != null)
                 pierceRecipe.OnHit = new IModifier[] { new Pierce(pierceCount) };
             if (bounceRecipe != null)
@@ -519,10 +562,12 @@ namespace Sandbox
             if (intervalRecipe != null)
             {
                 intervalRecipe.OnSpawn = new IModifier[] { new Interval(intervalSeconds) };
-                intervalRecipe.OnInterval = new IModifier[] { new Multiply(multiplyIntervalCount, childRecipe) };
+                intervalRecipe.OnInterval = new IModifier[] { CreateMultiply(multiplyIntervalCount) };
             }
             if (expireRecipe != null)
-                expireRecipe.OnExpire = new IModifier[] { new Multiply(multiplyExpireCount, childRecipe) };
+                expireRecipe.OnExpire = new IModifier[] { CreateMultiply(multiplyExpireCount) };
+            if (bounceMultiplyRecipe != null)
+                bounceMultiplyRecipe.OnHit = new IModifier[] { new Bounce(2), CreateMultiply(2) };
             if (multicastRecipe != null)
                 multicastRecipe.OnSpawn = new IModifier[] { new Multicast(multicastCount, multicastExtraRecipe) };
             if (strongHomingRecipe != null)
