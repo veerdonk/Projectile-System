@@ -63,7 +63,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Pool = pool,
                 ModifierContext = modifierContext,
                 Hit = info => Hit?.Invoke(info),
-                Expired = info => Expired?.Invoke(info)
+                Expired = info => Expired?.Invoke(info),
+                StatusApplied = info => StatusApplied?.Invoke(info)
             };
             simulation.Bridge = bridge;
         }
@@ -71,6 +72,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public event Action<HitInfo> Hit;
 
         public event Action<ExpireInfo> Expired;
+
+        public event Action<StatusInfo> StatusApplied;
 
         public int ActiveCount
         {

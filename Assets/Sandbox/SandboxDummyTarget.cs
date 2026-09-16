@@ -4,18 +4,21 @@ using UnityEngine;
 namespace Sandbox
 {
     /// <summary>
-    /// Sandbox cube that implements <see cref="IDamageable"/> and applies HP from <see cref="IProjectileWorld.Hit"/>.
+    /// Sandbox cube that implements <see cref="IDamageable"/> and <see cref="IStatusReceiver"/>.
+    /// HP comes from <see cref="IProjectileWorld.Hit"/>; status comes from the lab mapping <see cref="IProjectileWorld.StatusApplied"/>.
     /// </summary>
-    public sealed class SandboxDummyTarget : MonoBehaviour, IDamageable
+    public sealed class SandboxDummyTarget : MonoBehaviour, IDamageable, IStatusReceiver
     {
         [SerializeField] int maxHp = 10;
         [SerializeField] int hp = 10;
         [SerializeField] int targetId = 1;
 
         IProjectileWorld subscribed;
+        string lastStatusId = "";
 
         public int MaxHp => maxHp;
         public int Hp => hp;
+        public string LastStatusId => lastStatusId;
         public TargetId TargetId => new TargetId(targetId);
 
         public void Configure(int id, int maxHpValue = 10)
@@ -59,6 +62,11 @@ namespace Sandbox
                 return;
 
             hp = Mathf.Max(0, hp - 1);
+        }
+
+        public void Apply(IStatusEffect effect)
+        {
+            lastStatusId = effect != null ? effect.Id : "";
         }
 
         void OnDrawGizmos()

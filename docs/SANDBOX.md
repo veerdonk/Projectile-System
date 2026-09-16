@@ -40,7 +40,9 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 7 | Speed(2) on travel (key **R**) | Leaves the muzzle twice as fast as the straight Recipe |
 | 7 | Speed(0.5) on interval (key **T**) | Slows by half every interval; the **Interval** row retimes both **6** and **T** |
 | 7 | Bounce(1)+Speed(2) (key **Y**) | Reflects off the wall and continues faster |
-| 8 | ApplyStatus dummy | Dummy HUD shows `dummy` on a Target hit; wall hits do not |
+| 8 | ApplyStatus (key **U**) | DummyTarget HUD shows `dummy`; instance despawns |
+| 8 | ApplyStatus at wall (key **O**) | Hits WorldWall; no dummy status changes |
+| 8 | Pierce(1)+ApplyStatus (key **I**) | DummyTarget and DummyTarget2 both show `dummy`; instance dies on the second |
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.
 

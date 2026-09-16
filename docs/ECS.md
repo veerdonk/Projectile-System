@@ -16,7 +16,7 @@ How this package uses DOTS. Not a Unity ECS tutorial. Read this if you already k
 | **`float3`** | `Vector3` for jobs (`Unity.Mathematics`) | Internal. Public API stays `Vector3`. |
 | **Recipe / `IModifier`** | Ordinary classes (definition layer) | Cannot live on `IComponentData`. Entity holds `RecipeIndex`; `RecipeStore` looks up the Recipe. |
 
-`IProjectileWorld` is still the façade. Sandbox, tests, and games call `Spawn` / `Tick` and listen to `Hit` / `Expired`. They do not create entities.
+`IProjectileWorld` is still the façade. Sandbox, tests, and games call `Spawn` / `Tick` and listen to `Hit` / `Expired` / `StatusApplied`. They do not create entities.
 
 ## What we did not take
 
@@ -45,9 +45,10 @@ SandboxLab.Update
                  Burst integrate: candidate = pos + vel * dt
                  move/hit on the same list; skip if a hit already disabled the entity
                  IHitQuery.TryCast (ScriptedHitQuery in Edit Mode, PhysicsHitQuery in Play Mode)
-                 on hit: Hit event, OnHit, despawn unless Pierce/Bounce CancelDespawn
+                 on hit: Hit event, OnHit, StatusApplied after OnHit if ApplyStatus requested a Target effect
+                 despawn unless Pierce/Bounce CancelDespawn
                  CancelDespawn: keep remaining counts, place at hit point along current velocity
-                 killing hit: OnHit then OnExpire (`HasHit` still true so Multiply uses the hit point/normal)
+                 killing hit: OnHit then StatusApplied then OnExpire (`HasHit` still true so Multiply uses the hit point/normal)
                  Multiply children spawn slightly off the surface along that normal and inherit the parent's ignored collider so they do not immediately overlap-hit the same dummy
                  else: Position = Candidate, sync ProjectileView
        → flush RequestSpawn queue (child Recipes)
@@ -75,6 +76,9 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Homing.cs` | `OnTick`: steer at n degrees/second toward a lock. Acquires via `IHomingAcquisition` when unassigned. A Target hit drops the lock (`Homing.ReleaseLockOnTargetHit` after `OnHit`) |
 | `Runtime/Speed.cs` | Scale current speed by n, keep travel direction. `OnTravel` start scale, `OnInterval` progressive, `OnHit` after bounce/pierce. Scale <= 0 is a no-op |
 | `Runtime/Interval.cs` | `OnSpawn`: seconds between `OnInterval` runs, onto `Projectile.IntervalSeconds`. One period per instance drives the whole list |
+| `Runtime/ApplyStatus.cs` | `OnHit` Target: request an `IStatusEffect`. Flushed as `StatusApplied` after the list. World hits do nothing |
+| `Runtime/IStatusEffect.cs` | Effect contract plus v1 `DummyStatusEffect` (`Id` `"dummy"`). Package does not tick DoT |
+| `Runtime/IStatusReceiver.cs` | Game/sandbox apply contract. Package never calls it; sandbox maps `StatusApplied` → `Apply` |
 | `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget` |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views |
 | `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap; ignore last collider so pierce/bounce can leave the surface |

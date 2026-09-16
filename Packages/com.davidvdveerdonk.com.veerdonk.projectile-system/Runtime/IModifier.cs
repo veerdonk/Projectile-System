@@ -71,6 +71,21 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Enqueue(recipe, position, direction, default, default);
         }
 
+        /// <summary>
+        /// Requests a status on the current Target hit. Flushed as <see cref="IProjectileWorld.StatusApplied"/> after OnHit.
+        /// </summary>
+        public void RequestStatus(IStatusEffect effect)
+        {
+            RequestedStatus = effect ?? throw new ArgumentNullException(nameof(effect));
+        }
+
+        internal IStatusEffect RequestedStatus { get; private set; }
+
+        internal void ClearRequestedStatus()
+        {
+            RequestedStatus = null;
+        }
+
         /// <summary>Multicast expansions the extras queued from this stage may still run. Set before <c>OnSpawn</c>.</summary>
         internal int MulticastGenerationsForExtras { get; set; }
 
@@ -144,6 +159,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             HasHit = hasHit;
             Hit = hit;
             CancelDespawn = false;
+            RequestedStatus = null;
             DeltaTime = deltaTime;
             HomingTarget = homingTarget;
             HomingIgnoredTarget = homingIgnoredTarget;

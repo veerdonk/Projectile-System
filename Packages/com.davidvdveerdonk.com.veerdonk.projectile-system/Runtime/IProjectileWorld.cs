@@ -25,6 +25,20 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         /// <summary>Raised when an instance is returned to the pool.</summary>
         event Action<ExpireInfo> Expired;
+
+        /// <summary>
+        /// Raised after the OnHit list when <see cref="ApplyStatus"/> requested an effect on a Target.
+        /// The package does not apply the effect.
+        /// </summary>
+        event Action<StatusInfo> StatusApplied;
+    }
+
+    /// <summary>Payload for <see cref="IProjectileWorld.StatusApplied"/>.</summary>
+    public struct StatusInfo
+    {
+        public ProjectileId InstanceId;
+        public TargetId TargetId;
+        public IStatusEffect Effect;
     }
 
     /// <summary>Input to <see cref="IProjectileWorld.Spawn"/>.</summary>
