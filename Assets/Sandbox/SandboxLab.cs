@@ -63,6 +63,7 @@ namespace Sandbox
         Recipe bounceSpeedRecipe;
         Recipe applyStatusRecipe;
         Recipe pierceApplyStatusRecipe;
+        Recipe combatStatsRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
@@ -147,6 +148,8 @@ namespace Sandbox
                     selectedRecipe = 16;
                 if (keyboard.oKey.wasPressedThisFrame)
                     selectedRecipe = 17;
+                if (keyboard.pKey.wasPressedThisFrame)
+                    selectedRecipe = 18;
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
@@ -170,8 +173,8 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 8 (status)");
-            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, Y, U, I, and O select. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 9 (combat and cast stats)");
+            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, Y, U, I, O, and P select. - / + changes n for the next shot.");
 
             FireButton("Fire straight", 0, straightRecipe);
             FireButton("Fire lifetime (3s)", 1, lifetimeRecipe);
@@ -191,7 +194,18 @@ namespace Sandbox
             FireButton("Fire ApplyStatus", 15, applyStatusRecipe);
             FireButton("Fire Pierce(1)+ApplyStatus", 16, pierceApplyStatusRecipe);
             FireButton("Fire ApplyStatus at wall", 17, applyStatusRecipe);
+            FireButton("Fire Damage 5", 18, combatStatsRecipe);
             ScaleRow($"Interval {intervalSeconds:0.##}s (keys 6 and T)", ref intervalSeconds, 0.1f, 3f, 0.1f);
+
+            GUILayout.Space(6f);
+            Recipe selected = SelectedRecipe();
+            if (selected != null)
+            {
+                GUILayout.Label(
+                    $"Selected Recipe {selected.Id}\n" +
+                    $"  damage {selected.Damage:0.##}  crit {selected.CriticalChance:0.##}  mana {selected.ManaCost:0.##}\n" +
+                    $"  radius {selected.Radius:0.##}  effect radius {selected.EffectRadius:0.##}");
+            }
 
             GUILayout.Space(6f);
             GUILayout.Label(hasRequest
@@ -205,7 +219,7 @@ namespace Sandbox
                 if (dummy != null)
                 {
                     string status = string.IsNullOrEmpty(dummy.LastStatusId) ? "-" : dummy.LastStatusId;
-                    GUILayout.Label($"{dummy.name} HP: {dummy.Hp}/{dummy.MaxHp}  status: {status}");
+                    GUILayout.Label($"{dummy.name} HP: {dummy.Hp:0.##}/{dummy.MaxHp:0.##}  status: {status}");
                 }
             }
 
@@ -361,6 +375,8 @@ namespace Sandbox
                     return applyStatusRecipe;
                 case 16:
                     return pierceApplyStatusRecipe;
+                case 18:
+                    return combatStatsRecipe;
                 default:
                     return straightRecipe;
             }
@@ -414,6 +430,11 @@ namespace Sandbox
                 new ApplyStatus(new DummyStatusEffect()),
                 new ApplyStatus(new DummyStatusEffect())
             };
+            combatStatsRecipe = CreateRecipe("combat-stats", speed: 20f, lifetime: 5f);
+            combatStatsRecipe.Damage = 5f;
+            combatStatsRecipe.CriticalChance = 0.25f;
+            combatStatsRecipe.ManaCost = 12f;
+            combatStatsRecipe.EffectRadius = 2f;
             ApplyMagnitudes();
 
             var poolRoot = new GameObject("ProjectilePool");
@@ -436,6 +457,7 @@ namespace Sandbox
             world.Prewarm(bounceSpeedRecipe, PrewarmCount);
             world.Prewarm(applyStatusRecipe, PrewarmCount);
             world.Prewarm(pierceApplyStatusRecipe, PrewarmCount);
+            world.Prewarm(combatStatsRecipe, PrewarmCount);
 
             world.StatusApplied += OnStatusApplied;
             BindDummies();
