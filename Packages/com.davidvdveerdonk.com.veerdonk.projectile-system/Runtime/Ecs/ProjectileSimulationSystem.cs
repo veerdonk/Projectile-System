@@ -163,33 +163,27 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Projectile projectile = em.GetComponentData<Projectile>(entity);
             Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
             IModifier[] modifiers = recipe.OnInterval;
-            if (modifiers == null || modifiers.Length == 0 || projectile.MultiplyGenerationsLeft <= 0)
+            if (modifiers == null || modifiers.Length == 0)
                 return;
 
             float elapsed = projectile.ElapsedSeconds;
-            float previous = elapsed - dt;
-            bool bound = false;
-            for (int i = 0; i < modifiers.Length; i++)
-            {
-                if (modifiers[i] is not Multiply multiply)
-                    continue;
-
-                int fires = IntervalCrossings(previous, elapsed, multiply.IntervalSeconds);
-                if (fires <= 0)
-                    continue;
-
-                if (!bound)
-                {
-                    BindContext(entity, hasHit: false, default, dt);
-                    bound = true;
-                }
-
-                for (int f = 0; f < fires; f++)
-                    multiply.Apply(Bridge.ModifierContext);
-            }
-
-            if (!bound)
+            int fires = IntervalCrossings(elapsed - dt, elapsed, projectile.IntervalSeconds);
+            if (fires <= 0)
                 return;
+
+            BindContext(entity, hasHit: false, default, dt);
+            for (int f = 0; f < fires; f++)
+            {
+                for (int i = 0; i < modifiers.Length; i++)
+                {
+                    IModifier modifier = modifiers[i];
+                    if (modifier == null)
+                        continue;
+                    if (modifier is Multiply && !Bridge.ModifierContext.AllowsMultiply)
+                        continue;
+                    modifier.Apply(Bridge.ModifierContext);
+                }
+            }
 
             ProjectileVelocity velocity = em.GetComponentData<ProjectileVelocity>(entity);
             Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
@@ -257,6 +251,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 projectile.RemainingPierce,
                 projectile.RemainingBounce,
                 projectile.Radius,
+                projectile.IntervalSeconds,
                 projectile.MultiplyGenerationsLeft,
                 hasHit,
                 hit,

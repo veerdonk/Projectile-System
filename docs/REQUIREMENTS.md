@@ -23,14 +23,16 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Pool** — inactive instances reused on spawn; despawn returns an instance to the pool
 - **Damage** — authored hit amount copied onto the instance and `HitInfo`. The package does not apply HP
 - **Critical chance** — probability 0–1 on the instance and `HitInfo`. The package does not roll a crit
-- **Mana cost** — authored cast cost on the Recipe only. The package does not spend mana
-- **Spread** — cone in degrees for the original spawn direction (`SpreadDegrees`). 0 is exact
+- **Mana cost** — authored fire-time cost on the Recipe. Phase 10 copies it onto the instance so `Mana(n)` can scale that copy; the package does not spend mana
+- **Spread** — meters between child spawn points when `Multiply` creates more than one instance. Authored on `Multiply`, not on the Recipe. 0 stacks children on the same point
 - **Effect radius** — authored radius for a hit/expire gameplay effect (explosion, etc.). Distinct from projectile `Radius`. The package does not run AoE queries from this field in v1
 - **Size** — projectile collision size. This **is** `Recipe.Radius`; there is no second size field
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
   - **Strength** for homing (how hard it turns)
-  - **Scale** for speed, damage, critical chance, mana cost, spread, effect radius, and size (multiplier: `Speed(2)` doubles, `Speed(0.5)` halves; same for `Damage`, `Critical`, `Mana`, `Spread`, `EffectRadius`, `Size`)
+  - **Scale** for speed, damage, critical chance, mana cost, multiply spread, effect radius, and size (multiplier: `Speed(2)` doubles, `Speed(0.5)` halves; same for `Damage`, `Critical`, `Mana`, `Spread`, `EffectRadius`, `Size`)
+  - **Seconds** for interval (`Interval(0.5)` runs `OnInterval` every half second)
+  - **Distance** for multiply spread (`Multiply` `Spread` is meters between child spawn points)
 
 ### Named modifiers (v1)
 
@@ -38,12 +40,13 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Bounce(n)** — `OnHit`: reflect off `n` `World` or `Target` hits; despawn on hit `n+1`. `Hit` still fires on `Target`, so dummy HP still drops
 - **Homing(n)** — `OnTick`: steer toward a homing target; higher `n` turns faster. A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel
 - **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
-- **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`)
+- **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`). Optional `Spread` is meters between those child spawn points
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
+- **Interval(n)** — `OnSpawn`: seconds between `OnInterval` runs for this instance. One period per Recipe drives every modifier on that list; without it `OnInterval` never runs (see [DECISIONS.md](DECISIONS.md) ADR-012)
 - **Damage(n)** — scale instance damage by `n`. Same stages as `Speed(n)`. Package still does not apply HP
 - **Critical(n)** — scale instance critical chance by `n`, then clamp to `[0, 1]`. Same stages as `Speed(n)`. Package still does not roll a crit
 - **Mana(n)** — scale the instance mana-cost copy by `n`. Same stages as `Speed(n)`. Does not change `Recipe.ManaCost` or spend mana
-- **Spread(n)** — scale `SpreadDegrees` by `n`. Same stages as `Speed(n)`. Jitter still applies only to the original shot
+- **Spread(n)** — scale the instance multiply-spread (distance between `Multiply` child spawn points) by `n`. Same stages as `Speed(n)`. Does not jitter the original shot
 - **EffectRadius(n)** — scale instance effect radius by `n`. Same stages as `Speed(n)`. Package still does not run AoE queries
 - **Size(n)** — scale `Radius` by `n`. Same stages as `Speed(n)`. There is no separate size field
 - **ApplyStatus** — `OnHit` + `Target`: request an `IStatusEffect` on the hit Target. The package does not simulate the effect (see [DECISIONS.md](DECISIONS.md) ADR-011)
@@ -124,9 +127,9 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 ### Phase 3 — Multiply(2) every 0.5s of travel
 
-- **Given:** `Multiply(2)` on `OnInterval` with interval 0.5s and an explicit child Recipe
+- **Given:** `Multiply(2)` on `OnInterval`, `Interval(0.5)` on `OnSpawn`, and an explicit child Recipe
 - **When:** the parent has travelled for 0.5 seconds
-- **Then:** two child instances spawn roughly in the direction of travel (small random spread is allowed)
+- **Then:** two child instances spawn roughly in the direction of travel (a small random cone is allowed until phase 11 replaces it with `Multiply.Spread` meters)
 
 ### Phase 3 — Multiply(1) on expire
 
@@ -172,7 +175,7 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 ### Phase 7 — Speed(0.5) every 0.5s
 
-- **Given:** `Speed(0.5)` on `OnInterval` with interval 0.5s
+- **Given:** `Speed(0.5)` on `OnInterval` and `Interval(0.5)` on `OnSpawn`
 - **When:** the instance has travelled 0.5s, then 1.0s
 - **Then:** speed is half of spawn speed after the first interval, then a quarter after the second
 
@@ -206,12 +209,6 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** the instance records a `Target` hit
 - **Then:** `HitInfo.Damage` is 5 and the sandbox dummy loses 5 HP
 
-### Phase 9 — Zero spread is exact
-
-- **Given:** a Recipe with `SpreadDegrees = 0`
-- **When:** the instance is spawned
-- **Then:** travel direction matches `SpawnRequest.Direction`
-
 ### Phase 9 — Mana cost is Recipe data
 
 - **Given:** a Recipe with `ManaCost = 12`
@@ -242,11 +239,17 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** the instance is spawned
 - **Then:** instance radius is 0.5
 
-### Phase 11 — Spread(2) widens the original cone
+### Phase 11 — Multiply spread is spawn-point distance
 
-- **Given:** a Recipe with `SpreadDegrees = 10` and `Spread(2)` on `OnTravel`
-- **When:** the instance is spawned
-- **Then:** jitter uses 20 degrees; multicast extras still use the multicast pattern
+- **Given:** `Multiply(2)` with `Spread = 2` on `OnHit` and an explicit child Recipe
+- **When:** the parent records a hit
+- **Then:** the two children spawn 2 meters apart on a line perpendicular to the hit normal, centered on the hit point
+
+### Phase 11 — Spread(2) widens Multiply spacing
+
+- **Given:** the same `Multiply(2)` with `Spread = 2`, and `Spread(2)` on `OnTravel`
+- **When:** the parent records a hit
+- **Then:** the two children spawn 4 meters apart
 
 ### Phase 11 — EffectRadius(2) at spawn
 

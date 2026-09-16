@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 6 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
+    /// Phase 7 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -58,6 +58,9 @@ namespace Sandbox
         Recipe weakHomingRecipe;
         Recipe pierceHomingRecipe;
         Recipe bounceMultiplyRecipe;
+        Recipe travelSpeedRecipe;
+        Recipe intervalSpeedRecipe;
+        Recipe bounceSpeedRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
@@ -72,6 +75,10 @@ namespace Sandbox
         int multicastCount = 3;
         int homingStrong = 100;
         int homingWeak = 10;
+        float travelSpeedScale = 2f;
+        float intervalSpeedScale = 0.5f;
+        float bounceSpeedScale = 2f;
+        float intervalSeconds = 0.5f;
 
         int requestCount;
         Vector3 lastRequestPosition;
@@ -124,6 +131,12 @@ namespace Sandbox
                     selectedRecipe = 10;
                 if (keyboard.eKey.wasPressedThisFrame)
                     selectedRecipe = 11;
+                if (keyboard.rKey.wasPressedThisFrame)
+                    selectedRecipe = 12;
+                if (keyboard.tKey.wasPressedThisFrame)
+                    selectedRecipe = 13;
+                if (keyboard.yKey.wasPressedThisFrame)
+                    selectedRecipe = 14;
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
@@ -147,8 +160,8 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 6 (combinations)");
-            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, and E select. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 7 (speed)");
+            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, and Y select. - / + changes n for the next shot.");
 
             FireButton("Fire straight", 0, straightRecipe);
             FireButton("Fire lifetime (3s)", 1, lifetimeRecipe);
@@ -162,6 +175,10 @@ namespace Sandbox
             FireButtonWithMagnitude("Homing B", 9, weakHomingRecipe, ref homingWeak, 0, 300, 10);
             FireButton("Fire Pierce(1)+Homing(300)", 10, pierceHomingRecipe);
             FireButton("Fire Bounce(2)+Multiply(2)", 11, bounceMultiplyRecipe);
+            FireButtonWithScale("Speed on travel", 12, travelSpeedRecipe, ref travelSpeedScale, 0.25f, 8f, 0.25f);
+            FireButtonWithScale("Speed on interval", 13, intervalSpeedRecipe, ref intervalSpeedScale, 0.25f, 8f, 0.25f);
+            FireButtonWithScale("Bounce then Speed", 14, bounceSpeedRecipe, ref bounceSpeedScale, 0.25f, 8f, 0.25f);
+            ScaleRow($"Interval {intervalSeconds:0.##}s (keys 6 and T)", ref intervalSeconds, 0.1f, 3f, 0.1f);
 
             GUILayout.Space(6f);
             GUILayout.Label(hasRequest
@@ -210,6 +227,40 @@ namespace Sandbox
 
             selectedRecipe = slot;
             Fire(recipe);
+        }
+
+        void FireButtonWithScale(
+            string name,
+            int slot,
+            Recipe recipe,
+            ref float scale,
+            float min,
+            float max,
+            float step)
+        {
+            GUILayout.BeginHorizontal();
+            bool fire = GUILayout.Button($"Fire {name}({scale:0.##})", GUILayout.Height(28f));
+            if (GUILayout.Button("-", GUILayout.Width(28), GUILayout.Height(28)))
+                scale = Mathf.Max(min, scale - step);
+            if (GUILayout.Button("+", GUILayout.Width(28), GUILayout.Height(28)))
+                scale = Mathf.Min(max, scale + step);
+            GUILayout.EndHorizontal();
+            if (!fire)
+                return;
+
+            selectedRecipe = slot;
+            Fire(recipe);
+        }
+
+        void ScaleRow(string label, ref float value, float min, float max, float step)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, GUILayout.Height(28f));
+            if (GUILayout.Button("-", GUILayout.Width(28), GUILayout.Height(28)))
+                value = Mathf.Max(min, value - step);
+            if (GUILayout.Button("+", GUILayout.Width(28), GUILayout.Height(28)))
+                value = Mathf.Min(max, value + step);
+            GUILayout.EndHorizontal();
         }
 
         [ContextMenu("Fire")]
@@ -283,6 +334,12 @@ namespace Sandbox
                     return pierceHomingRecipe;
                 case 11:
                     return bounceMultiplyRecipe;
+                case 12:
+                    return travelSpeedRecipe;
+                case 13:
+                    return intervalSpeedRecipe;
+                case 14:
+                    return bounceSpeedRecipe;
                 default:
                     return straightRecipe;
             }
@@ -290,7 +347,7 @@ namespace Sandbox
 
         Vector3 FireDirection(Recipe recipe)
         {
-            if (recipe == bounceRecipe)
+            if (recipe == bounceRecipe || recipe == bounceSpeedRecipe)
                 return BounceDirection;
             if (recipe == bounceMultiplyRecipe)
                 return BounceMultiplyDirection;
@@ -318,6 +375,9 @@ namespace Sandbox
             pierceHomingRecipe.OnTick = new IModifier[] { new Homing(300f) };
             bounceMultiplyRecipe = CreateRecipe("bounce-multiply", speed: 20f, lifetime: 5f);
             bounceMultiplyRecipe.OnHit = new IModifier[] { new Bounce(2), new Multiply(2, childRecipe) };
+            travelSpeedRecipe = CreateRecipe("speed-travel", speed: 20f, lifetime: 5f);
+            intervalSpeedRecipe = CreateRecipe("speed-interval", speed: 20f, lifetime: 5f);
+            bounceSpeedRecipe = CreateRecipe("bounce-speed", speed: 20f, lifetime: 5f);
             ApplyMagnitudes();
 
             var poolRoot = new GameObject("ProjectilePool");
@@ -335,6 +395,9 @@ namespace Sandbox
             world.Prewarm(weakHomingRecipe, PrewarmCount);
             world.Prewarm(pierceHomingRecipe, PrewarmCount);
             world.Prewarm(bounceMultiplyRecipe, PrewarmCount);
+            world.Prewarm(travelSpeedRecipe, PrewarmCount);
+            world.Prewarm(intervalSpeedRecipe, PrewarmCount);
+            world.Prewarm(bounceSpeedRecipe, PrewarmCount);
 
             BindDummies();
         }
@@ -348,7 +411,10 @@ namespace Sandbox
             if (bounceRecipe != null)
                 bounceRecipe.OnHit = new IModifier[] { new Bounce(bounceCount) };
             if (intervalRecipe != null)
-                intervalRecipe.OnInterval = new IModifier[] { new Multiply(multiplyIntervalCount, childRecipe, intervalSeconds: 0.5f) };
+            {
+                intervalRecipe.OnSpawn = new IModifier[] { new Interval(intervalSeconds) };
+                intervalRecipe.OnInterval = new IModifier[] { new Multiply(multiplyIntervalCount, childRecipe) };
+            }
             if (expireRecipe != null)
                 expireRecipe.OnExpire = new IModifier[] { new Multiply(multiplyExpireCount, childRecipe) };
             if (multicastRecipe != null)
@@ -357,6 +423,15 @@ namespace Sandbox
                 strongHomingRecipe.OnTick = new IModifier[] { new Homing(homingStrong) };
             if (weakHomingRecipe != null)
                 weakHomingRecipe.OnTick = new IModifier[] { new Homing(homingWeak) };
+            if (travelSpeedRecipe != null)
+                travelSpeedRecipe.OnTravel = new IModifier[] { new Speed(travelSpeedScale) };
+            if (intervalSpeedRecipe != null)
+            {
+                intervalSpeedRecipe.OnSpawn = new IModifier[] { new Interval(intervalSeconds) };
+                intervalSpeedRecipe.OnInterval = new IModifier[] { new Speed(intervalSpeedScale) };
+            }
+            if (bounceSpeedRecipe != null)
+                bounceSpeedRecipe.OnHit = new IModifier[] { new Bounce(1), new Speed(bounceSpeedScale) };
         }
 
         static Recipe CreateRecipe(string id, float speed, float lifetime, float radius = 0.25f)

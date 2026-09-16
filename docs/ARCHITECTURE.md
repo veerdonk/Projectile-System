@@ -23,10 +23,10 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 
 | Stage | When it runs | Typical modifiers |
 | --- | --- | --- |
-| `OnSpawn` | Once when the instance is created | `Multicast(n)` |
+| `OnSpawn` | Once when the instance is created | `Multicast(n)`, `Interval(n)` |
 | `OnTravel` | Once after spawn, before the first move | `Speed(n)`, `Damage(n)`, `Critical(n)`, `Mana(n)`, `Spread(n)`, `EffectRadius(n)`, `Size(n)` |
 | `OnTick` | Every `ProjectileWorld.Tick` | `Homing(n)` |
-| `OnInterval` | When that modifier’s elapsed interval elapses during flight | `Multiply(n)` every 0.5s; scale modifiers every 0.5s |
+| `OnInterval` | Each time the instance’s interval elapses during flight | `Multiply(n)`, scale modifiers |
 | `OnHit` | On each hit from the pipeline | `Pierce`, `Bounce`, `Multiply` spawn, scale modifiers, `ApplyStatus` |
 | `OnExpire` | When the instance is ending | `Multiply` on death |
 
@@ -36,13 +36,15 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 
 `OnTravel` is one-shot setup. Continuous steering is `OnTick`. Periodic spawn or stat scale is `OnInterval`, not `OnTravel`. `Speed(n)` (and the other scale modifiers) on `OnTravel` is the spawn-time start scale; do not put them on `OnSpawn`.
 
+**Interval:** the seconds between `OnInterval` runs belong to the instance, not to the modifiers on the list. `Interval(n)` on `OnSpawn` sets that one period and every modifier on `OnInterval` fires on those crossings, in list order ([DECISIONS.md](DECISIONS.md) ADR-012). A Recipe with no `Interval(n)` never runs `OnInterval`. `Interval` is not a despawn clock; `LifetimeSeconds` still is.
+
 ## Recipe
 
 ```text
 Recipe
   Id
   Speed, Radius, LifetimeSeconds
-  Damage, CriticalChance, ManaCost, SpreadDegrees, EffectRadius
+  Damage, CriticalChance, ManaCost, EffectRadius
   PresentationId
   OnSpawn[], OnTravel[], OnTick[], OnInterval[], OnHit[], OnExpire[]
 ```
@@ -55,7 +57,7 @@ A modifier may:
 
 - Read instance simulation state
 - Mutate motion fields (velocity, speed, radius) and remaining pierce/bounce/interval
-- Mutate combat stats on the instance (damage, critical chance, effect radius, spread)
+- Mutate combat stats on the instance (damage, critical chance, effect radius) and multiply spread scale
 - Cancel despawn on the current hit
 - Request spawns of **explicit child Recipes** (never implied inherit)
 - Request a status effect on the current `Target` hit (flushed as `StatusApplied` after `OnHit`; see ADR-011)
@@ -73,6 +75,8 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 **Multicast:** `Multicast(n)` on `OnSpawn` requests `n-1` extra instances from an explicit sibling Recipe. By default extra instances do **not** run `Multicast` again: the spawn path skips it for them, so a sibling Recipe that carries one cannot explode. `Recipe.MulticastGenerations` buys further generations, counted down per extra so a chain always terminates ([DECISIONS.md](DECISIONS.md) ADR-007). `Recipe.MultiplyGenerations` is the same budget for `Multiply` children, which likewise do not inherit multiply by default.
 
 **Prewarm:** `Prewarm(recipe, count)` also prewarms the Recipes those modifiers chain into, using the same generations ([DECISIONS.md](DECISIONS.md) ADR-008). Do not hand-prewarm the children as well. Directions for all `n` slots, the original included, come from an `IMulticastPattern` ([DECISIONS.md](DECISIONS.md) ADR-006); v1 ships `RandomConePattern`.
+
+**Multiply spread:** `Multiply` authors `Spread` as meters between child spawn points, on a line perpendicular to travel or the hit normal and centered on that point ([DECISIONS.md](DECISIONS.md) ADR-014). `Spread = 0` stacks. `Spread(n)` scales that instance spacing. The original shot is not jittered.
 
 ## Hit pipeline
 

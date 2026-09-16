@@ -96,7 +96,7 @@ Keep phase 1 behaviour. Move live instances onto Entities.
 - `Multiply(n)` with an explicit child Recipe
 - `OnInterval` (e.g. every 0.5s)
 - `OnHit` and `OnExpire` multiply (killing hit: `OnHit` then `OnExpire`)
-- Spread on interval children may be a small random cone; seed it
+- Child directions: a small random cone is allowed (seed it). Phase 11 replaces this with `Multiply.Spread` meters between spawn points
 
 **Out of scope:** multicast, homing
 
@@ -152,9 +152,10 @@ Prove that named modifiers from phases 2–5 still do their jobs when they share
 **In scope**
 
 - `Speed(n)` on `OnTravel`: spawn-time / one-shot setup so the instance **starts** slower or faster than `Recipe.Speed`
-- `Speed(n)` on `OnInterval` with `IntervalSeconds` (same elapsed-time crossings as `Multiply`, e.g. every 0.5s): speed scales again each time the interval fires, so the instance can get progressively slower or faster
+- `Speed(n)` on `OnInterval` (same elapsed-time crossings as `Multiply`, e.g. every 0.5s): speed scales again each time the interval fires, so the instance can get progressively slower or faster
 - `Speed(n)` on `OnHit` for both `HitKind.Target` and `HitKind.World`, so pierce and bounce can change speed after a hit that keeps the parent alive. List order still applies (`Bounce` then `Speed` scales the reflected velocity)
 - Generalize `OnInterval` so it is not `Multiply`-only. Do not skip `Speed` when multiply generations are 0. Do not add an interval interface
+- Refined after review: the period is per Recipe, not per modifier — `Interval(n)` on `OnSpawn` sets it and `Multiply` / `Speed` dropped their `intervalSeconds` ([ADR-012](DECISIONS.md))
 - Edit Mode tests for start scale, interval re-scale, and OnHit scale after Bounce(1) and Pierce(1)
 - Sandbox Recipes: start faster, interval slowdown, bounce-then-faster
 
@@ -185,32 +186,31 @@ Apply a status effect on `HitKind.Target`. Do not simulate burn, poison, or shoc
 
 ## Phase 9 — Combat and cast stats
 
-Store game numbers on the Recipe (and on the instance when they can change in flight). Do **not** add a modifier per field. Phases 10–11 add `Damage(n)` / `Size(n)` and the other scale modifiers. ADR-012.
+Store game numbers on the Recipe (and on the instance when they can change in flight). Do **not** add a modifier per field. Phases 10–11 add scale modifiers. ADR-013. **Spread is not a Recipe stat** — it belongs on `Multiply` (phase 11 / ADR-014).
 
 **In scope**
 
-- Recipe fields: `Damage`, `CriticalChance` (0–1), `ManaCost`, `SpreadDegrees`, `EffectRadius`. **Size is `Radius`** — do not add a `Size` field
+- Recipe fields: `Damage`, `CriticalChance` (0–1), `ManaCost`, `EffectRadius`. **Size is `Radius`** — do not add a `Size` field
 - Copy damage, crit chance, effect radius, and radius onto the live instance at spawn; expose them on `ModifierContext` so a later modifier can write them without new plumbing
 - `ManaCost` stays Recipe-only (read at fire time). Package does not spend mana
 - `HitInfo` carries `Damage`, `CriticalChance`, and `EffectRadius` from the instance at contact (today `Hit` fires before `OnHit`)
-- `SpreadDegrees` jitters the **original** spawn direction (0 = exact). Multicast still owns extra directions ([ADR-006](DECISIONS.md)); do not double-apply spread on extras
 - Default `Damage = 1` so existing dummy HP (currently −1 per hit) keeps working when the sandbox uses `Hit.Damage`. Other new fields default to 0
-- Edit Mode tests: `Hit.Damage` matches Recipe; zero spread is deterministic; nonzero spread changes direction; `ManaCost` readable on Recipe, unchanged by `Tick`
-- Sandbox HUD shows selected Recipe damage, crit, mana, spread, radius, effect radius. Dummy HP subtracts `Hit.Damage`
+- Edit Mode tests: `Hit.Damage` matches Recipe; `ManaCost` readable on Recipe, unchanged by `Tick`
+- Sandbox HUD shows selected Recipe damage, crit, mana, radius, effect radius. Dummy HP subtracts `Hit.Damage`
 
-**Out of scope:** rolling crit; AoE overlap queries; spending mana; `Damage(n)` / `Size(n)` modifiers (phases 10–11); editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** rolling crit; AoE overlap queries; spending mana; `Damage(n)` / `Size(n)` / Multiply `Spread` (phases 10–11); original-shot direction jitter; editor tooling; Unity Physics; Entities Graphics
 
-**Proof:** fire a Recipe with Damage 5 — dummy loses 5 HP. HUD shows mana/spread/radius. A spread Recipe leaves the muzzle off the exact spawn direction.
+**Proof:** fire a Recipe with Damage 5 — dummy loses 5 HP. HUD shows mana/radius.
 
 **Stop.**
 
 ## Phase 10 — Damage, critical, and mana modifiers
 
-`Damage(n)`, `Critical(n)`, and `Mana(n)` scale the instance stats from phase 9 the way `Speed(n)` scales speed (`n > 1` up, `0 < n < 1` down, `n <= 0` no-op). ADR-013. Do not apply HP, roll crit, or spend mana.
+`Damage(n)`, `Critical(n)`, and `Mana(n)` scale the instance stats from phase 9 the way `Speed(n)` scales speed (`n > 1` up, `0 < n < 1` down, `n <= 0` no-op). ADR-014. Do not apply HP, roll crit, or spend mana.
 
 **In scope**
 
-- `Damage(n)` / `Critical(n)` / `Mana(n)` on `OnTravel` (start), `OnInterval` (progressive), and `OnHit` (after bounce/pierce). Not `OnSpawn`
+- `Damage(n)` / `Critical(n)` / `Mana(n)` on `OnTravel` (start), `OnInterval` (progressive), and `OnHit` (after bounce/pierce). Not `OnSpawn`. Interval period is still `Interval(n)` on `OnSpawn` (ADR-012)
 - Copy `ManaCost` onto the instance at spawn so `Mana(n)` mutates that copy, not the shared Recipe. `Recipe.ManaCost` stays the authored fire-time cost
 - Clamp critical chance to `[0, 1]` after a scale
 - `OnTravel` scales run before the first move, so the first `Hit` sees them. `OnHit` scales run after the current `Hit` event; later pierce/bounce hits see the new values
@@ -225,20 +225,22 @@ Store game numbers on the Recipe (and on the instance when they can change in fl
 
 ## Phase 11 — Spread, effect radius, and size modifiers
 
-`Spread(n)`, `EffectRadius(n)`, and `Size(n)` scale the remaining phase 9 stats. `Size(n)` scales `Radius` — still no second size field.
+`EffectRadius(n)` and `Size(n)` scale the remaining phase 9 stats. `Size(n)` scales `Radius` — still no second size field. `Spread(n)` scales `Multiply.Spread`, the meters between child spawn points. ADR-014. Do not jitter the original shot.
 
 **In scope**
 
+- `Multiply.Spread`: world-unit **distance between child spawn points** on a line perpendicular to travel (interval/expire) or the hit normal (OnHit), centered on the parent or hit. Default `0` stacks children on that point. This replaces Multiply's hardcoded 12° random cone
+- Copy that authored spacing onto the instance (scale default 1). `Spread(n)` multiplies it the way `Speed(n)` multiplies speed
 - `Spread(n)` / `EffectRadius(n)` / `Size(n)` on `OnTravel`, `OnInterval`, and `OnHit`. Same scale contract as `Speed(n)` / phase 10. Not `OnSpawn`
-- Apply original-shot spread jitter **after** `OnTravel` so `Spread(n)` on travel is included. Multicast extras still use ADR-006 patterns; do not double-apply
+- Multicast extras still use ADR-006 patterns. Do not add original-shot direction jitter
 - `Size(n)` must be able to write `Radius` on `ModifierContext` (phase 9 may have left it read-only). SphereCast and the view scale with the new radius
 - `OnHit` `EffectRadius(n)` / `Size(n)` follow the same Hit-then-OnHit timing as phase 10
-- Edit Mode tests: OnTravel `Size(2)` doubles radius; OnTravel `Spread(2)` widens jitter vs the Recipe cone; OnTravel `EffectRadius(2)` doubles `HitInfo.EffectRadius`; `n <= 0` is a no-op
-- Sandbox Recipes: Size(2) looks and hits larger; Spread(2) leaves the muzzle farther off-axis than the phase 9 spread Recipe
+- Edit Mode tests: OnTravel `Size(2)` doubles radius; `Multiply(2)` with `Spread = 2` places children 2 m apart; OnTravel `Spread(2)` with that Multiply places them 4 m apart; `Spread = 0` stacks; OnTravel `EffectRadius(2)` doubles `HitInfo.EffectRadius`; `n <= 0` is a no-op
+- Sandbox Recipes: Size(2) looks and hits larger; Multiply Spread 2 vs 0 (apart vs stacked); Spread(2) on travel doubles that spacing
 
-**Out of scope:** AoE overlap queries; `Damage(n)` (phase 10); editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** AoE overlap queries; `Damage(n)` (phase 10); original-shot direction jitter; editor tooling; Unity Physics; Entities Graphics
 
-**Proof:** fire Size(2) — sphere is larger and contacts sooner. Fire Spread(2) — more off-axis than the unscaled spread Recipe.
+**Proof:** fire Size(2) — sphere is larger and contacts sooner. Fire Multiply with Spread 2 — children spawn 2 m apart. Fire Spread(2) on travel with that Multiply — 4 m apart.
 
 **Stop.**
 
