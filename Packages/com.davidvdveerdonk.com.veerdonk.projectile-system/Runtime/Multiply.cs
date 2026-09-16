@@ -6,24 +6,22 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// <summary>
     /// Spawns <see cref="Count"/> instances of an explicit child Recipe from OnHit, OnExpire, or OnInterval.
     /// On a hit, children start at the hit point along the hit normal. Count &gt; 1 uses a small random cone.
+    /// On OnInterval the period comes from <see cref="Interval"/> on the Recipe's OnSpawn list.
     /// </summary>
     public sealed class Multiply : IModifier
     {
         const float SpreadDegrees = 12f;
         const float SurfaceSkin = 0.01f;
 
-        public Multiply(int count, Recipe childRecipe, float intervalSeconds = 0f)
+        public Multiply(int count, Recipe childRecipe)
         {
             Count = count;
             ChildRecipe = childRecipe ?? throw new ArgumentNullException(nameof(childRecipe));
-            IntervalSeconds = intervalSeconds;
         }
 
         public int Count { get; }
 
         public Recipe ChildRecipe { get; }
-
-        public float IntervalSeconds { get; }
 
         public void Apply(ModifierContext context)
         {

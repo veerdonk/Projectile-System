@@ -45,6 +45,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public float Radius { get; internal set; }
 
+        /// <summary>Seconds between <c>OnInterval</c> runs. <see cref="Interval"/> writes it on <c>OnSpawn</c>; 0 never fires.</summary>
+        public float IntervalSeconds { get; set; }
+
         public bool HasHit { get; internal set; }
 
         public HitInfo Hit { get; internal set; }
@@ -120,6 +123,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             int remainingPierce,
             int remainingBounce,
             float radius,
+            float intervalSeconds,
             int multiplyGenerationsLeft,
             bool hasHit,
             in HitInfo hit,
@@ -136,6 +140,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             RemainingPierce = remainingPierce;
             RemainingBounce = remainingBounce;
             Radius = radius;
+            IntervalSeconds = intervalSeconds;
             HasHit = hasHit;
             Hit = hit;
             CancelDespawn = false;
@@ -150,6 +155,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             projectile.RemainingLifetime = RemainingLifetime;
             projectile.RemainingPierce = RemainingPierce;
             projectile.RemainingBounce = RemainingBounce;
+            projectile.IntervalSeconds = IntervalSeconds;
             projectile.HomingHasTarget = HomingTarget.IsAssigned;
             projectile.HomingTargetId = HomingTarget.Id;
             projectile.HomingHasIgnoredTarget = HomingIgnoredTarget.IsAssigned;
