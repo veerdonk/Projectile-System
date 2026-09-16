@@ -281,6 +281,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 projectile.Radius,
                 projectile.Damage,
                 projectile.CriticalChance,
+                projectile.ManaCost,
                 projectile.EffectRadius,
                 projectile.IntervalSeconds,
                 projectile.MultiplyGenerationsLeft,

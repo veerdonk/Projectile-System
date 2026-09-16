@@ -33,12 +33,13 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 9 — combat and cast stats**
+**Phase 10 — combat scale modifiers**
 
 - Running tests through MCP rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- `ModifierContext.Bind` takes 17 positional parameters. Phases 10 and 12 add more. Passing the `Projectile` row instead would be an improvement, but as its own change, not folded into a phase.
-- The sandbox HUD is at 18 fire slots and single-key selection has run through `1`–`9`, `0`, `Q`, `E`, `R`, `T`, `Y`, `U`, `I`, `O`, `P`. Phases 11–13 need a different selector.
-- Sandbox dummy HP is a `float` now so it can subtract `Hit.Damage`. `Assets/Scenes/Sandbox.unity` still serializes `hp: 10` / `maxHp: 10` as integers; Unity reads them into the float fields without complaint.
+- `ModifierContext.Bind` is 18 positional parameters after adding instance `ManaCost`. Phases 12 still add more. Passing the `Projectile` row instead would be an improvement, but as its own change, not folded into a phase.
+- The sandbox HUD is at 22 fire slots. Keys in use: `1`–`9`, `0`, `Q`, `E`, `R`, `T`, `Y`, `U`, `I`, `O`, `P`, `F`, `G`, `H`. Phases 11–13 need a different selector.
+- Sandbox dummy HP is a `float` so it can subtract `Hit.Damage`. `Assets/Scenes/Sandbox.unity` still serializes `hp: 10` / `maxHp: 10` as integers; Unity reads them into the float fields without complaint.
+- `ProjectileWorld.TryGetManaCost` is public so the lab can show the instance copy after `Mana(n)` without putting that query on `IProjectileWorld`.
 
 ## Do not
 

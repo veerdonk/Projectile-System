@@ -108,7 +108,7 @@ struct HitInfo
 - `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`. `ApplyStatus` ignores World. `AreaEffect` on a World hit still overlaps nearby Targets
 - Projectile-vs-projectile: ignore until an ADR.
 
-The package does **not** apply HP, roll crits, spend mana, or tick DoT. Direct contact `HitInfo` is sampled before `OnHit` and raised after that list (ADR-016) so `AreaEffect` can suppress it; sampled damage still ignores OnHit `Damage(n)` on this contact. Sandbox listens to `Hit` for dummy health (`Hit.Damage`) and to `StatusApplied` to call `IStatusReceiver.Apply`. Size is `Radius`. `ManaCost` is read from the Recipe at fire time. `EffectRadius` is the `AreaEffect` overlap radius.
+The package does **not** apply HP, roll crits, spend mana, or tick DoT. Direct contact `HitInfo` is sampled before `OnHit` and raised after that list (ADR-016) so `AreaEffect` can suppress it; sampled damage still ignores OnHit `Damage(n)` on this contact. Sandbox listens to `Hit` for dummy health (`Hit.Damage`) and to `StatusApplied` to call `IStatusReceiver.Apply`. Size is `Radius`. `Recipe.ManaCost` is the authored fire-time cost; `Mana(n)` scales the instance copy. `EffectRadius` is the `AreaEffect` overlap radius.
 
 ## Public API sketch
 

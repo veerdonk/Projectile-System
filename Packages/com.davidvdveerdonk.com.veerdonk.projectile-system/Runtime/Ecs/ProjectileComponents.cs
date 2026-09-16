@@ -11,6 +11,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public float Radius;
         public float Damage;
         public float CriticalChance;
+        public float ManaCost;
         public float EffectRadius;
         public float RemainingLifetime;
         public float ElapsedSeconds;

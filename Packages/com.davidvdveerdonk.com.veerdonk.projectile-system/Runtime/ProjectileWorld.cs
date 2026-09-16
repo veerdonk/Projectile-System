@@ -176,6 +176,51 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             return false;
         }
 
+        /// <summary>
+        /// Instance mana-cost copy after spawn and any <see cref="Mana"/> scales. The Recipe field is unchanged.
+        /// </summary>
+        public bool TryGetManaCost(ProjectileId id, out float manaCost)
+        {
+            return TryGetCombatStats(id, out _, out _, out manaCost, out _);
+        }
+
+        internal bool TryGetCombatStats(
+            ProjectileId id,
+            out float damage,
+            out float criticalChance,
+            out float manaCost,
+            out float effectRadius)
+        {
+            ThrowIfDisposed();
+            EntityManager em = ecsWorld.EntityManager;
+            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
+            try
+            {
+                for (int i = 0; i < entities.Length; i++)
+                {
+                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
+                    if (new ProjectileId(projectile.Id) != id)
+                        continue;
+
+                    damage = projectile.Damage;
+                    criticalChance = projectile.CriticalChance;
+                    manaCost = projectile.ManaCost;
+                    effectRadius = projectile.EffectRadius;
+                    return true;
+                }
+            }
+            finally
+            {
+                entities.Dispose();
+            }
+
+            damage = 0f;
+            criticalChance = 0f;
+            manaCost = 0f;
+            effectRadius = 0f;
+            return false;
+        }
+
         internal bool TryGetRemaining(ProjectileId id, out int remainingPierce, out int remainingBounce)
         {
             ThrowIfDisposed();
@@ -325,6 +370,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Radius = recipe.Radius,
                 Damage = recipe.Damage,
                 CriticalChance = recipe.CriticalChance,
+                ManaCost = recipe.ManaCost,
                 EffectRadius = recipe.EffectRadius,
                 RemainingLifetime = recipe.LifetimeSeconds,
                 ElapsedSeconds = 0f,

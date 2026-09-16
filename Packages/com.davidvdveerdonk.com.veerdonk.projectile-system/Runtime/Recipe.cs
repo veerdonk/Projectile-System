@@ -19,7 +19,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         /// <summary>Probability 0–1. The package never rolls a crit.</summary>
         public float CriticalChance { get; set; }
 
-        /// <summary>Fire-time cost for the game to read. The package never spends mana.</summary>
+        /// <summary>
+        /// Authored fire-time cost. Copied onto the instance at spawn so <see cref="Mana"/> can scale
+        /// that copy; this field stays the authored value. The package never spends mana.
+        /// </summary>
         public float ManaCost { get; set; }
 
         /// <summary>Radius of the area-effect overlap sphere a later phase queries. Distinct from <see cref="Radius"/>.</summary>
