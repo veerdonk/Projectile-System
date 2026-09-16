@@ -6,7 +6,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// <summary>
     /// OnTick: steer toward a homing target. <see cref="TurnRateDegreesPerSecond"/> is the maximum turn in
     /// degrees per second — Homing(100) turns at 100°/s, Homing(10) at 10°/s. If spawn did not assign a target,
-    /// <see cref="Acquisition"/> picks one once; the instance keeps that lock and does not retarget.
+    /// <see cref="Acquisition"/> picks one. A Target hit drops the lock and ignores that TargetId while it stays
+    /// in front of travel, so a pierce shot does not re-lock the dummy it is still overlapping. Other candidates
+    /// may lock on a later tick.
     /// </summary>
     public sealed class Homing : IModifier
     {
@@ -20,12 +22,31 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public IHomingAcquisition Acquisition { get; }
 
+        internal static void ReleaseLockOnTargetHit(ref Projectile projectile, in HitInfo hit)
+        {
+            if (hit.Kind != HitKind.Target)
+                return;
+
+            projectile.HomingHasTarget = false;
+            projectile.HomingTargetId = default;
+            projectile.HomingHasIgnoredTarget = true;
+            projectile.HomingIgnoredTargetId = hit.TargetId;
+        }
+
         public void Apply(ModifierContext context)
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
 
+            DropIgnoredIfPassed(context);
+
             HomingTarget target = context.HomingTarget;
+            if (target.IsAssigned && SameTarget(target, context.HomingIgnoredTarget))
+            {
+                target = default;
+                context.HomingTarget = default;
+            }
+
             if (!target.IsAssigned)
             {
                 if (!Acquisition.TryAcquire(context, out target))
@@ -57,6 +78,31 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
             Vector3 newDir = Vector3.RotateTowards(currentDir, toTarget.normalized, maxRadians, 0f);
             context.Velocity = newDir * speed;
+        }
+
+        static void DropIgnoredIfPassed(ModifierContext context)
+        {
+            HomingTarget ignored = context.HomingIgnoredTarget;
+            if (!ignored.IsAssigned)
+                return;
+
+            if (!context.HomingCatalog.TryGetPosition(ignored, out Vector3 position))
+            {
+                context.HomingIgnoredTarget = default;
+                return;
+            }
+
+            Vector3 travel = context.Velocity;
+            if (travel.sqrMagnitude < 1e-12f)
+                return;
+
+            if (Vector3.Dot(position - context.Position, travel) <= 0f)
+                context.HomingIgnoredTarget = default;
+        }
+
+        static bool SameTarget(HomingTarget left, HomingTarget right)
+        {
+            return left.IsAssigned && right.IsAssigned && left.Id.Equals(right.Id);
         }
     }
 }

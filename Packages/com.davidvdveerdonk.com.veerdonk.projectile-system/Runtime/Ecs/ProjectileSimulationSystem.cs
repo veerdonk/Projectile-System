@@ -124,6 +124,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             if (runOnHit)
             {
                 RunStage(recipe.OnHit, entity, hasHit: true, hit, dt: 0f);
+                Projectile afterHit = em.GetComponentData<Projectile>(entity);
+                Homing.ReleaseLockOnTargetHit(ref afterHit, hit);
+                em.SetComponentData(entity, afterHit);
                 if (Bridge.ModifierContext.CancelDespawn)
                 {
                     ContinueAfterHit(entity, hit);
@@ -242,6 +245,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             HomingTarget homing = projectile.HomingHasTarget
                 ? HomingTarget.Assigned(projectile.HomingTargetId)
                 : default;
+            HomingTarget ignored = projectile.HomingHasIgnoredTarget
+                ? HomingTarget.Assigned(projectile.HomingIgnoredTargetId)
+                : default;
             Bridge.ModifierContext.Bind(
                 new ProjectileId(projectile.Id),
                 ToVector3(position.Value),
@@ -255,7 +261,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 hasHit,
                 hit,
                 dt,
-                homing);
+                homing,
+                ignored);
         }
 
         static Vector3 ToVector3(float3 value)

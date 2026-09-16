@@ -32,7 +32,7 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 
 **Hit then expire:** a hit that despawns the instance runs `OnHit` first, then `OnExpire`.
 
-**Pierce / bounce** are `OnHit` modifiers. They inspect `HitInfo.Kind` and may **cancel despawn** (see Hit pipeline).
+**Pierce / bounce** are `OnHit` modifiers. They may **cancel despawn** (see Hit pipeline). Pierce inspects `HitInfo.Kind` (`Target` only). Bounce reflects any hit.
 
 `OnTravel` is one-shot setup. Continuous steering is `OnTick`. Periodic spawn is `OnInterval`, not `OnTravel`.
 
@@ -88,7 +88,7 @@ struct HitInfo
 }
 ```
 
-- `Target` — dummy (or later enemy). Default: raise `Hit`, despawn unless `Pierce` cancels despawn.
+- `Target` — dummy (or later enemy). Default: raise `Hit`, despawn unless `Pierce` or `Bounce` cancels despawn. Bounce still raises `Hit` so dummy HP drops.
 - `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`.
 - Projectile-vs-projectile: ignore until an ADR.
 
@@ -104,7 +104,7 @@ struct SpawnRequest
     Recipe Recipe;
     Vector3 Position;
     Vector3 Direction;
-    HomingTarget HomingTarget; // optional; Homing acquires if unassigned (ADR-009)
+    HomingTarget HomingTarget; // optional initial lock; Homing acquires if unassigned (ADR-009, ADR-010)
 }
 
 struct ProjectileId { /* opaque handle */ }
@@ -128,7 +128,7 @@ Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for exa
 - Spawn never uses `Instantiate` outside the pool
 - Presentation / views must not write simulation state
 - Modifiers in a list run in list order. `CancelDespawn` does not skip the rest of that list (so `Bounce` and `Multiply` on the same `OnHit` list both run)
-- An instance that cancelled despawn stays live and still runs `OnTick` on later ticks (so `Pierce` then `Homing` compose without a retarget API)
+- An instance that cancelled despawn stays live and still runs `OnTick` on later ticks (so `Pierce` then `Homing` compose: the next tick can drop the pierced dummy and acquire another)
 - Simulation components have no `MonoBehaviour`, `GameObject`, or other `UnityEngine.Object` fields
 - The simulation `World` is package-owned, not `DefaultGameObjectInjectionWorld`, and is not ticked from the Player Loop
 - No `FindObjectOfType` (or equivalent global search) in the runtime package

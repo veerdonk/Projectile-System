@@ -57,6 +57,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         /// <summary>Lock for this instance. Homing writes here after a successful acquire.</summary>
         public HomingTarget HomingTarget { get; set; }
 
+        /// <summary>Last Target hit. Acquisition skips it while it stays in front of travel.</summary>
+        public HomingTarget HomingIgnoredTarget { get; set; }
+
         public HomingCatalog HomingCatalog { get; }
 
         /// <summary>Queues an instance of an explicit child Recipe. Spawned after the current instance finishes this stage.</summary>
@@ -121,7 +124,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             bool hasHit,
             in HitInfo hit,
             float deltaTime,
-            HomingTarget homingTarget)
+            HomingTarget homingTarget,
+            HomingTarget homingIgnoredTarget)
         {
             MultiplyGenerationsLeft = multiplyGenerationsLeft;
             InstanceId = instanceId;
@@ -137,6 +141,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             CancelDespawn = false;
             DeltaTime = deltaTime;
             HomingTarget = homingTarget;
+            HomingIgnoredTarget = homingIgnoredTarget;
         }
 
         internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
@@ -147,6 +152,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             projectile.RemainingBounce = RemainingBounce;
             projectile.HomingHasTarget = HomingTarget.IsAssigned;
             projectile.HomingTargetId = HomingTarget.Id;
+            projectile.HomingHasIgnoredTarget = HomingIgnoredTarget.IsAssigned;
+            projectile.HomingIgnoredTargetId = HomingIgnoredTarget.Id;
             velocity.Value = new Unity.Mathematics.float3(Velocity.x, Velocity.y, Velocity.z);
         }
     }
