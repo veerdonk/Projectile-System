@@ -16,8 +16,8 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
 - Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1)
 - Phase 6: reuse an off-lane dummy as the Pierce(1)+Homing(100) target; add a second World wall only if two Bounce(2)+Multiply(2) hits cannot be shown on the existing wall
-- Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s)
-- On-screen readout: last spawn request, active instances, pool available count, dummy HP
+- Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed scale)
+- On-screen readout: last spawn request, active instances, pool available count, dummy HP, last status id on each dummy
 
 ## How to prove a phase
 
@@ -38,6 +38,10 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 5 | Homing(100) (key **9**) vs Homing(10) (key **0**) | Fire 25° off +Z; closest dummy in front is DummyTarget. Strong curves in and hits; weak misses |
 | 6 | Pierce(1)+Homing(100) | First dummy on the lane is pierced; instance curves into the off-lane homing dummy |
 | 6 | Bounce(2)+Multiply(2) | Two World hits; two extra instances appear at each bounce; parent stays live |
+| 7 | Speed(2) on travel | Leaves the muzzle twice as fast as the straight Recipe |
+| 7 | Speed(0.5) on interval | Slows by half every 0.5s |
+| 7 | Bounce(1)+Speed(2) | Reflects off the wall and continues faster |
+| 8 | ApplyStatus dummy | Dummy HUD shows `dummy` on a Target hit; wall hits do not |
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.
 
