@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-021 — Views come from a factory; hits stay a sphere
+
+- **Date:** 2026-09-16
+- **Decision:** `ProjectilePool` does not `CreatePrimitive` itself. It calls `IProjectileViewFactory.Create(recipe, poolParent)`. `Recipe.PresentationId` selects the look. The default factory is the current sphere primitive, scaled to `2 * Radius`. A `PrefabViewFactory` maps ids to prefabs and does not rescale them. Unknown ids fall back to the primitive. `ProjectileView` is public so prefabs can carry it. Colliders on views stay disabled. SphereCast of `Recipe.Radius` is still the hit shape. Tests with `createViews: false` never call the factory. No Addressables, no Entities Graphics, no mesh colliders for hits.
+- **Why:** Games need their own meshes and particles without forking the pool or putting `UnityEngine.Object` on simulation components. `PresentationId` has been on the Recipe since phase 1 and was unused. A factory is the same shape as `IHitQuery` / `IMulticastPattern`: one method, swap the implementation. Scaling a user prefab to the sim radius would squash authored art; the lab sphere can keep scaling.
+- **Consequences:** Three new public types (`IProjectileViewFactory`, `PrimitiveViewFactory`, `PrefabViewFactory`) and a public `ProjectileView`. `ProjectileWorld` gains an optional factory argument. v1 ships two prefabs (`sphere`, `cube`) for tests and the sandbox. Hit/expire one-shot VFX stay game listeners on `Hit` / `Expired`.
+
 ## ADR-020 — Protection is a collider marker, not HP
 
 - **Date:** 2026-09-16

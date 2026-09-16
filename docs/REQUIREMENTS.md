@@ -29,6 +29,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Multiply pattern** — layout of those child spawn points in the plane perpendicular to travel or the hit normal (`SquarePattern`, `CirclePattern`, `RandomCirclePattern` in v1)
 - **Effect radius** — authored radius of an `AreaEffect` overlap sphere, copied onto the instance. Distinct from projectile `Radius`. Unused until phase 13 queries it
 - **Area effect** — overlap sphere around a spawn, hit point, or flying instance that applies area damage and optional status to Targets inside. Not a lingering ground field
+- **Presentation** — GameObject view for an instance. Selected by `Recipe.PresentationId` through `IProjectileViewFactory`. Not the hit shape
 - **Size** — projectile collision size. This **is** `Recipe.Radius`; there is no second size field
 - **Gravity** — downward acceleration in m/s² on the Recipe (default 0) and the instance. Burst adds it to velocity each tick. 0 is a straight shot
 - **Magnitude** — the number in `ModifierName(n)`:
@@ -382,6 +383,18 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** a Strong-protected collider and a Recipe with `Bounce(1)`, `AreaEffect`, and `Multiply` on `OnHit` / `OnExpire`
 - **When:** the instance records a hit on that collider
 - **Then:** the instance returns to the pool; no Direct `Hit`; no Area `Hit`; no child instances; `Expired` fires
+
+### Phase 18 — Cube presentation is not a cube hit
+
+- **Given:** a Recipe with `PresentationId = "cube"`, the same `Radius` as the sphere Recipe, and `PrefabViewFactory` mapping `"cube"` and `"sphere"`
+- **When:** the instance records a `Target` hit on DummyTarget
+- **Then:** the view is the cube prefab; `Hit` still uses `Radius` (same contact as the sphere Recipe)
+
+### Phase 18 — Unknown PresentationId falls back to a sphere
+
+- **Given:** `PresentationId = "missing"` and the same factory
+- **When:** the instance is spawned with views on
+- **Then:** the view is the primitive sphere fallback
 
 ## Product constraints
 

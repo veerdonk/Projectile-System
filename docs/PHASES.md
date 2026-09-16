@@ -387,6 +387,27 @@ Collider marker, same idea as `IDamageable`: the package classifies the hit; it 
 
 **Stop.**
 
+## Phase 18 — View factory
+
+The pool stops hard-coding `CreatePrimitive(Sphere)`. It asks an `IProjectileViewFactory` for a view from `Recipe.PresentationId`. Hits stay the kinematic SphereCast of `Radius` — the mesh is display only. ADR-021.
+
+**In scope**
+
+- Public `IProjectileViewFactory { ProjectileView Create(Recipe recipe, Transform poolParent); }`. Pool still owns rent/return stacks per Recipe. `createViews: false` still creates no views (Edit Mode tests unchanged)
+- `ProjectileView` becomes public (`Bind` / `SetPose` / `Release`). Prefabs may already have it; the factory adds it if missing. Disable/strip colliders on created views (same as today)
+- Default when the game passes none: `PrimitiveViewFactory` — current sphere primitive, scaled to `2 * Radius`
+- `PrefabViewFactory`: map `PresentationId` → prefab. Unknown id falls back to the primitive factory. **Do not** overwrite the prefab’s `localScale` (author at world scale)
+- `ProjectileWorld` takes an optional factory; `new ProjectileWorld(poolParent)` keeps today’s sphere
+- Two test/sandbox prefabs: **sphere** and **cube** (square silhouette). `PresentationId` `"sphere"` and `"cube"`. Live under sandbox or `Tests/Runtime` (not Addressables)
+- Play Mode tests: Recipe `"cube"` rents a cube view; Recipe `"sphere"` rents a sphere view; both still hit DummyTarget using `Radius`; return-to-pool reuses the same view GameObject
+- Sandbox: two Recipes, fire cube vs sphere — different look, same lane hit
+
+**Out of scope:** mesh-shaped hits; Addressables; Entities Graphics; scaling prefabs to `Radius`; hit/expire VFX beyond the flying view; editor tooling; Unity Physics
+
+**Proof:** fire the sphere Recipe — looks like today. Fire the cube Recipe — a cube flies the lane and still hits the dummy.
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

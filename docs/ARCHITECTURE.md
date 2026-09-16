@@ -81,6 +81,8 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Multiply spread:** `Multiply` authors `Spread` as meters between adjacent pips on an `IMultiplyPattern` ([DECISIONS.md](DECISIONS.md) ADR-015). Default `SquarePattern`. `Spread = 0` stacks. Children keep travel / hit-normal direction. `Spread(n)` scales the instance copy of that spacing (phase 12). The original shot is not jittered.
 
+**Views:** the pool asks `IProjectileViewFactory` for a GameObject view from `Recipe.PresentationId` ([DECISIONS.md](DECISIONS.md) ADR-021). Default is a sphere primitive. Hits stay SphereCast of `Radius`; the mesh is not the collider.
+
 **Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016). Area damage is on the modifier. Interval is an aura on the live instance, pulsed on `OnInterval`, not a ground field. Direct contact can be suppressed. The original shot is not an implied splash.
 
 ## Hit pipeline
@@ -170,6 +172,11 @@ static class BallisticAim
     // Fire-time direction so speed+gravity pass through target. Low arc default.
     // false = unreachable. Does not simulate; copy into SpawnRequest.Direction.
     bool TrySolve(Vector3 origin, Vector3 target, float speed, float gravity, out Vector3 direction, bool highArc = false);
+}
+
+interface IProjectileViewFactory
+{
+    ProjectileView Create(Recipe recipe, Transform poolParent);
 }
 ```
 
