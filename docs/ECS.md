@@ -45,7 +45,7 @@ SandboxLab.Update
                  Burst integrate: candidate = pos + vel * dt
                  move/hit on the same list; skip if a hit already disabled the entity
                  IHitQuery.TryCast (ScriptedHitQuery in Edit Mode, PhysicsHitQuery in Play Mode)
-                 on hit: Hit event, OnHit, StatusApplied after OnHit if ApplyStatus requested a Target effect
+                 on hit: Hit event, OnHit, StatusApplied after OnHit once per ApplyStatus request on a Target
                  despawn unless Pierce/Bounce CancelDespawn
                  CancelDespawn: keep remaining counts, place at hit point along current velocity
                  killing hit: OnHit then StatusApplied then OnExpire (`HasHit` still true so Multiply uses the hit point/normal)
@@ -76,7 +76,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Homing.cs` | `OnTick`: steer at n degrees/second toward a lock. Acquires via `IHomingAcquisition` when unassigned. A Target hit drops the lock (`Homing.ReleaseLockOnTargetHit` after `OnHit`) |
 | `Runtime/Speed.cs` | Scale current speed by n, keep travel direction. `OnTravel` start scale, `OnInterval` progressive, `OnHit` after bounce/pierce. Scale <= 0 is a no-op |
 | `Runtime/Interval.cs` | `OnSpawn`: seconds between `OnInterval` runs, onto `Projectile.IntervalSeconds`. One period per instance drives the whole list |
-| `Runtime/ApplyStatus.cs` | `OnHit` Target: request an `IStatusEffect`. Flushed as `StatusApplied` after the list. World hits do nothing |
+| `Runtime/ApplyStatus.cs` | `OnHit` Target: request an `IStatusEffect`. Each request on the list is flushed as `StatusApplied` after the list, in order. World hits do nothing |
 | `Runtime/IStatusEffect.cs` | Effect contract plus v1 `DummyStatusEffect` (`Id` `"dummy"`). Package does not tick DoT |
 | `Runtime/IStatusReceiver.cs` | Game/sandbox apply contract. Package never calls it; sandbox maps `StatusApplied` → `Apply` |
 | `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget` |

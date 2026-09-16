@@ -58,7 +58,7 @@ A modifier may:
 - Mutate motion fields (velocity, speed) and remaining pierce/bounce/interval
 - Cancel despawn on the current hit
 - Request spawns of **explicit child Recipes** (never implied inherit)
-- Request a status effect on the current `Target` hit (flushed as `StatusApplied` after `OnHit`; see ADR-011)
+- Request status effects on the current `Target` hit (flushed as `StatusApplied` after `OnHit`, one event per request, in list order; see ADR-011)
 
 A modifier may not:
 

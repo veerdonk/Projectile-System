@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -206,16 +207,23 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         void FlushStatusApplied(in HitInfo hit)
         {
-            IStatusEffect effect = Bridge.ModifierContext.RequestedStatus;
-            if (effect == null || hit.Kind != HitKind.Target)
+            if (hit.Kind != HitKind.Target)
                 return;
 
-            Bridge.StatusApplied?.Invoke(new StatusInfo
+            IReadOnlyList<IStatusEffect> effects = Bridge.ModifierContext.RequestedStatuses;
+            for (int i = 0; i < effects.Count; i++)
             {
-                InstanceId = hit.InstanceId,
-                TargetId = hit.TargetId,
-                Effect = effect
-            });
+                IStatusEffect effect = effects[i];
+                if (effect == null)
+                    continue;
+
+                Bridge.StatusApplied?.Invoke(new StatusInfo
+                {
+                    InstanceId = hit.InstanceId,
+                    TargetId = hit.TargetId,
+                    Effect = effect
+                });
+            }
         }
 
         void RunStage(IModifier[] modifiers, Entity entity, bool hasHit, in HitInfo hit, float dt, bool skipMulticast = false)

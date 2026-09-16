@@ -36,7 +36,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`)
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
 - **Interval(n)** — `OnSpawn`: seconds between `OnInterval` runs for this instance. One period per Recipe drives every modifier on that list; without it `OnInterval` never runs (see [DECISIONS.md](DECISIONS.md) ADR-012)
-- **ApplyStatus** — `OnHit` + `Target`: request an `IStatusEffect` on the hit Target. The package does not simulate the effect (see [DECISIONS.md](DECISIONS.md) ADR-011)
+- **ApplyStatus** — `OnHit` + `Target`: request one or more `IStatusEffect`s on the hit Target. The package does not simulate the effects (see [DECISIONS.md](DECISIONS.md) ADR-011)
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
 
 ## Goals
@@ -183,6 +183,12 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** `ApplyStatus` with `DummyStatusEffect` on `OnHit`
 - **When:** the instance records a `Target` hit
 - **Then:** `StatusApplied` is raised with that effect and Target id; the sandbox dummy receives it; the instance still despawns unless Pierce/Bounce cancel that
+
+### Phase 8 — Multiple status on one Target hit
+
+- **Given:** two `ApplyStatus` modifiers on `OnHit`
+- **When:** the instance records a `Target` hit
+- **Then:** `StatusApplied` is raised once per modifier, in list order
 
 ### Phase 8 — Status does not apply on World
 

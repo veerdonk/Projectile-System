@@ -79,8 +79,13 @@ namespace Sandbox
 
         public void Apply(IStatusEffect effect)
         {
-            lastStatusId = effect != null ? effect.Id : "";
-            if (effect == null || !isActiveAndEnabled)
+            if (effect == null)
+                return;
+
+            lastStatusId = string.IsNullOrEmpty(lastStatusId)
+                ? effect.Id
+                : lastStatusId + ", " + effect.Id;
+            if (!isActiveAndEnabled)
                 return;
 
             if (flashRoutine != null)

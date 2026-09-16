@@ -402,11 +402,16 @@ namespace Sandbox
             intervalSpeedRecipe = CreateRecipe("speed-interval", speed: 20f, lifetime: 5f);
             bounceSpeedRecipe = CreateRecipe("bounce-speed", speed: 20f, lifetime: 5f);
             applyStatusRecipe = CreateRecipe("apply-status", speed: 20f, lifetime: 5f);
-            applyStatusRecipe.OnHit = new IModifier[] { new ApplyStatus(new DummyStatusEffect()) };
+            applyStatusRecipe.OnHit = new IModifier[]
+            {
+                new ApplyStatus(new DummyStatusEffect()),
+                new ApplyStatus(new DummyStatusEffect())
+            };
             pierceApplyStatusRecipe = CreateRecipe("pierce-status", speed: 20f, lifetime: 5f);
             pierceApplyStatusRecipe.OnHit = new IModifier[]
             {
                 new Pierce(1),
+                new ApplyStatus(new DummyStatusEffect()),
                 new ApplyStatus(new DummyStatusEffect())
             };
             ApplyMagnitudes();

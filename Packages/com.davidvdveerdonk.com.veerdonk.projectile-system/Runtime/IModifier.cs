@@ -17,6 +17,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     public sealed class ModifierContext
     {
         readonly List<SpawnRequest> pendingSpawns;
+        readonly List<IStatusEffect> requestedStatuses = new List<IStatusEffect>();
         Unity.Mathematics.Random random;
 
         internal ModifierContext(
@@ -72,18 +73,21 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         }
 
         /// <summary>
-        /// Requests a status on the current Target hit. Flushed as <see cref="IProjectileWorld.StatusApplied"/> after OnHit.
+        /// Requests a status on the current Target hit. Each request is flushed as
+        /// <see cref="IProjectileWorld.StatusApplied"/> after OnHit, in list order.
         /// </summary>
         public void RequestStatus(IStatusEffect effect)
         {
-            RequestedStatus = effect ?? throw new ArgumentNullException(nameof(effect));
+            if (effect == null)
+                throw new ArgumentNullException(nameof(effect));
+            requestedStatuses.Add(effect);
         }
 
-        internal IStatusEffect RequestedStatus { get; private set; }
+        internal IReadOnlyList<IStatusEffect> RequestedStatuses => requestedStatuses;
 
         internal void ClearRequestedStatus()
         {
-            RequestedStatus = null;
+            requestedStatuses.Clear();
         }
 
         /// <summary>Multicast expansions the extras queued from this stage may still run. Set before <c>OnSpawn</c>.</summary>
@@ -159,7 +163,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             HasHit = hasHit;
             Hit = hit;
             CancelDespawn = false;
-            RequestedStatus = null;
+            requestedStatuses.Clear();
             DeltaTime = deltaTime;
             HomingTarget = homingTarget;
             HomingIgnoredTarget = homingIgnoredTarget;

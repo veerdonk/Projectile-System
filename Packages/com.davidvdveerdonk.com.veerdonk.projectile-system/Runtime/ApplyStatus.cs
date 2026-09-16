@@ -4,7 +4,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
     /// <summary>
     /// <see cref="HitKind.Target"/> hits request <see cref="Effect"/>. World hits do nothing.
-    /// The world raises <see cref="IProjectileWorld.StatusApplied"/> after this OnHit list.
+    /// The world raises <see cref="IProjectileWorld.StatusApplied"/> for each request after this OnHit list.
     /// </summary>
     public sealed class ApplyStatus : IModifier
     {
