@@ -14,7 +14,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - Camera looking down the lane
 - Spawn point with a visible gizmo
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
-- Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1); a second wall at −X for Bounce(2)+Multiply(2)
+- Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1); a second wall at −X for Bounce(2)+Multiply(2); a splash dummy near DummyTarget for phase 13 OnHit area
 - Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed / Damage / Critical / Mana / Spread / EffectRadius / Size scale), plus one **- / +** row for the shared interval length in seconds, plus Multiply **pattern** (Square / Circle / RandomCircle) and **Spread** meters
 - On-screen readout: last spawn request, active instances, pool available count, dummy HP, last status id on each dummy, selected Recipe damage / crit / mana / radius / effect radius
 
@@ -50,6 +50,10 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 11 | Multiply Spread 0 | Children stacked on the hit/parent |
 | 12 | Size(2) on travel | Sphere looks and hits larger |
 | 12 | Spread(2) on travel + Square Spread 2 | Pair 4 m apart |
+| 13 | OnHit AreaEffect | DummyTarget and the nearby splash dummy both lose area damage |
+| 13 | Area-only OnHit | Contact dummy loses area damage, not Recipe damage |
+| 13 | OnTravel AreaEffect | Dummy at muzzle is hit before the shot moves |
+| 13 | Interval aura | Dummy beside the lane ticks each interval while the shot is in range |
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.
 

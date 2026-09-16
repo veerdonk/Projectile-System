@@ -198,7 +198,7 @@ Store game numbers on the Recipe (and on the instance when they can change in fl
 - Edit Mode tests: `Hit.Damage` matches Recipe; `ManaCost` readable on Recipe, unchanged by `Tick`
 - Sandbox HUD shows selected Recipe damage, crit, mana, radius, effect radius. Dummy HP subtracts `Hit.Damage`
 
-**Out of scope:** rolling crit; AoE overlap queries; spending mana; `Damage(n)` (phase 10); Multiply patterns / `Spread` (phase 11); `Size(n)` / `EffectRadius(n)` / `Spread(n)` (phase 12); original-shot direction jitter; editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** rolling crit; AoE overlap queries (phase 13); spending mana; `Damage(n)` (phase 10); Multiply patterns / `Spread` (phase 11); `Size(n)` / `EffectRadius(n)` / `Spread(n)` (phase 12); original-shot direction jitter; editor tooling; Unity Physics; Entities Graphics
 
 **Proof:** fire a Recipe with Damage 5 — dummy loses 5 HP. HUD shows mana/radius.
 
@@ -289,9 +289,31 @@ Disk in the same plane, radius `= spread` (count does not grow the disk). `n = 1
 - Edit Mode tests: OnTravel `Size(2)` doubles radius; OnTravel `Spread(2)` with `Multiply(2)` Square `Spread = 2` places the pair 4 m apart; `Spread = 0` still stacks; OnTravel `EffectRadius(2)` doubles `HitInfo.EffectRadius`; `n <= 0` is a no-op
 - Sandbox Recipes: Size(2) looks and hits larger; Spread(2) on travel doubles Square pip spacing
 
-**Out of scope:** AoE overlap queries; `Damage(n)` (phase 10); new multiply patterns (phase 11); original-shot direction jitter; editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** AoE overlap queries (phase 13); `Damage(n)` (phase 10); new multiply patterns (phase 11); original-shot direction jitter; editor tooling; Unity Physics; Entities Graphics
 
 **Proof:** fire Size(2) — sphere is larger and contacts sooner. Fire Spread(2) on travel with Square Multiply Spread 2 — pips 4 m apart.
+
+**Stop.**
+
+## Phase 13 — Area effects
+
+`AreaEffect` on `OnHit`, `OnTravel`, and `OnInterval`. Same modifier, three stages. Size is instance `EffectRadius` (phase 9 field, phase 12 scale). Area **damage** is authored on the modifier, not `Recipe.Damage`. Optional status too. Whether the projectile still applies its own contact damage/status is a pair of flags. ADR-016. Package still does not apply HP or tick DoT.
+
+**In scope**
+
+- `AreaEffect(damage, status = null, includeDirectHit = true, includeDirectStatus = true)`
+- Query a PhysX overlap sphere of instance `EffectRadius` (0 = no-op). `IHitQuery.Overlap` — Edit Mode `ScriptedHitQuery`, Play Mode `PhysicsHitQuery`. Only `IDamageable` Targets; ignore World and other projectiles. Modifier queues the request on `ModifierContext`; it does not call Physics
+- Each Target in the sphere raises `Hit` with `HitSource.Area` and the **modifier** damage, then `StatusApplied` if `status` is set. Same events as today; sandbox dummy HP still listens to `Hit.Damage`
+- **OnHit:** sphere at `Hit.Point`. **OnTravel:** sphere at spawn position, once, before the first move. **OnInterval:** aura — sphere at the instance’s current position on each interval crossing (`Interval(n)` on `OnSpawn` still required). The volume moves with the projectile; it is not a ground zone left behind. Not `OnTick` (that would apply every frame)
+- Direct contact `HitInfo` is still **sampled** before `OnHit` (phase 10 OnHit `Damage(n)` does not rewrite this contact). Raise that event **after** the `OnHit` list unless `includeDirectHit` is false (`SuppressDirectHit`). Direct `ApplyStatus` still flushes after the list unless `includeDirectStatus` is false. Area Hits/status flush after that
+- `includeDirectHit` / `includeDirectStatus` apply only on `OnHit`. OnTravel / OnInterval have no contact to suppress
+- If both flags stay true, the contacted dummy can receive a Direct Hit **and** an Area Hit (projectile damage + area damage)
+- Edit Mode tests: OnHit splash hits a nearby scripted Target; area-only suppresses the Direct Hit; OnTravel splash at spawn; OnInterval aura hits a Target beside the flight path on the first interval and again on the second; `EffectRadius = 0` hits nobody; World overlap is ignored; area status raises `StatusApplied` per Target
+- Sandbox: OnHit splash with two dummies in radius; area-only (contact dummy takes area damage, not Recipe damage); OnTravel burst if a dummy is at the muzzle; aura flying the lane ticks anyone inside `EffectRadius`
+
+**Out of scope:** lingering ground fields; occupancy enter/exit; `OnTick` aura; `OnExpire` area; scaling area damage with `Damage(n)`; rolling crit; applying HP/DoT in the package; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire OnHit AreaEffect — DummyTarget and a nearby dummy both lose area damage. Fire area-only — contact dummy loses area damage only. Fire OnTravel AreaEffect — dummy at muzzle is hit immediately. Fire interval aura — dummy beside the lane loses HP each interval while the shot is in range, then stops when it has passed.
 
 **Stop.**
 
@@ -300,6 +322,7 @@ Disk in the same plane, radius `= spread` (count does not grow the disk). `n = 1
 - Unity Physics and/or Entities Graphics adapters
 - Editor Recipe authoring
 - Multiply patterns: line, arc, cross, triangle; a pattern editor that authors an `IMultiplyPattern`
+- Lingering ground fields; occupancy enter/exit or `OnTick` auras
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Package samples vs sandbox split cleanup
 - Rename the UPM id if the double `com.davidvdveerdonk.com.veerdonk` prefix should go

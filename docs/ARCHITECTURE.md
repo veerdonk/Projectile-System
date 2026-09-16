@@ -24,10 +24,10 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 | Stage | When it runs | Typical modifiers |
 | --- | --- | --- |
 | `OnSpawn` | Once when the instance is created | `Multicast(n)`, `Interval(n)` |
-| `OnTravel` | Once after spawn, before the first move | `Speed(n)`, `Damage(n)`, `Critical(n)`, `Mana(n)`, `Spread(n)`, `EffectRadius(n)`, `Size(n)` |
+| `OnTravel` | Once after spawn, before the first move | `Speed(n)`, `Damage(n)`, `Critical(n)`, `Mana(n)`, `Spread(n)`, `EffectRadius(n)`, `Size(n)`, `AreaEffect` |
 | `OnTick` | Every `ProjectileWorld.Tick` | `Homing(n)` |
-| `OnInterval` | Each time the instance’s interval elapses during flight | `Multiply(n)`, scale modifiers |
-| `OnHit` | On each hit from the pipeline | `Pierce`, `Bounce`, `Multiply` spawn, scale modifiers, `ApplyStatus` |
+| `OnInterval` | Each time the instance’s interval elapses during flight | `Multiply(n)`, scale modifiers, `AreaEffect` (aura) |
+| `OnHit` | On each hit from the pipeline | `Pierce`, `Bounce`, `Multiply` spawn, scale modifiers, `ApplyStatus`, `AreaEffect` |
 | `OnExpire` | When the instance is ending | `Multiply` on death |
 
 **Hit then expire:** a hit that despawns the instance runs `OnHit` first, then `OnExpire`.
@@ -61,6 +61,7 @@ A modifier may:
 - Cancel despawn on the current hit
 - Request spawns of **explicit child Recipes** (never implied inherit)
 - Request a status effect on the current `Target` hit (flushed as `StatusApplied` after `OnHit`; see ADR-011)
+- Request an area overlap (flushed after the stage; see ADR-016) and suppress the direct contact `Hit` / `ApplyStatus`
 
 A modifier may not:
 
@@ -78,6 +79,8 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Multiply spread:** `Multiply` authors `Spread` as meters between adjacent pips on an `IMultiplyPattern` ([DECISIONS.md](DECISIONS.md) ADR-015). Default `SquarePattern`. `Spread = 0` stacks. Children keep travel / hit-normal direction. `Spread(n)` scales the instance copy of that spacing (phase 12). The original shot is not jittered.
 
+**Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016). Area damage is on the modifier. Interval is an aura on the live instance, pulsed on `OnInterval`, not a ground field. Direct contact can be suppressed. The original shot is not an implied splash.
+
 ## Hit pipeline
 
 Kinematic movement casts along the step (SphereCast / overlap). Each contact produces:
@@ -85,24 +88,27 @@ Kinematic movement casts along the step (SphereCast / overlap). Each contact pro
 ```csharp
 enum HitKind { Target, World }
 
+enum HitSource { Direct, Area }
+
 struct HitInfo
 {
     ProjectileId InstanceId;
     HitKind Kind;
+    HitSource Source;       // Direct = contact cast; Area = AreaEffect overlap (ADR-016)
     Vector3 Point;
     Vector3 Normal;
     // TargetId is a sandbox/game id; package stores it opaquely
-    float Damage;           // instance value at contact; Hit fires before OnHit
+    float Damage;           // Direct: instance value sampled at contact. Area: AreaEffect.Damage
     float CriticalChance;   // 0–1; package does not roll
-    float EffectRadius;     // authored; package does not AoE-query from this
+    float EffectRadius;     // instance value; AreaEffect overlaps this radius
 }
 ```
 
-- `Target` — dummy (or later enemy). Default: raise `Hit`, despawn unless `Pierce` or `Bounce` cancels despawn. Bounce still raises `Hit` so dummy HP drops. `ApplyStatus` may also request a status; that is raised as `StatusApplied` **after** the `OnHit` list, not on `Hit`
-- `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`. `ApplyStatus` ignores World
+- `Target` — dummy (or later enemy). Default: raise Direct `Hit` after `OnHit` unless suppressed, despawn unless `Pierce` or `Bounce` cancels despawn. Bounce still raises Direct `Hit` so dummy HP drops. `ApplyStatus` may also request a status; that is raised as `StatusApplied` **after** the `OnHit` list, not on `Hit`. `AreaEffect` may add Area Hits after that
+- `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`. `ApplyStatus` ignores World. `AreaEffect` on a World hit still overlaps nearby Targets
 - Projectile-vs-projectile: ignore until an ADR.
 
-The package does **not** apply HP, roll crits, spend mana, or run AoE from `EffectRadius`. Sandbox listens to `Hit` for dummy health (`Hit.Damage`) and to `StatusApplied` to call `IStatusReceiver.Apply`. Size is `Radius`. `ManaCost` is read from the Recipe at fire time.
+The package does **not** apply HP, roll crits, spend mana, or tick DoT. Direct contact `HitInfo` is sampled before `OnHit` and raised after that list (ADR-016) so `AreaEffect` can suppress it; sampled damage still ignores OnHit `Damage(n)` on this contact. Sandbox listens to `Hit` for dummy health (`Hit.Damage`) and to `StatusApplied` to call `IStatusReceiver.Apply`. Size is `Radius`. `ManaCost` is read from the Recipe at fire time. `EffectRadius` is the `AreaEffect` overlap radius.
 
 ## Public API sketch
 
@@ -127,7 +133,7 @@ interface IProjectileWorld
     void RemoveHomingCandidate(TargetId id);
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
-    event Action<StatusInfo> StatusApplied; // after OnHit; phase 8 (ADR-011)
+    event Action<StatusInfo> StatusApplied; // after OnHit / area flush (ADR-011, ADR-016)
 }
 
 struct StatusInfo

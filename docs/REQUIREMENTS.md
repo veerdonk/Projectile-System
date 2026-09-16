@@ -26,7 +26,8 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Mana cost** — authored fire-time cost on the Recipe. Phase 10 copies it onto the instance so `Mana(n)` can scale that copy; the package does not spend mana
 - **Spread** — meters between adjacent child pips when `Multiply` creates more than one instance. Authored on `Multiply`, not on the Recipe. Consumed by `IMultiplyPattern`. 0 stacks children on the same point
 - **Multiply pattern** — layout of those child spawn points in the plane perpendicular to travel or the hit normal (`SquarePattern`, `CirclePattern`, `RandomCirclePattern` in v1)
-- **Effect radius** — authored radius for a hit/expire gameplay effect (explosion, etc.). Distinct from projectile `Radius`. The package does not run AoE queries from this field in v1
+- **Effect radius** — authored radius of an `AreaEffect` overlap sphere, copied onto the instance. Distinct from projectile `Radius`. Unused until phase 13 queries it
+- **Area effect** — overlap sphere around a spawn, hit point, or flying instance that applies area damage and optional status to Targets inside. Not a lingering ground field
 - **Size** — projectile collision size. This **is** `Recipe.Radius`; there is no second size field
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
@@ -48,9 +49,10 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Critical(n)** — scale instance critical chance by `n`, then clamp to `[0, 1]`. Same stages as `Speed(n)`. Package still does not roll a crit
 - **Mana(n)** — scale the instance mana-cost copy by `n`. Same stages as `Speed(n)`. Does not change `Recipe.ManaCost` or spend mana
 - **Spread(n)** — scale the instance multiply-spread (pip spacing for `IMultiplyPattern`) by `n`. Same stages as `Speed(n)`. Does not jitter the original shot
-- **EffectRadius(n)** — scale instance effect radius by `n`. Same stages as `Speed(n)`. Package still does not run AoE queries
+- **EffectRadius(n)** — scale instance effect radius by `n`. Same stages as `Speed(n)`. Phase 13 uses the result as the `AreaEffect` overlap radius
 - **Size(n)** — scale `Radius` by `n`. Same stages as `Speed(n)`. There is no separate size field
 - **ApplyStatus** — `OnHit` + `Target`: request an `IStatusEffect` on the hit Target. The package does not simulate the effect (see [DECISIONS.md](DECISIONS.md) ADR-011)
+- **AreaEffect** — overlap Targets in instance `EffectRadius` and raise Area `Hit` / `StatusApplied`. Own damage on the modifier. `OnHit` (splash at the hit point), `OnTravel` (burst at spawn), `OnInterval` (aura on the flying instance). Flags choose whether the projectile’s own contact damage/status still apply. See [DECISIONS.md](DECISIONS.md) ADR-016
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
 
 ## Goals
@@ -293,6 +295,36 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** a Recipe with `EffectRadius = 1` and `EffectRadius(2)` on `OnTravel`
 - **When:** the instance records a hit
 - **Then:** `HitInfo.EffectRadius` is 2
+
+### Phase 13 — OnHit area hits nearby Targets
+
+- **Given:** `AreaEffect` with damage 3 on `OnHit`; `EffectRadius` large enough to cover DummyTarget and a nearby dummy; `includeDirectHit = true`
+- **When:** the instance records a `Target` hit on DummyTarget
+- **Then:** DummyTarget receives a Direct `Hit` (Recipe damage) and an Area `Hit` (3); the nearby dummy receives an Area `Hit` (3)
+
+### Phase 13 — Area-only suppresses the contact Hit
+
+- **Given:** the same splash, `includeDirectHit = false`, Recipe `Damage = 5`, area damage 3
+- **When:** the instance records a `Target` hit on DummyTarget
+- **Then:** DummyTarget receives only the Area `Hit` (3); no Direct `Hit` is raised
+
+### Phase 13 — OnTravel burst at spawn
+
+- **Given:** `AreaEffect` with damage 3 on `OnTravel`; a dummy inside `EffectRadius` of the spawn point
+- **When:** the Recipe is spawned
+- **Then:** that dummy receives an Area `Hit` (3) before the instance moves
+
+### Phase 13 — Interval aura follows the instance
+
+- **Given:** `AreaEffect` with damage 3 on `OnInterval`, `Interval(0.5)` on `OnSpawn`; a dummy beside the flight path inside `EffectRadius`
+- **When:** the instance has travelled 0.5s (still beside the dummy) then later has passed out of range
+- **Then:** the dummy receives an Area `Hit` (3) on that interval; after the instance has left the radius, later intervals do not hit it
+
+### Phase 13 — Area status and suppress direct status
+
+- **Given:** `AreaEffect` with `DummyStatusEffect` and `includeDirectStatus = false` on `OnHit`; `ApplyStatus` also on that list
+- **When:** the instance records a `Target` hit
+- **Then:** each Target in the sphere receives `StatusApplied` with the area effect; `ApplyStatus` does not run for the contact Target
 
 ## Product constraints
 

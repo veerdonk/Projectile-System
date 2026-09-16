@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-016 — AreaEffect overlaps Targets; area damage is not Recipe.Damage
+
+- **Date:** 2026-09-16
+- **Decision:** `AreaEffect` is one modifier on `OnHit`, `OnTravel`, and `OnInterval`. The overlap sphere uses instance `EffectRadius`. Area damage and optional `IStatusEffect` live on the modifier, not on `Recipe.Damage` / `ApplyStatus`. Each Target in the sphere raises the existing `Hit` / `StatusApplied` events with `HitSource.Area`. `includeDirectHit` / `includeDirectStatus` (default true) control whether the **contact** still raises Direct `Hit` and `ApplyStatus`. Contact `HitInfo` is still sampled before `OnHit` so phase 10 OnHit `Damage(n)` does not rewrite that event; the Direct event is raised **after** the `OnHit` list so it can be suppressed. OnInterval is an **aura**: the sphere is centered on the live instance each interval crossing, not a zone left in the world. Not `OnTick`. `EffectRadius = 0` is a no-op. World colliders and other projectiles are ignored. The package does not apply HP or tick DoT. `IHitQuery.Overlap` is the query; modifiers only queue via `ModifierContext`.
+- **Why:** Splash, muzzle burst, and a traveling aura are the same overlap, three existing stages. Radius is already a Recipe stat; area damage must not steal `Recipe.Damage` or a straight shot without `AreaEffect` would explode. Hit-before-OnHit made “area only” impossible; sampling early and raising late keeps pierce damage timing and lets the flags work. Per-frame `OnTick` overlap would melt dummy HP; the interval clock is already the pulse rate.
+- **Consequences:** One new public modifier (`AreaEffect`), `HitSource` on `HitInfo`, overlap on `IHitQuery` / `ScriptedHitQuery`, and `ModifierContext` request/suppress APIs. Do not add a second façade or a seventh stage. Do not scale area damage with `Damage(n)` in this phase. Lingering ground fields and occupancy tracking are later.
+
 ## ADR-015 — Multiply places children through `IMultiplyPattern`
 
 - **Date:** 2026-09-16
