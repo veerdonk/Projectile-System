@@ -16,6 +16,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Child recipe** — a full Recipe passed into a spawn modifier. Children do **not** inherit the parent’s lists unless that modifier says so
 - **Hit** — a collision result from the hit pipeline, not Unity’s `OnCollision*` messages
 - **Hit kind** — `Target` (damageable sandbox object) or `World` (wall / environment). Other projectiles are ignored until an ADR says otherwise
+- **Protection** — collider marker (`IProjectileProtection`) that changes how a hit is processed: Basic (OnHit/area still run, no status, game skips HP) or Strong (eat the projectile). Not a health bar. See [DECISIONS.md](DECISIONS.md) ADR-020
 - **Target** — the object described by a `Target` hit
 - **Homing target** — the object an instance is steering toward (may differ from what it eventually hits)
 - **Effect** — presentation or gameplay reaction associated with a modifier or event (VFX, audio). Damage is a sandbox effect, not package logic
@@ -91,7 +92,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - Cameras, lighting, URP
 - Input handling and debug compose / fire UI
-- Dummy targets (HP, `IDamageable`, `IStatusReceiver`)
+- Dummy targets (HP, `IDamageable`, `IStatusReceiver`, optional `IProjectileProtection`)
 - Player or enemy objects if you add them later
 
 If a type needs `Player`, `Enemy`, or camera code, it does not belong in the package.
@@ -363,6 +364,24 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** the same helper, a target farther than that speed and gravity can reach
 - **When:** `TrySolve` is called
 - **Then:** it returns false
+
+### Phase 17 — Basic protection skips HP and status, not bounce
+
+- **Given:** a collider with `IProjectileProtection` Basic and `Bounce(1)` on the Recipe
+- **When:** the instance records a hit on that collider
+- **Then:** Bounce reflects and does not despawn; Direct `Hit` has `Protection = Basic`; `StatusApplied` is not raised; sandbox HP on that dummy is unchanged
+
+### Phase 17 — Basic protection still pierces
+
+- **Given:** `Pierce(1)` and a Basic-protected dummy in front of an unprotected dummy
+- **When:** the instance travels through both
+- **Then:** the first contact does not despawn the instance; the unprotected dummy then receives a normal Target `Hit`
+
+### Phase 17 — Strong protection eats the shot
+
+- **Given:** a Strong-protected collider and a Recipe with `Bounce(1)`, `AreaEffect`, and `Multiply` on `OnHit` / `OnExpire`
+- **When:** the instance records a hit on that collider
+- **Then:** the instance returns to the pool; no Direct `Hit`; no Area `Hit`; no child instances; `Expired` fires
 
 ## Product constraints
 
