@@ -37,9 +37,9 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 5 | Homing(100) (key **9**) vs Homing(10) (key **0**) | Fire 25° off +Z; closest dummy in front is DummyTarget. Strong curves in and hits; weak misses |
 | 6 | Pierce(1)+Homing(300) (key **Q**) | First dummy on the lane is pierced; lock drops; instance then homes onto DummyBounce (closest remaining candidate in front). 300°/s is enough to leave DummyTarget instead of looping back into it |
 | 6 | Bounce(2)+Multiply(2) (key **E**) | Fires +X; two World walls; two extra instances at each bounce; parent stays live |
-| 7 | Speed(2) on travel | Leaves the muzzle twice as fast as the straight Recipe |
-| 7 | Speed(0.5) on interval | Slows by half every 0.5s |
-| 7 | Bounce(1)+Speed(2) | Reflects off the wall and continues faster |
+| 7 | Speed(2) on travel (key **R**) | Leaves the muzzle twice as fast as the straight Recipe |
+| 7 | Speed(0.5) on interval (key **T**) | Slows by half every 0.5s |
+| 7 | Bounce(1)+Speed(2) (key **Y**) | Reflects off the wall and continues faster |
 | 8 | ApplyStatus dummy | Dummy HUD shows `dummy` on a Target hit; wall hits do not |
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.

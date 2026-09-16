@@ -163,7 +163,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Projectile projectile = em.GetComponentData<Projectile>(entity);
             Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
             IModifier[] modifiers = recipe.OnInterval;
-            if (modifiers == null || modifiers.Length == 0 || projectile.MultiplyGenerationsLeft <= 0)
+            if (modifiers == null || modifiers.Length == 0)
                 return;
 
             float elapsed = projectile.ElapsedSeconds;
@@ -171,10 +171,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             bool bound = false;
             for (int i = 0; i < modifiers.Length; i++)
             {
-                if (modifiers[i] is not Multiply multiply)
+                IModifier modifier = modifiers[i];
+                if (modifier == null)
+                    continue;
+                if (modifier is Multiply && projectile.MultiplyGenerationsLeft <= 0)
                     continue;
 
-                int fires = IntervalCrossings(previous, elapsed, multiply.IntervalSeconds);
+                float interval = IntervalSecondsOf(modifier);
+                int fires = IntervalCrossings(previous, elapsed, interval);
                 if (fires <= 0)
                     continue;
 
@@ -185,7 +189,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 }
 
                 for (int f = 0; f < fires; f++)
-                    multiply.Apply(Bridge.ModifierContext);
+                    modifier.Apply(Bridge.ModifierContext);
             }
 
             if (!bound)
@@ -195,6 +199,19 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
             em.SetComponentData(entity, projectile);
             em.SetComponentData(entity, velocity);
+        }
+
+        static float IntervalSecondsOf(IModifier modifier)
+        {
+            switch (modifier)
+            {
+                case Multiply multiply:
+                    return multiply.IntervalSeconds;
+                case Speed speed:
+                    return speed.IntervalSeconds;
+                default:
+                    return 0f;
+            }
         }
 
         static int IntervalCrossings(float previousElapsed, float elapsed, float interval)

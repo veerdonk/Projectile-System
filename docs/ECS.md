@@ -41,7 +41,7 @@ SandboxLab.Update
                  snapshot entities whose lifetime <= 0; expire them (OnExpire, return to pool)
                  snapshot remaining live entities **once**
                  OnTick modifiers (same list); Homing acquires if unassigned (skips last Target hit while it stays ahead), then steers at n degrees/second
-                 OnInterval: each `Multiply` whose interval elapsed this tick (more than once if `dt` skips a beat), unless this instance's multiply generations are spent
+                 OnInterval: each modifier whose interval elapsed this tick (more than once if `dt` skips a beat). `Multiply` is skipped when this instance's multiply generations are spent; `Speed` still runs
                  Burst integrate: candidate = pos + vel * dt
                  move/hit on the same list; skip if a hit already disabled the entity
                  IHitQuery.TryCast (ScriptedHitQuery in Edit Mode, PhysicsHitQuery in Play Mode)
@@ -73,6 +73,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Multicast.cs` | `OnSpawn`: total instances is `n`; extras use an explicit sibling Recipe and only multicast again if `Recipe.MulticastGenerations` pays for it |
 | `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math; `Multiply` samples it too |
 | `Runtime/Homing.cs` | `OnTick`: steer at n degrees/second toward a lock. Acquires via `IHomingAcquisition` when unassigned. A Target hit drops the lock (`Homing.ReleaseLockOnTargetHit` after `OnHit`) |
+| `Runtime/Speed.cs` | Scale current speed by n, keep travel direction. `OnTravel` start scale, `OnInterval` progressive, `OnHit` after bounce/pierce. Scale <= 0 is a no-op |
 | `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget` |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views |
 | `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap; ignore last collider so pierce/bounce can leave the surface |
