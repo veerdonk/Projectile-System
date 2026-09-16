@@ -60,7 +60,7 @@ A modifier may:
 - Mutate combat stats on the instance (damage, critical chance, effect radius) and multiply spread scale
 - Cancel despawn on the current hit
 - Request spawns of **explicit child Recipes** (never implied inherit)
-- Request a status effect on the current `Target` hit (flushed as `StatusApplied` after `OnHit`; see ADR-011)
+- Request status effects on the current `Target` hit (flushed as `StatusApplied` after `OnHit`, one event per request, in list order; see ADR-011)
 - Request an area overlap (flushed after the stage; see ADR-016) and suppress the direct contact `Hit` / `ApplyStatus`
 
 A modifier may not:

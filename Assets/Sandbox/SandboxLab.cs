@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 7 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
+    /// Phase 8 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -61,6 +61,8 @@ namespace Sandbox
         Recipe travelSpeedRecipe;
         Recipe intervalSpeedRecipe;
         Recipe bounceSpeedRecipe;
+        Recipe applyStatusRecipe;
+        Recipe pierceApplyStatusRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
@@ -98,6 +100,8 @@ namespace Sandbox
         void OnDestroy()
         {
             UnbindDummies();
+            if (world != null)
+                world.StatusApplied -= OnStatusApplied;
             world?.Dispose();
             world = null;
         }
@@ -137,6 +141,12 @@ namespace Sandbox
                     selectedRecipe = 13;
                 if (keyboard.yKey.wasPressedThisFrame)
                     selectedRecipe = 14;
+                if (keyboard.uKey.wasPressedThisFrame)
+                    selectedRecipe = 15;
+                if (keyboard.iKey.wasPressedThisFrame)
+                    selectedRecipe = 16;
+                if (keyboard.oKey.wasPressedThisFrame)
+                    selectedRecipe = 17;
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
@@ -160,8 +170,8 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 7 (speed)");
-            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, and Y select. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 8 (status)");
+            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, Y, U, I, and O select. - / + changes n for the next shot.");
 
             FireButton("Fire straight", 0, straightRecipe);
             FireButton("Fire lifetime (3s)", 1, lifetimeRecipe);
@@ -178,6 +188,9 @@ namespace Sandbox
             FireButtonWithScale("Speed on travel", 12, travelSpeedRecipe, ref travelSpeedScale, 0.25f, 8f, 0.25f);
             FireButtonWithScale("Speed on interval", 13, intervalSpeedRecipe, ref intervalSpeedScale, 0.25f, 8f, 0.25f);
             FireButtonWithScale("Bounce then Speed", 14, bounceSpeedRecipe, ref bounceSpeedScale, 0.25f, 8f, 0.25f);
+            FireButton("Fire ApplyStatus", 15, applyStatusRecipe);
+            FireButton("Fire Pierce(1)+ApplyStatus", 16, pierceApplyStatusRecipe);
+            FireButton("Fire ApplyStatus at wall", 17, applyStatusRecipe);
             ScaleRow($"Interval {intervalSeconds:0.##}s (keys 6 and T)", ref intervalSeconds, 0.1f, 3f, 0.1f);
 
             GUILayout.Space(6f);
@@ -190,7 +203,10 @@ namespace Sandbox
             {
                 SandboxDummyTarget dummy = dummies[i];
                 if (dummy != null)
-                    GUILayout.Label($"{dummy.name} HP: {dummy.Hp}/{dummy.MaxHp}");
+                {
+                    string status = string.IsNullOrEmpty(dummy.LastStatusId) ? "-" : dummy.LastStatusId;
+                    GUILayout.Label($"{dummy.name} HP: {dummy.Hp}/{dummy.MaxHp}  status: {status}");
+                }
             }
 
             GUILayout.EndScrollView();
@@ -340,6 +356,11 @@ namespace Sandbox
                     return intervalSpeedRecipe;
                 case 14:
                     return bounceSpeedRecipe;
+                case 15:
+                case 17:
+                    return applyStatusRecipe;
+                case 16:
+                    return pierceApplyStatusRecipe;
                 default:
                     return straightRecipe;
             }
@@ -348,6 +369,8 @@ namespace Sandbox
         Vector3 FireDirection(Recipe recipe)
         {
             if (recipe == bounceRecipe || recipe == bounceSpeedRecipe)
+                return BounceDirection;
+            if (selectedRecipe == 17)
                 return BounceDirection;
             if (recipe == bounceMultiplyRecipe)
                 return BounceMultiplyDirection;
@@ -378,6 +401,19 @@ namespace Sandbox
             travelSpeedRecipe = CreateRecipe("speed-travel", speed: 20f, lifetime: 5f);
             intervalSpeedRecipe = CreateRecipe("speed-interval", speed: 20f, lifetime: 5f);
             bounceSpeedRecipe = CreateRecipe("bounce-speed", speed: 20f, lifetime: 5f);
+            applyStatusRecipe = CreateRecipe("apply-status", speed: 20f, lifetime: 5f);
+            applyStatusRecipe.OnHit = new IModifier[]
+            {
+                new ApplyStatus(new DummyStatusEffect()),
+                new ApplyStatus(new DummyStatusEffect())
+            };
+            pierceApplyStatusRecipe = CreateRecipe("pierce-status", speed: 20f, lifetime: 5f);
+            pierceApplyStatusRecipe.OnHit = new IModifier[]
+            {
+                new Pierce(1),
+                new ApplyStatus(new DummyStatusEffect()),
+                new ApplyStatus(new DummyStatusEffect())
+            };
             ApplyMagnitudes();
 
             var poolRoot = new GameObject("ProjectilePool");
@@ -398,7 +434,10 @@ namespace Sandbox
             world.Prewarm(travelSpeedRecipe, PrewarmCount);
             world.Prewarm(intervalSpeedRecipe, PrewarmCount);
             world.Prewarm(bounceSpeedRecipe, PrewarmCount);
+            world.Prewarm(applyStatusRecipe, PrewarmCount);
+            world.Prewarm(pierceApplyStatusRecipe, PrewarmCount);
 
+            world.StatusApplied += OnStatusApplied;
             BindDummies();
         }
 
@@ -479,6 +518,16 @@ namespace Sandbox
             BindChildren();
             for (int i = 0; i < dummies.Length; i++)
                 dummies[i]?.Bind(world);
+        }
+
+        void OnStatusApplied(StatusInfo info)
+        {
+            for (int i = 0; i < dummies.Length; i++)
+            {
+                SandboxDummyTarget dummy = dummies[i];
+                if (dummy != null && dummy.TargetId == info.TargetId)
+                    dummy.Apply(info.Effect);
+            }
         }
 
         void UnbindDummies()

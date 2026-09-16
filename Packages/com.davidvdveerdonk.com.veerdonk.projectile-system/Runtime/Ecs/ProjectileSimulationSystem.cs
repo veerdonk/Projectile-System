@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -14,6 +15,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public ModifierContext ModifierContext;
         public System.Action<HitInfo> Hit;
         public System.Action<ExpireInfo> Expired;
+        public System.Action<StatusInfo> StatusApplied;
     }
 
     [DisableAutoCreation]
@@ -127,6 +129,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Projectile afterHit = em.GetComponentData<Projectile>(entity);
                 Homing.ReleaseLockOnTargetHit(ref afterHit, hit);
                 em.SetComponentData(entity, afterHit);
+                FlushStatusApplied(hit);
                 if (Bridge.ModifierContext.CancelDespawn)
                 {
                     ContinueAfterHit(entity, hit);
@@ -202,9 +205,31 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             return fires > 0 ? fires : 0;
         }
 
+        void FlushStatusApplied(in HitInfo hit)
+        {
+            if (hit.Kind != HitKind.Target)
+                return;
+
+            IReadOnlyList<IStatusEffect> effects = Bridge.ModifierContext.RequestedStatuses;
+            for (int i = 0; i < effects.Count; i++)
+            {
+                IStatusEffect effect = effects[i];
+                if (effect == null)
+                    continue;
+
+                Bridge.StatusApplied?.Invoke(new StatusInfo
+                {
+                    InstanceId = hit.InstanceId,
+                    TargetId = hit.TargetId,
+                    Effect = effect
+                });
+            }
+        }
+
         void RunStage(IModifier[] modifiers, Entity entity, bool hasHit, in HitInfo hit, float dt, bool skipMulticast = false)
         {
             Bridge.ModifierContext.CancelDespawn = false;
+            Bridge.ModifierContext.ClearRequestedStatus();
             if (modifiers == null || modifiers.Length == 0)
                 return;
 

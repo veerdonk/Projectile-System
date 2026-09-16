@@ -51,7 +51,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Spread(n)** — scale the instance multiply-spread (pip spacing for `IMultiplyPattern`) by `n`. Same stages as `Speed(n)`. Does not jitter the original shot
 - **EffectRadius(n)** — scale instance effect radius by `n`. Same stages as `Speed(n)`. Phase 13 uses the result as the `AreaEffect` overlap radius
 - **Size(n)** — scale `Radius` by `n`. Same stages as `Speed(n)`. There is no separate size field
-- **ApplyStatus** — `OnHit` + `Target`: request an `IStatusEffect` on the hit Target. The package does not simulate the effect (see [DECISIONS.md](DECISIONS.md) ADR-011)
+- **ApplyStatus** — `OnHit` + `Target`: request one or more `IStatusEffect`s on the hit Target. The package does not simulate the effects (see [DECISIONS.md](DECISIONS.md) ADR-011)
 - **AreaEffect** — overlap Targets in instance `EffectRadius` and raise Area `Hit` / `StatusApplied`. Own damage on the modifier. `OnHit` (splash at the hit point), `OnTravel` (burst at spawn), `OnInterval` (aura on the flying instance). Flags choose whether the projectile’s own contact damage/status still apply. See [DECISIONS.md](DECISIONS.md) ADR-016
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
 
@@ -199,6 +199,12 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** `ApplyStatus` with `DummyStatusEffect` on `OnHit`
 - **When:** the instance records a `Target` hit
 - **Then:** `StatusApplied` is raised with that effect and Target id; the sandbox dummy receives it; the instance still despawns unless Pierce/Bounce cancel that
+
+### Phase 8 — Multiple status on one Target hit
+
+- **Given:** two `ApplyStatus` modifiers on `OnHit`
+- **When:** the instance records a `Target` hit
+- **Then:** `StatusApplied` is raised once per modifier, in list order
 
 ### Phase 8 — Status does not apply on World
 
