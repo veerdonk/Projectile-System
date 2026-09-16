@@ -6,6 +6,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
     {
         HitInfo? queued;
         bool hasQueued;
+        bool filterInstance;
+        ProjectileId queuedInstance;
 
         public void Queue(HitKind kind, Vector3 point, Vector3 normal, TargetId targetId = default)
         {
@@ -17,6 +19,20 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 TargetId = targetId
             };
             hasQueued = true;
+            filterInstance = false;
+            queuedInstance = default;
+        }
+
+        public void QueueFor(
+            ProjectileId instanceId,
+            HitKind kind,
+            Vector3 point,
+            Vector3 normal,
+            TargetId targetId = default)
+        {
+            Queue(kind, point, normal, targetId);
+            filterInstance = true;
+            queuedInstance = instanceId;
         }
 
         public bool TryCast(ProjectileId instanceId, Vector3 origin, Vector3 direction, float distance, float radius, out HitInfo hit)
@@ -27,10 +43,17 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 return false;
             }
 
+            if (filterInstance && queuedInstance != instanceId)
+            {
+                hit = default;
+                return false;
+            }
+
             hit = queued.Value;
             hit.InstanceId = instanceId;
             hasQueued = false;
             queued = null;
+            filterInstance = false;
             return true;
         }
 

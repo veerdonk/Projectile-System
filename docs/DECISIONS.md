@@ -2,19 +2,26 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
-## ADR-010 — Status is a hit request, not package combat
+## ADR-011 — Status is a hit request, not package combat
 
 - **Date:** 2026-09-16
 - **Decision:** `ApplyStatus` is an `OnHit` modifier for `HitKind.Target`. It requests an `IStatusEffect`; it does not tick burn, poison, shock, duration, or stacking. The package raises `IProjectileWorld.StatusApplied` **after** the `OnHit` list (the existing `Hit` event stays HP-only and still fires before `OnHit`). The world does not call `IStatusReceiver` or `GetComponent` for status — tests have no GameObjects. Sandbox (or the game) implements `IStatusReceiver` and applies from `StatusApplied`. v1 ships one effect, `DummyStatusEffect` (`Id` `"dummy"`). World hits never request status.
 - **Why:** Games will want burn/poison/shock later without the package owning combat. That split already exists for HP (ADR-004). Status cannot ride on `Hit` because that event fires before `OnHit` modifiers run. An apply interface on the dummy plus an event keeps Edit Mode tests and the sandbox on the same contract.
 - **Consequences:** Five new public types (`IStatusEffect`, `DummyStatusEffect`, `IStatusReceiver`, `ApplyStatus`, `StatusInfo`) and one new façade event. Do not add per-status classes, DoT systems, or a second world. Pierce + `ApplyStatus` on the same `OnHit` list raises `StatusApplied` for each Target hit, including a killing hit.
 
+## ADR-010 — Homing retargets after a Target hit; Bounce reflects Target too
+
+- **Date:** 2026-09-15
+- **Decision:** A `Target` hit clears that instance's `HomingTarget`. The hit `TargetId` is ignored by acquisition while it stays in front of travel (positive dot), so a pierce shot does not re-lock the dummy it is still overlapping. Other catalog candidates may lock on the next `OnTick`. When the ignored candidate is missing or no longer in front, the ignore drops. `Bounce(n)` consumes remaining bounce on `Target` as well as `World`, reflects around `HitInfo.Normal`, and still raises `Hit` so sandbox dummy HP drops. `SpawnRequest.HomingTarget` is only the initial lock; it does not survive a `Target` hit. There is still no public retarget API.
+- **Why:** Pierce then homing should seek the next dummy once the first is hit, without a new façade. Bouncing off a dummy is the same kinematic reflect as a wall; damage is already the `Hit` event, not despawn.
+- **Consequences:** Phase 6 Pierce+Homing no longer pins DummyBounce on `SpawnRequest`. `ClosestInTravelDirectionAcquisition` skips `ModifierContext.HomingIgnoredTarget`. The `Projectile` row stores `HomingHasIgnoredTarget`. `Bounce(1)` into a dummy with remaining bounce reflects instead of dying (phase 2 wall-then-dummy still dies because the wall spent the remaining bounce).
+
 ## ADR-009 — Homing acquires once, then steers
 
 - **Date:** 2026-09-15
-- **Decision:** `Homing(n)` is maximum turn rate in **degrees per second**. Each instance steers toward one `HomingTarget`. If `SpawnRequest.HomingTarget` is assigned, that target is used. Otherwise the modifier's `IHomingAcquisition` may pick one during `OnTick` until it succeeds; after that the instance keeps the lock. v1 ships `ClosestInTravelDirectionAcquisition`: nearest registered candidate whose offset from the instance has a positive dot with travel. Games push live poses with `IProjectileWorld.SetHomingCandidate` / `RemoveHomingCandidate`. There is no retarget API. Later player-view or random locks are new `IHomingAcquisition` implementations, not a change to `Homing` or spawn.
-- **Why:** Phase 5 needs missiles that find a target themselves, and the next lock rules (aim from the player, pick at random) should not force a second façade. A strategy on the modifier matches ADR-006. `SpawnRequest` still wins so phase 6 can pin a second dummy. Simulation components cannot hold Unity objects, so the game registers ids and positions; Homing only reads those.
-- **Consequences:** Three new public types (`IHomingAcquisition`, `ClosestInTravelDirectionAcquisition`, `HomingCatalog`). Poses live on the catalog, not on `ModifierContext`. `HomingTarget.Id` is `TargetId`. An assigned spawn target still needs a catalog entry to steer. If the locked candidate disappears, the instance flies straight rather than picking again.
+- **Decision:** `Homing(n)` is maximum turn rate in **degrees per second**. Each instance steers toward one `HomingTarget`. If `SpawnRequest.HomingTarget` is assigned, that target is used. Otherwise the modifier's `IHomingAcquisition` may pick one during `OnTick` until it succeeds; after that the instance keeps the lock until a `Target` hit ([ADR-010](#adr-010--homing-retargets-after-a-target-hit-bounce-reflects-target-too)). v1 ships `ClosestInTravelDirectionAcquisition`: nearest registered candidate whose offset from the instance has a positive dot with travel. Games push live poses with `IProjectileWorld.SetHomingCandidate` / `RemoveHomingCandidate`. There is no retarget API. Later player-view or random locks are new `IHomingAcquisition` implementations, not a change to `Homing` or spawn.
+- **Why:** Phase 5 needs missiles that find a target themselves, and the next lock rules (aim from the player, pick at random) should not force a second façade. A strategy on the modifier matches ADR-006. `SpawnRequest` still wins as an initial lock. Simulation components cannot hold Unity objects, so the game registers ids and positions; Homing only reads those.
+- **Consequences:** Three new public types (`IHomingAcquisition`, `ClosestInTravelDirectionAcquisition`, `HomingCatalog`). Poses live on the catalog, not on `ModifierContext`. `HomingTarget.Id` is `TargetId`. An assigned spawn target still needs a catalog entry to steer. If the locked candidate disappears, the instance flies straight rather than picking again until a later `Target` hit drops the empty lock's ignore rules ([ADR-010](#adr-010--homing-retargets-after-a-target-hit-bounce-reflects-target-too)).
 
 ## ADR-008 — Prewarm follows spawn chains
 

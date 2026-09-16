@@ -80,7 +80,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     {
         /// <summary>
         /// Returns true and a target when this instance should lock. Returning false leaves the instance
-        /// unassigned so a later tick can try again. Once a lock is stored, <see cref="Homing"/> does not call this.
+        /// unassigned so a later tick can try again. Homing calls this whenever the lock is empty, including after
+        /// a Target hit. Skip <see cref="ModifierContext.HomingIgnoredTarget"/> while it is set.
         /// </summary>
         bool TryAcquire(ModifierContext context, out HomingTarget target);
     }
@@ -114,6 +115,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             for (int i = 0; i < count; i++)
             {
                 if (!catalog.TryGet(i, out TargetId id, out Vector3 position))
+                    continue;
+                if (context.HomingIgnoredTarget.IsAssigned && id.Equals(context.HomingIgnoredTarget.Id))
                     continue;
 
                 Vector3 toTarget = position - context.Position;

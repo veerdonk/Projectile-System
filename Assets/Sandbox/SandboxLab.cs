@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 5 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
+    /// Phase 6 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -17,6 +17,7 @@ namespace Sandbox
         public const string Dummy3Name = "DummyTarget3";
         public const string DummyBounceName = "DummyBounce";
         public const string WallName = "WorldWall";
+        public const string Wall2Name = "WorldWall2";
         const int PrewarmCount = 8;
 
         static readonly Vector3 CameraPosition = new Vector3(-12f, 8f, -5f);
@@ -27,7 +28,10 @@ namespace Sandbox
         static readonly Vector3 DummyBouncePosition = new Vector3(4f, 1f, 12f);
         static readonly Vector3 WallPosition = new Vector3(8f, 2f, 8f);
         static readonly Vector3 WallScale = new Vector3(0.5f, 4f, 16f);
+        static readonly Vector3 Wall2Position = new Vector3(-6f, 2f, 8f);
+        static readonly Vector3 Wall2Scale = new Vector3(0.5f, 4f, 16f);
         static readonly Vector3 BounceDirection = new Vector3(1f, 0f, 1f);
+        static readonly Vector3 BounceMultiplyDirection = Vector3.right;
         static readonly Vector3 HomingDirection = Quaternion.AngleAxis(25f, Vector3.up) * Vector3.forward;
         static readonly Color Dummy1Color = new Color(0.82f, 0.22f, 0.18f);
         static readonly Color Dummy2Color = new Color(0.85f, 0.45f, 0.15f);
@@ -37,6 +41,7 @@ namespace Sandbox
         [SerializeField] SandboxSpawnPoint spawnPoint;
         [SerializeField] SandboxDummyTarget dummyTarget;
         [SerializeField] Transform worldWall;
+        [SerializeField] Transform worldWall2;
         [SerializeField] Transform requestMarker;
 
         SandboxDummyTarget[] dummies = System.Array.Empty<SandboxDummyTarget>();
@@ -51,6 +56,8 @@ namespace Sandbox
         Recipe multicastRecipe;
         Recipe strongHomingRecipe;
         Recipe weakHomingRecipe;
+        Recipe pierceHomingRecipe;
+        Recipe bounceMultiplyRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
@@ -113,6 +120,10 @@ namespace Sandbox
                     selectedRecipe = 8;
                 if (keyboard.digit0Key.wasPressedThisFrame)
                     selectedRecipe = 9;
+                if (keyboard.qKey.wasPressedThisFrame)
+                    selectedRecipe = 10;
+                if (keyboard.eKey.wasPressedThisFrame)
+                    selectedRecipe = 11;
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
@@ -136,8 +147,8 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 5 (homing)");
-            GUILayout.Label("Space fires the selected Recipe. 1–9 and 0 select. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 6 (combinations)");
+            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, and E select. - / + changes n for the next shot.");
 
             FireButton("Fire straight", 0, straightRecipe);
             FireButton("Fire lifetime (3s)", 1, lifetimeRecipe);
@@ -149,6 +160,8 @@ namespace Sandbox
             FireButtonWithMagnitude("Multicast", 7, multicastRecipe, ref multicastCount, 1, 8);
             FireButtonWithMagnitude("Homing A", 8, strongHomingRecipe, ref homingStrong, 0, 300, 10);
             FireButtonWithMagnitude("Homing B", 9, weakHomingRecipe, ref homingWeak, 0, 300, 10);
+            FireButton("Fire Pierce(1)+Homing(300)", 10, pierceHomingRecipe);
+            FireButton("Fire Bounce(2)+Multiply(2)", 11, bounceMultiplyRecipe);
 
             GUILayout.Space(6f);
             GUILayout.Label(hasRequest
@@ -266,6 +279,10 @@ namespace Sandbox
                     return strongHomingRecipe;
                 case 9:
                     return weakHomingRecipe;
+                case 10:
+                    return pierceHomingRecipe;
+                case 11:
+                    return bounceMultiplyRecipe;
                 default:
                     return straightRecipe;
             }
@@ -275,6 +292,8 @@ namespace Sandbox
         {
             if (recipe == bounceRecipe)
                 return BounceDirection;
+            if (recipe == bounceMultiplyRecipe)
+                return BounceMultiplyDirection;
             if (recipe == strongHomingRecipe || recipe == weakHomingRecipe)
                 return HomingDirection;
             return spawnPoint.Direction;
@@ -294,6 +313,11 @@ namespace Sandbox
             multicastRecipe = CreateRecipe("multicast", speed: 18f, lifetime: 5f);
             strongHomingRecipe = CreateRecipe("homing-strong", speed: 20f, lifetime: 5f);
             weakHomingRecipe = CreateRecipe("homing-weak", speed: 20f, lifetime: 5f);
+            pierceHomingRecipe = CreateRecipe("pierce-homing", speed: 20f, lifetime: 5f);
+            pierceHomingRecipe.OnHit = new IModifier[] { new Pierce(1) };
+            pierceHomingRecipe.OnTick = new IModifier[] { new Homing(300f) };
+            bounceMultiplyRecipe = CreateRecipe("bounce-multiply", speed: 20f, lifetime: 5f);
+            bounceMultiplyRecipe.OnHit = new IModifier[] { new Bounce(2), new Multiply(2, childRecipe) };
             ApplyMagnitudes();
 
             var poolRoot = new GameObject("ProjectilePool");
@@ -309,6 +333,8 @@ namespace Sandbox
             world.Prewarm(multicastRecipe, PrewarmCount);
             world.Prewarm(strongHomingRecipe, PrewarmCount);
             world.Prewarm(weakHomingRecipe, PrewarmCount);
+            world.Prewarm(pierceHomingRecipe, PrewarmCount);
+            world.Prewarm(bounceMultiplyRecipe, PrewarmCount);
 
             BindDummies();
         }
@@ -352,10 +378,9 @@ namespace Sandbox
             dummies = GetComponentsInChildren<SandboxDummyTarget>(true);
             dummyTarget = dummies.Length > 0 ? dummies[0] : null;
             if (worldWall == null)
-            {
-                Transform found = transform.Find(WallName);
-                worldWall = found;
-            }
+                worldWall = transform.Find(WallName);
+            if (worldWall2 == null)
+                worldWall2 = transform.Find(Wall2Name);
 
             if (requestMarker == null && spawnPoint != null)
             {
@@ -442,22 +467,28 @@ namespace Sandbox
             created |= EnsureDummy(root, Dummy2Name, Dummy2Position, 2, Dummy2Color);
             created |= EnsureDummy(root, Dummy3Name, Dummy3Position, 3, Dummy3Color);
             created |= EnsureDummy(root, DummyBounceName, DummyBouncePosition, 4, DummyBounceColor);
+            created |= EnsureWall(root, WallName, WallPosition, WallScale);
+            created |= EnsureWall(root, Wall2Name, Wall2Position, Wall2Scale);
 
-            Transform wall = root.Find(WallName);
+            return created;
+        }
+
+        static bool EnsureWall(Transform root, string name, Vector3 position, Vector3 scale)
+        {
+            Transform wall = root.Find(name);
+            bool created = false;
             if (wall == null)
             {
                 created = true;
                 GameObject wallGo = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                wallGo.name = WallName;
+                wallGo.name = name;
                 wall = wallGo.transform;
                 wall.SetParent(root, false);
-                Tint(wallGo, new Color(0.45f, 0.45f, 0.5f));
             }
 
-            wall.localPosition = WallPosition;
-            wall.localScale = WallScale;
+            wall.localPosition = position;
+            wall.localScale = scale;
             Tint(wall.gameObject, new Color(0.45f, 0.45f, 0.5f));
-
             return created;
         }
 
@@ -492,6 +523,8 @@ namespace Sandbox
                 Tint(requestMarker.gameObject, new Color(1f, 0.82f, 0.15f));
             if (worldWall != null)
                 Tint(worldWall.gameObject, new Color(0.45f, 0.45f, 0.5f));
+            if (worldWall2 != null)
+                Tint(worldWall2.gameObject, new Color(0.45f, 0.45f, 0.5f));
         }
 
         public static void AimCameraAtLane()

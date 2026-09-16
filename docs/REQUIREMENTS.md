@@ -29,12 +29,12 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 ### Named modifiers (v1)
 
 - **Pierce(n)** — `OnHit` + `Target`: pass through `n` targets; despawn on hit `n+1`
-- **Bounce(n)** — `OnHit` + `World`: reflect off `n` world hits; despawn on world hit `n+1`
-- **Homing(n)** — `OnTick`: steer toward a homing target; higher `n` turns faster
+- **Bounce(n)** — `OnHit`: reflect off `n` `World` or `Target` hits; despawn on hit `n+1`. `Hit` still fires on `Target`, so dummy HP still drops
+- **Homing(n)** — `OnTick`: steer toward a homing target; higher `n` turns faster. A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel
 - **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
 - **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`)
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
-- **ApplyStatus** — `OnHit` + `Target`: request an `IStatusEffect` on the hit Target. The package does not simulate the effect (see [DECISIONS.md](DECISIONS.md) ADR-010)
+- **ApplyStatus** — `OnHit` + `Target`: request an `IStatusEffect` on the hit Target. The package does not simulate the effect (see [DECISIONS.md](DECISIONS.md) ADR-011)
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
 
 ## Goals
@@ -55,7 +55,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - Player controller, inventory, wand UI, mana / spell points
 - A second composition model (Noita wrap-the-next-spell, behaviour trees, visual graphs)
 - HP / damage application inside the runtime package (sandbox listens to `Hit` and applies damage). `IDamageable` is a Target-classification marker only; see [DECISIONS.md](DECISIONS.md) ADR-004
-- Burn / poison / shock simulation, duration, stacking, or cleansing inside the runtime package (phase 8 delivers the apply request only; see [DECISIONS.md](DECISIONS.md) ADR-010)
+- Burn / poison / shock simulation, duration, stacking, or cleansing inside the runtime package (phase 8 delivers the apply request only; see [DECISIONS.md](DECISIONS.md) ADR-011)
 - New folders or patterns without an ADR
 
 ## Package vs game boundary
@@ -108,7 +108,7 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 - **Given:** `Bounce(1)` on `OnHit`; a wall (`World`) then a dummy target
 - **When:** the instance hits the wall, then the target
-- **Then:** it reflects off the wall and does not despawn; it despawns on the `Target` hit (bounce remaining was already 0 for a second world hit, and pierce is 0)
+- **Then:** it reflects off the wall and does not despawn; it despawns on the `Target` hit because bounce remaining is already 0 (a `Target` hit with remaining bounce would reflect and still raise `Hit`)
 
 ### Phase 3 — Multiply(2) every 0.5s of travel
 
@@ -142,9 +142,9 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 ### Phase 6 — Pierce(1) then home to a second dummy
 
-- **Given:** `Pierce(1)` on `OnHit` and `Homing(100)` on `OnTick`; a first dummy on the initial trajectory; `SpawnRequest.HomingTarget` is a second dummy that is not on the remaining straight-line path
+- **Given:** `Pierce(1)` on `OnHit` and `Homing(300)` on `OnTick`; a first dummy on the initial trajectory; a second dummy off the remaining straight-line path
 - **When:** the instance records a `Target` hit on the first dummy
-- **Then:** Pierce cancels despawn; later ticks still run Homing toward that same homing target; the instance hits the second dummy
+- **Then:** Pierce cancels despawn; Homing drops that lock and does not re-acquire the pierced dummy while it stays in front of travel; later ticks acquire the next candidate and steer into it
 
 ### Phase 6 — Bounce(2) and Multiply(2) on each wall
 

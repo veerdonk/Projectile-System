@@ -32,7 +32,7 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 
 **Hit then expire:** a hit that despawns the instance runs `OnHit` first, then `OnExpire`.
 
-**Pierce / bounce** are `OnHit` modifiers. They inspect `HitInfo.Kind` and may **cancel despawn** (see Hit pipeline).
+**Pierce / bounce** are `OnHit` modifiers. They may **cancel despawn** (see Hit pipeline). Pierce inspects `HitInfo.Kind` (`Target` only). Bounce reflects any hit.
 
 `OnTravel` is one-shot setup. Continuous steering is `OnTick`. Periodic spawn or speed change is `OnInterval`, not `OnTravel`. `Speed(n)` on `OnTravel` is the spawn-time start scale; do not put it on `OnSpawn`.
 
@@ -56,7 +56,7 @@ A modifier may:
 - Mutate motion fields (velocity, speed) and remaining pierce/bounce/interval
 - Cancel despawn on the current hit
 - Request spawns of **explicit child Recipes** (never implied inherit)
-- Request a status effect on the current `Target` hit (flushed as `StatusApplied` after `OnHit`; see ADR-010)
+- Request a status effect on the current `Target` hit (flushed as `StatusApplied` after `OnHit`; see ADR-011)
 
 A modifier may not:
 
@@ -89,7 +89,7 @@ struct HitInfo
 }
 ```
 
-- `Target` — dummy (or later enemy). Default: raise `Hit`, despawn unless `Pierce` cancels despawn. `ApplyStatus` may also request a status; that is raised as `StatusApplied` **after** the `OnHit` list, not on `Hit`
+- `Target` — dummy (or later enemy). Default: raise `Hit`, despawn unless `Pierce` or `Bounce` cancels despawn. Bounce still raises `Hit` so dummy HP drops. `ApplyStatus` may also request a status; that is raised as `StatusApplied` **after** the `OnHit` list, not on `Hit`
 - `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`. `ApplyStatus` ignores World
 - Projectile-vs-projectile: ignore until an ADR.
 
@@ -105,7 +105,7 @@ struct SpawnRequest
     Recipe Recipe;
     Vector3 Position;
     Vector3 Direction;
-    HomingTarget HomingTarget; // optional; Homing acquires if unassigned (ADR-009)
+    HomingTarget HomingTarget; // optional initial lock; Homing acquires if unassigned (ADR-009, ADR-010)
 }
 
 struct ProjectileId { /* opaque handle */ }
@@ -118,7 +118,7 @@ interface IProjectileWorld
     void RemoveHomingCandidate(TargetId id);
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
-    event Action<StatusInfo> StatusApplied; // after OnHit; phase 8
+    event Action<StatusInfo> StatusApplied; // after OnHit; phase 8 (ADR-011)
 }
 
 struct StatusInfo
@@ -141,7 +141,7 @@ Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for exa
 - Spawn never uses `Instantiate` outside the pool
 - Presentation / views must not write simulation state
 - Modifiers in a list run in list order. `CancelDespawn` does not skip the rest of that list (so `Bounce` and `Multiply` on the same `OnHit` list both run)
-- An instance that cancelled despawn stays live and still runs `OnTick` on later ticks (so `Pierce` then `Homing` compose without a retarget API)
+- An instance that cancelled despawn stays live and still runs `OnTick` on later ticks (so `Pierce` then `Homing` compose: the next tick can drop the pierced dummy and acquire another)
 - Simulation components have no `MonoBehaviour`, `GameObject`, or other `UnityEngine.Object` fields
 - The simulation `World` is package-owned, not `DefaultGameObjectInjectionWorld`, and is not ticked from the Player Loop
 - No `FindObjectOfType` (or equivalent global search) in the runtime package

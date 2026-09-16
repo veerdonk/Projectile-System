@@ -120,7 +120,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
-        public void Bounce_DoesNotAbsorbTargetHit()
+        public void Bounce1_TargetHit_Reflects_RaisesHit_AndStaysLive()
         {
             Recipe recipe = SimulationTestHelper.CreateRecipe(
                 "bounce-target",
@@ -130,17 +130,32 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
-                world.Spawn(new SpawnRequest
+                var seen = new System.Collections.Generic.List<HitInfo>();
+                world.Hit += info => seen.Add(info);
+
+                ProjectileId id = world.Spawn(new SpawnRequest
                 {
                     Recipe = recipe,
                     Position = Vector3.zero,
                     Direction = Vector3.forward
                 });
 
-                hits.Queue(HitKind.Target, new Vector3(0f, 0f, 1f), Vector3.back, new TargetId(1));
+                Vector3 point = new Vector3(0f, 0f, 1f);
+                Vector3 normal = Vector3.back;
+                hits.Queue(HitKind.Target, point, normal, new TargetId(1));
                 world.Tick(0.1f);
 
-                Assert.AreEqual(0, world.ActiveCount);
+                Assert.AreEqual(1, world.ActiveCount);
+                Assert.AreEqual(1, seen.Count);
+                Assert.AreEqual(HitKind.Target, seen[0].Kind);
+                Assert.AreEqual(new TargetId(1), seen[0].TargetId);
+                Assert.IsTrue(world.TryGetRemaining(id, out _, out int bounce));
+                Assert.AreEqual(0, bounce);
+                Assert.IsTrue(world.TryGetState(id, out _, out Vector3 velocity, out _));
+                Vector3 expected = Vector3.Reflect(Vector3.forward * recipe.Speed, normal.normalized);
+                Assert.AreEqual(expected.x, velocity.x, 0.0001f);
+                Assert.AreEqual(expected.y, velocity.y, 0.0001f);
+                Assert.AreEqual(expected.z, velocity.z, 0.0001f);
             }
         }
     }
