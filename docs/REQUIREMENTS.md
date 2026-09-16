@@ -9,7 +9,7 @@ Agents implement the first version **one phase at a time** ([PHASES.md](PHASES.m
 Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - **Projectile** — the concept of a spell, bullet, missile, or shot (not a live object)
-- **Recipe** — authored definition: base stats (speed, radius, lifetime, presentation id) plus six modifier lists
+- **Recipe** — authored definition: base stats (speed, radius, lifetime, presentation id, combat/cast numbers) plus six modifier lists
 - **Instance** — one live simulated projectile
 - **Modifier** — a named behavior with a magnitude, written `Name(magnitude)` (see below)
 - **Stage list** — one of the six ordered modifier lists on a Recipe (`OnSpawn`, `OnTravel`, `OnTick`, `OnInterval`, `OnHit`, `OnExpire`). See [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -21,11 +21,19 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Effect** — presentation or gameplay reaction associated with a modifier or event (VFX, audio). Damage is a sandbox effect, not package logic
 - **Status effect** — a named gameplay condition requested on a Target hit (burn, poison, shock, …). The package delivers the request; the game simulates it. v1 ships `DummyStatusEffect` only
 - **Pool** — inactive instances reused on spawn; despawn returns an instance to the pool
+- **Damage** — authored hit amount copied onto the instance and `HitInfo`. The package does not apply HP
+- **Critical chance** — probability 0–1 on the instance and `HitInfo`. The package does not roll a crit
+- **Mana cost** — authored fire-time cost on the Recipe. Phase 10 copies it onto the instance so `Mana(n)` can scale that copy; the package does not spend mana
+- **Spread** — meters between adjacent child pips when `Multiply` creates more than one instance. Authored on `Multiply`, not on the Recipe. Consumed by `IMultiplyPattern`. 0 stacks children on the same point
+- **Multiply pattern** — layout of those child spawn points in the plane perpendicular to travel or the hit normal (`SquarePattern`, `CirclePattern`, `RandomCirclePattern` in v1)
+- **Effect radius** — authored radius for a hit/expire gameplay effect (explosion, etc.). Distinct from projectile `Radius`. The package does not run AoE queries from this field in v1
+- **Size** — projectile collision size. This **is** `Recipe.Radius`; there is no second size field
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
   - **Strength** for homing (how hard it turns)
-  - **Scale** for speed (multiplier: `Speed(2)` doubles current speed, `Speed(0.5)` halves it)
+  - **Scale** for speed, damage, critical chance, mana cost, multiply spread, effect radius, and size (multiplier: `Speed(2)` doubles, `Speed(0.5)` halves; same for `Damage`, `Critical`, `Mana`, `Spread`, `EffectRadius`, `Size`)
   - **Seconds** for interval (`Interval(0.5)` runs `OnInterval` every half second)
+  - **Distance** for multiply spread (`Multiply` `Spread` is meters between adjacent pips on the multiply pattern)
 
 ### Named modifiers (v1)
 
@@ -33,9 +41,15 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Bounce(n)** — `OnHit`: reflect off `n` `World` or `Target` hits; despawn on hit `n+1`. `Hit` still fires on `Target`, so dummy HP still drops
 - **Homing(n)** — `OnTick`: steer toward a homing target; higher `n` turns faster. A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel
 - **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
-- **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`)
+- **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`). Optional `Spread` is meters between adjacent pips. Layout comes from an `IMultiplyPattern` (default `SquarePattern`)
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
 - **Interval(n)** — `OnSpawn`: seconds between `OnInterval` runs for this instance. One period per Recipe drives every modifier on that list; without it `OnInterval` never runs (see [DECISIONS.md](DECISIONS.md) ADR-012)
+- **Damage(n)** — scale instance damage by `n`. Same stages as `Speed(n)`. Package still does not apply HP
+- **Critical(n)** — scale instance critical chance by `n`, then clamp to `[0, 1]`. Same stages as `Speed(n)`. Package still does not roll a crit
+- **Mana(n)** — scale the instance mana-cost copy by `n`. Same stages as `Speed(n)`. Does not change `Recipe.ManaCost` or spend mana
+- **Spread(n)** — scale the instance multiply-spread (pip spacing for `IMultiplyPattern`) by `n`. Same stages as `Speed(n)`. Does not jitter the original shot
+- **EffectRadius(n)** — scale instance effect radius by `n`. Same stages as `Speed(n)`. Package still does not run AoE queries
+- **Size(n)** — scale `Radius` by `n`. Same stages as `Speed(n)`. There is no separate size field
 - **ApplyStatus** — `OnHit` + `Target`: request an `IStatusEffect` on the hit Target. The package does not simulate the effect (see [DECISIONS.md](DECISIONS.md) ADR-011)
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
 
@@ -54,7 +68,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - Pixel or material physics
 - Networking
 - Unity Physics / Entities Graphics (hybrid ECS is in; full DOTS stack is later)
-- Player controller, inventory, wand UI, mana / spell points
+- Player controller, inventory, wand UI, mana / spell points (Recipe may still *store* `ManaCost` for the game to read; the package does not spend it)
 - A second composition model (Noita wrap-the-next-spell, behaviour trees, visual graphs)
 - HP / damage application inside the runtime package (sandbox listens to `Hit` and applies damage). `IDamageable` is a Target-classification marker only; see [DECISIONS.md](DECISIONS.md) ADR-004
 - Burn / poison / shock simulation, duration, stacking, or cleansing inside the runtime package (phase 8 delivers the apply request only; see [DECISIONS.md](DECISIONS.md) ADR-011)
@@ -116,7 +130,7 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 - **Given:** `Multiply(2)` on `OnInterval`, `Interval(0.5)` on `OnSpawn`, and an explicit child Recipe
 - **When:** the parent has travelled for 0.5 seconds
-- **Then:** two child instances spawn roughly in the direction of travel (small random spread is allowed)
+- **Then:** two child instances spawn roughly in the direction of travel (a small random cone is allowed until phase 11 replaces it with `IMultiplyPattern` positions)
 
 ### Phase 3 — Multiply(1) on expire
 
@@ -189,6 +203,96 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** the same `ApplyStatus` Recipe
 - **When:** the instance records a `World` hit
 - **Then:** `StatusApplied` is not raised
+
+### Phase 9 — Hit carries Recipe damage
+
+- **Given:** a Recipe with `Damage = 5` and no extra modifiers
+- **When:** the instance records a `Target` hit
+- **Then:** `HitInfo.Damage` is 5 and the sandbox dummy loses 5 HP
+
+### Phase 9 — Mana cost is Recipe data
+
+- **Given:** a Recipe with `ManaCost = 12`
+- **When:** the Recipe is spawned and ticked
+- **Then:** `Recipe.ManaCost` is still 12; the package does not change or spend it
+
+### Phase 10 — Damage(2) at spawn
+
+- **Given:** a Recipe with `Damage = 5` and `Damage(2)` on `OnTravel`
+- **When:** the instance records a `Target` hit
+- **Then:** `HitInfo.Damage` is 10 and the sandbox dummy loses 10 HP
+
+### Phase 10 — OnHit Damage(2) after pierce
+
+- **Given:** `Pierce(1)` then `Damage(2)` on `OnHit`; Recipe `Damage = 5`
+- **When:** the instance records two `Target` hits
+- **Then:** the first `Hit.Damage` is 5 (OnHit has not run yet); the second `Hit.Damage` is 10
+
+### Phase 10 — Mana(0.5) does not rewrite the Recipe
+
+- **Given:** a Recipe with `ManaCost = 12` and `Mana(0.5)` on `OnTravel`
+- **When:** the instance is spawned
+- **Then:** instance mana cost is 6; `Recipe.ManaCost` is still 12
+
+### Phase 11 — Square 5 is die 5
+
+- **Given:** `Multiply(5)` with `SquarePattern`, `Spread = 2` on `OnHit`, and an explicit child Recipe
+- **When:** the parent records a hit
+- **Then:** five children: four corners of a 3×3 lattice (cell 2 m) plus the hit point (center)
+
+### Phase 11 — Square 7 is an H
+
+- **Given:** `Multiply(7)` with `SquarePattern` and `Spread = 2` on `OnHit`
+- **When:** the parent records a hit
+- **Then:** the seven children form an H on that lattice (two columns of three plus the center)
+
+### Phase 11 — Square 9 is a 3×3; 10 adds the top middle
+
+- **Given:** `Multiply(9)` then `Multiply(10)` with `SquarePattern` and `Spread = 2` on `OnHit`
+- **When:** the parent records a hit
+- **Then:** 9 fills the 3×3; 10 adds one pip at the top-middle of the 5×5 ring (2 m above the center, in the pattern plane)
+
+### Phase 11 — Circle 3 is a triangle; 4 adds the center
+
+- **Given:** `Multiply(3)` then `Multiply(4)` with `CirclePattern` and `Spread = 2` on `OnHit`
+- **When:** the parent records a hit
+- **Then:** 3 children form an equilateral triangle of side 2 m; 4 adds a pip at the hit point
+
+### Phase 11 — Circle 6 is center plus five on a ring
+
+- **Given:** `Multiply(6)` with `CirclePattern` and `Spread = 2` on `OnHit`
+- **When:** the parent records a hit
+- **Then:** one child at the hit point and five on a ring whose adjacent chord is 2 m
+
+### Phase 11 — Random circle stays inside the disk
+
+- **Given:** `Multiply(8)` with `RandomCirclePattern` and `Spread = 2` on `OnHit`, world seed fixed
+- **When:** the parent records a hit
+- **Then:** eight children lie in the plane disk of radius 2 m about the hit point; the same seed repeats the poses
+
+### Phase 11 — Spread 0 stacks
+
+- **Given:** any of the three patterns, `Multiply(4)`, `Spread = 0`
+- **When:** the parent records a hit
+- **Then:** all four children spawn on the hit point
+
+### Phase 12 — Size(2) at spawn
+
+- **Given:** a Recipe with `Radius = 0.25` and `Size(2)` on `OnTravel`
+- **When:** the instance is spawned
+- **Then:** instance radius is 0.5
+
+### Phase 12 — Spread(2) widens Multiply spacing
+
+- **Given:** `Multiply(2)` Square with `Spread = 2`, and `Spread(2)` on `OnTravel`
+- **When:** the parent records a hit
+- **Then:** the two children spawn 4 meters apart
+
+### Phase 12 — EffectRadius(2) at spawn
+
+- **Given:** a Recipe with `EffectRadius = 1` and `EffectRadius(2)` on `OnTravel`
+- **When:** the instance records a hit
+- **Then:** `HitInfo.EffectRadius` is 2
 
 ## Product constraints
 

@@ -11,7 +11,7 @@ Do not add a second composition model. Stage lists are the only one ([DECISIONS.
 | Layer | Lives in | Responsibility |
 | --- | --- | --- |
 | Definition | ScriptableObjects / serializable data | Recipe: base stats + six ordered modifier lists |
-| Simulation | Internal `IComponentData` in an isolated Entities `World` | Position, velocity, remaining lifetime, pierce/bounce remaining, interval clocks. No `UnityEngine.Object` fields |
+| Simulation | Internal `IComponentData` in an isolated Entities `World` | Position, velocity, remaining lifetime, pierce/bounce remaining, interval clocks, combat stats that can change in flight. No `UnityEngine.Object` fields |
 | Movement | Swappable solver | Kinematic first (Burst integrate); optional Rigidbody later |
 | Hits | Query + callback pipeline | PhysX SphereCast / overlap; `HitInfo` events, not `OnCollisionEnter` |
 | Presentation | Views bound to instance id | Mesh, trail, VFX GameObjects; may be disabled in tests |
@@ -24,17 +24,17 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 | Stage | When it runs | Typical modifiers |
 | --- | --- | --- |
 | `OnSpawn` | Once when the instance is created | `Multicast(n)`, `Interval(n)` |
-| `OnTravel` | Once after spawn, before the first move | `Speed(n)` (start faster/slower), size, direction |
+| `OnTravel` | Once after spawn, before the first move | `Speed(n)`, `Damage(n)`, `Critical(n)`, `Mana(n)`, `Spread(n)`, `EffectRadius(n)`, `Size(n)` |
 | `OnTick` | Every `ProjectileWorld.Tick` | `Homing(n)` |
-| `OnInterval` | Each time the instance’s interval elapses during flight | `Multiply(n)`, `Speed(n)` |
-| `OnHit` | On each hit from the pipeline | Damage event, `Pierce`, `Bounce`, `Multiply` spawn, `Speed(n)`, `ApplyStatus` |
+| `OnInterval` | Each time the instance’s interval elapses during flight | `Multiply(n)`, scale modifiers |
+| `OnHit` | On each hit from the pipeline | `Pierce`, `Bounce`, `Multiply` spawn, scale modifiers, `ApplyStatus` |
 | `OnExpire` | When the instance is ending | `Multiply` on death |
 
 **Hit then expire:** a hit that despawns the instance runs `OnHit` first, then `OnExpire`.
 
 **Pierce / bounce** are `OnHit` modifiers. They may **cancel despawn** (see Hit pipeline). Pierce inspects `HitInfo.Kind` (`Target` only). Bounce reflects any hit.
 
-`OnTravel` is one-shot setup. Continuous steering is `OnTick`. Periodic spawn or speed change is `OnInterval`, not `OnTravel`. `Speed(n)` on `OnTravel` is the spawn-time start scale; do not put it on `OnSpawn`.
+`OnTravel` is one-shot setup. Continuous steering is `OnTick`. Periodic spawn or stat scale is `OnInterval`, not `OnTravel`. `Speed(n)` (and the other scale modifiers) on `OnTravel` is the spawn-time start scale; do not put them on `OnSpawn`.
 
 **Interval:** the seconds between `OnInterval` runs belong to the instance, not to the modifiers on the list. `Interval(n)` on `OnSpawn` sets that one period and every modifier on `OnInterval` fires on those crossings, in list order ([DECISIONS.md](DECISIONS.md) ADR-012). A Recipe with no `Interval(n)` never runs `OnInterval`. `Interval` is not a despawn clock; `LifetimeSeconds` still is.
 
@@ -44,6 +44,7 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 Recipe
   Id
   Speed, Radius, LifetimeSeconds
+  Damage, CriticalChance, ManaCost, EffectRadius
   PresentationId
   OnSpawn[], OnTravel[], OnTick[], OnInterval[], OnHit[], OnExpire[]
 ```
@@ -55,7 +56,8 @@ Recipe
 A modifier may:
 
 - Read instance simulation state
-- Mutate motion fields (velocity, speed) and remaining pierce/bounce/interval
+- Mutate motion fields (velocity, speed, radius) and remaining pierce/bounce/interval
+- Mutate combat stats on the instance (damage, critical chance, effect radius) and multiply spread scale
 - Cancel despawn on the current hit
 - Request spawns of **explicit child Recipes** (never implied inherit)
 - Request a status effect on the current `Target` hit (flushed as `StatusApplied` after `OnHit`; see ADR-011)
@@ -74,6 +76,8 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Prewarm:** `Prewarm(recipe, count)` also prewarms the Recipes those modifiers chain into, using the same generations ([DECISIONS.md](DECISIONS.md) ADR-008). Do not hand-prewarm the children as well. Directions for all `n` slots, the original included, come from an `IMulticastPattern` ([DECISIONS.md](DECISIONS.md) ADR-006); v1 ships `RandomConePattern`.
 
+**Multiply spread:** `Multiply` authors `Spread` as meters between adjacent pips on an `IMultiplyPattern` ([DECISIONS.md](DECISIONS.md) ADR-015). Default `SquarePattern`. `Spread = 0` stacks. Children keep travel / hit-normal direction. `Spread(n)` scales the instance copy of that spacing (phase 12). The original shot is not jittered.
+
 ## Hit pipeline
 
 Kinematic movement casts along the step (SphereCast / overlap). Each contact produces:
@@ -88,6 +92,9 @@ struct HitInfo
     Vector3 Point;
     Vector3 Normal;
     // TargetId is a sandbox/game id; package stores it opaquely
+    float Damage;           // instance value at contact; Hit fires before OnHit
+    float CriticalChance;   // 0–1; package does not roll
+    float EffectRadius;     // authored; package does not AoE-query from this
 }
 ```
 
@@ -95,7 +102,7 @@ struct HitInfo
 - `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`. `ApplyStatus` ignores World
 - Projectile-vs-projectile: ignore until an ADR.
 
-The package does **not** apply HP or simulate status effects. Sandbox listens to `Hit` for dummy health and to `StatusApplied` to call `IStatusReceiver.Apply`.
+The package does **not** apply HP, roll crits, spend mana, or run AoE from `EffectRadius`. Sandbox listens to `Hit` for dummy health (`Hit.Damage`) and to `StatusApplied` to call `IStatusReceiver.Apply`. Size is `Radius`. `ManaCost` is read from the Recipe at fire time.
 
 ## Public API sketch
 
@@ -133,6 +140,13 @@ struct StatusInfo
 interface IStatusEffect { string Id { get; } }
 
 interface IStatusReceiver { void Apply(IStatusEffect effect); }
+
+interface IMultiplyPattern
+{
+    // World offset from parent/hit for child index of count.
+    // Plane perpendicular to forward. spread=0 → zero.
+    Vector3 GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count);
+}
 ```
 
 Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for example from one `Update`). Instances do not have their own `Update`. `ProjectileWorld` is `IDisposable` (dispose the Entities `World`).

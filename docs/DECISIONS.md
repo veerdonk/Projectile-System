@@ -2,6 +2,27 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-015 — Multiply places children through `IMultiplyPattern`
+
+- **Date:** 2026-09-16
+- **Decision:** `Multiply` does not aim children with `RandomConePattern`. It asks an `IMultiplyPattern` for a world-space **offset** per child (`GetOffset(context, forward, spread, index, count)`). Children keep the parent travel direction (interval/expire) or the hit normal (OnHit). `Multiply.Spread` is meters between adjacent pips; `0` stacks. Default pattern is `SquarePattern`. v1 also ships `CirclePattern` and `RandomCirclePattern`. Do **not** merge this with `IMulticastPattern` (that type aims; this type places). Do not add a pattern editor or an unused offset-list class in this phase. Line, arc, cross, and triangle patterns are later implementations of the same interface.
+- **Why:** Shotgun/burst layout is positional, not a cone of velocities. Multicast already proved “strategy on the modifier, one method, index + count.” Square (dice then grid), circle (triangle then rings), and random disk are the layouts we want to fire in the lab; a visual editor is more work than those three types and still could not replace the `n > 9` / `n > 10` overflow rules with a static list. A later editor authors a new `IMultiplyPattern` (local offsets × spread) without changing `Multiply` or `IProjectileWorld`.
+- **Consequences:** Four new public types (`IMultiplyPattern`, `SquarePattern`, `CirclePattern`, `RandomCirclePattern`) and `Multiply.Spread` / `Multiply.Pattern`. Layouts are specified in [PHASES.md](PHASES.md) phase 11. `Spread(n)` still copies and scales the instance spacing in phase 12 (ADR-014). Multicast is unchanged (ADR-006).
+
+## ADR-014 — Stat modifiers are scales; Spread(n) scales Multiply spacing
+
+- **Date:** 2026-09-16
+- **Decision:** `Damage(n)`, `Critical(n)`, `Mana(n)`, `EffectRadius(n)`, `Size(n)`, and `Spread(n)` use the same scale contract as `Speed(n)`: `n > 1` increases, `0 < n < 1` decreases, `n <= 0` is a no-op. They run on `OnTravel`, `OnInterval`, and `OnHit`, not `OnSpawn`. `Size(n)` scales `Radius`. `Critical(n)` clamps to `[0, 1]`. `ManaCost` is copied onto the instance at spawn so `Mana(n)` mutates that copy; `Recipe.ManaCost` stays the authored fire-time cost. **Spread is not a Recipe stat** and does not jitter the original shot. `Spread(n)` scales the instance copy of `Multiply.Spread` (pip spacing for `IMultiplyPattern`, ADR-015; default scale 1). Multicast still uses `IMulticastPattern` (ADR-006). `OnHit` scales do not rewrite the `Hit` event that already fired.
+- **Why:** Phase 9 stored combat numbers on the Recipe. Spread belongs to how Multiply lays out children, not to every shot's muzzle. A Recipe field would jitter singles that never multiply. A scale modifier can widen pip spacing the way `Speed(n)` widens speed.
+- **Consequences:** Six new public modifier types. Phase 11 authors `Multiply.Spread` and the patterns (ADR-015); this ADR's `Spread(n)` / `Size` / `EffectRadius` wait until phase 12. `ModifierContext.Radius` must be writable. Views and SphereCast follow `Size`. Do not roll crit, run AoE queries, or spend mana. Do not add additive (`+5` damage) variants in these phases.
+
+## ADR-013 — Combat and cast numbers are Recipe stats
+
+- **Date:** 2026-09-16
+- **Decision:** Damage, critical chance, mana cost, effect radius, and size are **authored stats**, not named modifiers. They live on `Recipe` next to `Speed`, `Radius`, and `LifetimeSeconds`. Size **is** `Radius` — do not add a second field. Damage, crit chance, effect radius, and radius copy onto the live instance at spawn and onto `HitInfo` at contact so a later modifier can mutate them the way `Speed(n)` mutates `Speed`. `ManaCost` stays on the Recipe only until phase 10 copies it for `Mana(n)`; the package never spends it. **Spread is not a Recipe field** — it is authored on `Multiply` (ADR-015). This phase does not add scale modifiers.
+- **Why:** A straight shot must have damage without putting `Damage(10)` on a stage list. Modifiers are behaviors with a magnitude; they should *change* stats, not *be* the only place a stat exists. That is already how speed works: `Recipe.Speed` from phase 1, `Speed(n)` later. Mana and crit application are game combat (ADR-004); storing the numbers is enough for a game to read them.
+- **Consequences:** `HitInfo` grows combat fields. Default `Damage` is 1 so sandbox HP that used to subtract 1 per hit keeps working. Default crit, mana, and effect radius are 0. `ModifierContext` must expose the mutable combat stats or a later modifier cannot write them. Do not roll crit, run AoE queries, or spend mana in the package. Combat scale modifiers are phase 10; Multiply layout is phase 11 (ADR-015); `Size` / `EffectRadius` / `Spread(n)` are phase 12 (ADR-014).
+
 ## ADR-012 — One interval per instance, set by `Interval(n)` on `OnSpawn`
 
 - **Date:** 2026-09-16
@@ -49,7 +70,7 @@ Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if
 - **Date:** 2026-09-15
 - **Decision:** `Multicast(n, extraRecipe, pattern)` does not compute directions itself. It asks an `IMulticastPattern` for the direction of every one of the `n` instances, including the original at index 0 (the original is re-aimed through `ModifierContext.Velocity`). v1 ships one implementation, `RandomConePattern`, and uses it by default; its randomness comes from the world seed. Extras are queued with a multicast budget rather than trusting the authored sibling Recipe; at the default budget their `OnSpawn` list runs with `Multicast` skipped (ADR-007).
 - **Why:** Phase 4 needs a random cone now, but the shape is meant to become configurable (fan, ring, arc). A pattern that receives index and count can own the original's slot, which a symmetric fan needs and a "spread the extras only" rule cannot express. Deciding the extras' multicast at the spawn path instead of trusting the authored sibling Recipe keeps the rule in one place even when the sibling carries `Multicast`.
-- **Consequences:** Two new public types (`IMulticastPattern`, `RandomConePattern`) and one new public modifier (`Multicast`). `ModifierContext` exposes the world-seeded stream as `NextFloat` instead of a cone helper, so patterns written outside the package stay deterministic; the cone geometry lives in `RandomConePattern.Sample`, which `Multiply` reuses for its own spread. Adding a pattern is a new `IMulticastPattern`, not a change to `Multicast` or the spawn path.
+- **Consequences:** Two new public types (`IMulticastPattern`, `RandomConePattern`) and one new public modifier (`Multicast`). `ModifierContext` exposes the world-seeded stream as `NextFloat` instead of a cone helper, so patterns written outside the package stay deterministic; the cone geometry lives in `RandomConePattern.Sample`. Phase 3 `Multiply` reused that cone; [ADR-015](#adr-015--multiply-places-children-through-imultiplypattern) replaces Multiply layout with `IMultiplyPattern` offsets. Adding a multicast pattern is a new `IMulticastPattern`, not a change to `Multicast` or the spawn path.
 
 ## ADR-005 — Hybrid ECS for live instances
 
