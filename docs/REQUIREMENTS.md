@@ -9,7 +9,7 @@ Agents implement the first version **one phase at a time** ([PHASES.md](PHASES.m
 Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - **Projectile** — the concept of a spell, bullet, missile, or shot (not a live object)
-- **Recipe** — authored definition: base stats (speed, radius, lifetime, presentation id, combat/cast numbers) plus six modifier lists
+- **Recipe** — authored definition: base stats (speed, radius, lifetime, gravity, presentation id, combat/cast numbers) plus six modifier lists
 - **Instance** — one live simulated projectile
 - **Modifier** — a named behavior with a magnitude, written `Name(magnitude)` (see below)
 - **Stage list** — one of the six ordered modifier lists on a Recipe (`OnSpawn`, `OnTravel`, `OnTick`, `OnInterval`, `OnHit`, `OnExpire`). See [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -29,10 +29,11 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Effect radius** — authored radius of an `AreaEffect` overlap sphere, copied onto the instance. Distinct from projectile `Radius`. Unused until phase 13 queries it
 - **Area effect** — overlap sphere around a spawn, hit point, or flying instance that applies area damage and optional status to Targets inside. Not a lingering ground field
 - **Size** — projectile collision size. This **is** `Recipe.Radius`; there is no second size field
+- **Gravity** — downward acceleration in m/s² on the Recipe (default 0) and the instance. Burst adds it to velocity each tick. 0 is a straight shot
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
   - **Strength** for homing (how hard it turns)
-  - **Scale** for speed, damage, critical chance, mana cost, multiply spread, effect radius, and size (multiplier: `Speed(2)` doubles, `Speed(0.5)` halves; same for `Damage`, `Critical`, `Mana`, `Spread`, `EffectRadius`, `Size`)
+  - **Scale** for speed, damage, critical chance, mana cost, multiply spread, effect radius, size, and gravity (multiplier: `Speed(2)` doubles, `Speed(0.5)` halves; same for `Damage`, `Critical`, `Mana`, `Spread`, `EffectRadius`, `Size`, `Gravity`)
   - **Seconds** for interval (`Interval(0.5)` runs `OnInterval` every half second)
   - **Distance** for multiply spread (`Multiply` `Spread` is meters between adjacent pips on the multiply pattern)
 
@@ -53,6 +54,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Size(n)** — scale `Radius` by `n`. Same stages as `Speed(n)`. There is no separate size field
 - **ApplyStatus** — `OnHit` + `Target`: request one or more `IStatusEffect`s on the hit Target. The package does not simulate the effects (see [DECISIONS.md](DECISIONS.md) ADR-011)
 - **AreaEffect** — overlap Targets in instance `EffectRadius` and raise Area `Hit` / `StatusApplied`. Own damage on the modifier. `OnHit` (splash at the hit point), `OnTravel` (burst at spawn), `OnInterval` (aura on the flying instance). Flags choose whether the projectile’s own contact damage/status still apply. See [DECISIONS.md](DECISIONS.md) ADR-016
+- **Gravity(n)** — scale instance gravity by `n`. Same stages as `Speed(n)`. Burst still applies gravity; this modifier does not add `g * dt` itself
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
 
 ## Goals
@@ -331,6 +333,36 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** `AreaEffect` with `DummyStatusEffect` and `includeDirectStatus = false` on `OnHit`; `ApplyStatus` also on that list
 - **When:** the instance records a `Target` hit
 - **Then:** each Target in the sphere receives `StatusApplied` with the area effect; `ApplyStatus` does not run for the contact Target
+
+### Phase 14 — Gravity 0 stays straight
+
+- **Given:** a Recipe with `Gravity = 0` and the same aim as the straight shot
+- **When:** the instance is ticked several times with no obstacles
+- **Then:** its height (y) is unchanged
+
+### Phase 14 — Gravity drops the shot
+
+- **Given:** a Recipe with `Gravity > 0` and the same horizontal aim and speed as the straight shot
+- **When:** the instance is ticked several times with no obstacles
+- **Then:** its y decreases each tick while it still moves along the launch heading
+
+### Phase 15 — Gravity(2) at spawn
+
+- **Given:** a Recipe with `Gravity = 10` and `Gravity(2)` on `OnTravel`
+- **When:** the instance is spawned
+- **Then:** instance gravity is 20; `Recipe.Gravity` is still 10
+
+### Phase 16 — Ballistic aim hits a reachable target
+
+- **Given:** spawn origin, DummyTarget position, cannonball `Speed` and `Gravity` that can reach it
+- **When:** `BallisticAim.TrySolve` is called with `highArc = false`
+- **Then:** it returns true and a direction such that simulating with that Recipe meets the dummy (within test tolerance)
+
+### Phase 16 — Unreachable target fails
+
+- **Given:** the same helper, a target farther than that speed and gravity can reach
+- **When:** `TrySolve` is called
+- **Then:** it returns false
 
 ## Product constraints
 

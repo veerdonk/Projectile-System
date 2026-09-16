@@ -24,7 +24,7 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 | Stage | When it runs | Typical modifiers |
 | --- | --- | --- |
 | `OnSpawn` | Once when the instance is created | `Multicast(n)`, `Interval(n)` |
-| `OnTravel` | Once after spawn, before the first move | `Speed(n)`, `Damage(n)`, `Critical(n)`, `Mana(n)`, `Spread(n)`, `EffectRadius(n)`, `Size(n)`, `AreaEffect` |
+| `OnTravel` | Once after spawn, before the first move | `Speed(n)`, `Damage(n)`, `Critical(n)`, `Mana(n)`, `Spread(n)`, `EffectRadius(n)`, `Size(n)`, `Gravity(n)`, `AreaEffect` |
 | `OnTick` | Every `ProjectileWorld.Tick` | `Homing(n)` |
 | `OnInterval` | Each time the instance’s interval elapses during flight | `Multiply(n)`, scale modifiers, `AreaEffect` (aura) |
 | `OnHit` | On each hit from the pipeline | `Pierce`, `Bounce`, `Multiply` spawn, scale modifiers, `ApplyStatus`, `AreaEffect` |
@@ -43,7 +43,7 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 ```text
 Recipe
   Id
-  Speed, Radius, LifetimeSeconds
+  Speed, Radius, LifetimeSeconds, Gravity
   Damage, CriticalChance, ManaCost, EffectRadius
   PresentationId
   OnSpawn[], OnTravel[], OnTick[], OnInterval[], OnHit[], OnExpire[]
@@ -51,12 +51,14 @@ Recipe
 
 `LifetimeSeconds` is the only despawn clock. When remaining lifetime reaches 0, run `OnExpire` and return the instance to the pool.
 
+**Gravity:** `Recipe.Gravity` is downward acceleration in m/s², default 0 ([DECISIONS.md](DECISIONS.md) ADR-017). Burst integrates it each tick; `Gravity(n)` scales the instance value (ADR-018). Aim-to-point is `BallisticAim.TrySolve` at fire time (ADR-019), not a baked curve.
+
 ## Modifier contract
 
 A modifier may:
 
 - Read instance simulation state
-- Mutate motion fields (velocity, speed, radius) and remaining pierce/bounce/interval
+- Mutate motion fields (velocity, speed, radius, gravity) and remaining pierce/bounce/interval
 - Mutate combat stats on the instance (damage, critical chance, effect radius) and multiply spread scale
 - Cancel despawn on the current hit
 - Request spawns of **explicit child Recipes** (never implied inherit)
@@ -152,6 +154,13 @@ interface IMultiplyPattern
     // World offset from parent/hit for child index of count.
     // Plane perpendicular to forward. spread=0 → zero.
     Vector3 GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count);
+}
+
+static class BallisticAim
+{
+    // Fire-time direction so speed+gravity pass through target. Low arc default.
+    // false = unreachable. Does not simulate; copy into SpawnRequest.Direction.
+    bool TrySolve(Vector3 origin, Vector3 target, float speed, float gravity, out Vector3 direction, bool highArc = false);
 }
 ```
 

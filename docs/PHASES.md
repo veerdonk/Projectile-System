@@ -317,6 +317,57 @@ Disk in the same plane, radius `= spread` (count does not grow the disk). `n = 1
 
 **Stop.**
 
+## Phase 14 — Recipe gravity
+
+`Recipe.Gravity` is downward acceleration in m/s². Default **0**, so every existing straight shot stays a straight shot. The Burst integrate applies it; the path is calculated each tick, not a predefined curve. ADR-017.
+
+**In scope**
+
+- `Recipe.Gravity` (float, default 0). Copy onto the live instance at spawn (`ModifierContext.Gravity` writable so phase 15 can scale it)
+- Burst integrate: `velocity += worldDown * gravity * dt`, then `candidate = position + velocity * dt` (world down is `(0,-1,0)`, not `Physics.gravity`). `Gravity <= 0` uses the current `candidate = pos + vel * dt` path
+- SphereCast still runs along that segment. Bounce still reflects the current velocity (which may already point down)
+- Edit Mode tests: `Gravity = 0` stays level (y unchanged over several ticks); `Gravity > 0` decreases y while x/z follow launch direction; bounce still reflects
+- Sandbox: a cannonball Recipe with `Gravity > 0`, same speed as the straight shot, aimed ~35° up — it arcs and falls; the straight Recipe is unchanged
+
+**Out of scope:** `Gravity(n)` (phase 15); ballistic aim helper (phase 16); `OnTick` gravity modifier; Rigidbody; `Physics.gravity`; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire the straight Recipe — still hits DummyTarget on the lane. Fire the cannonball aimed up — visible drop, lands short unless you raise speed or flatten the aim.
+
+**Stop.**
+
+## Phase 15 — Gravity scale modifier
+
+`Gravity(n)` scales instance gravity the way `Speed(n)` scales speed (`n > 1` more drop, `0 < n < 1` less, `n <= 0` no-op). ADR-018. The Burst job still applies gravity; the modifier must **not** add `g * dt` itself (that would double-apply, and OnTick would compound every frame).
+
+**In scope**
+
+- `Gravity(n)` on `OnTravel` (start), `OnInterval` (progressive), and `OnHit` (after bounce/pierce). Not `OnSpawn`. Not `OnTick`
+- Edit Mode tests: OnTravel `Gravity(2)` with Recipe `Gravity = 10` drops as 20 m/s²; OnInterval `Gravity(0.5)` halves drop each period; `n <= 0` leaves gravity unchanged; `Recipe.Gravity` stays the authored value
+- Sandbox: cannonball with Gravity(2) on travel falls faster than the phase 14 cannonball
+
+**Out of scope:** ballistic aim (phase 16); changing the Burst integrate; Rigidbody; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire Gravity(2) on travel with the cannonball Recipe — it drops harder than the unscaled cannonball.
+
+**Stop.**
+
+## Phase 16 — Ballistic aim helper
+
+A fire-time solver that returns a launch **direction** so a given speed and gravity pass through a point. Flight is still phase 14 integrate. Not a spline, not a modifier, not a seventh stage. ADR-019.
+
+**In scope**
+
+- Public `BallisticAim.TrySolve(origin, target, speed, gravity, out direction, highArc = false)` → `false` if unreachable. Uses world down. Low arc is the default of the two classic solutions
+- Callers put `direction` on `SpawnRequest.Direction`. Do not add a second façade or a `Spawn` overload that aims for you
+- Edit Mode tests: reachable dummy at sandbox range returns a direction that, when simulated with that speed/gravity, the instance’s path meets the target (within a small tolerance); too-far or `gravity = 0` with a high target returns false (gravity 0 only works if the target lies on the ray)
+- Sandbox: cannonball fire uses the helper toward DummyTarget — it hits; toggle high arc if both solutions exist
+
+**Out of scope:** replacing tick integrate with closed-form `x(t)` during flight; Rigidbody; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire the aimed cannonball — it hits DummyTarget. Fire with speed too low — helper returns false and the lab does not spawn.
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

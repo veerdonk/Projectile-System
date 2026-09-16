@@ -2,6 +2,27 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-019 — Ballistic aim is a fire-time helper, not a path
+
+- **Date:** 2026-09-16
+- **Decision:** `BallisticAim.TrySolve` returns a launch direction for a given origin, target, speed, and gravity (world down). Low arc is the default; `highArc` selects the other solution. `false` means unreachable. Games copy the direction into `SpawnRequest`. The instance still flies through the phase 14 Burst integrate. Do not evaluate a closed-form parabola instead of the per-tick SphereCast. Do not add a second `IProjectileWorld` method that spawns-and-aims.
+- **Why:** Hitting a dummy with a cannonball is an aiming problem, not a new motion solver. Replacing the tick integrate with `x(t)` would skip the hit pipeline’s segment casts. A helper keeps `SpawnRequest.Direction` as the only aim input.
+- **Consequences:** One new public type (`BallisticAim`). Sandbox may call it before `Spawn`. Unreachable shots are the caller’s problem.
+
+## ADR-018 — Gravity(n) scales instance gravity, like Speed
+
+- **Date:** 2026-09-16
+- **Decision:** `Gravity(n)` uses the same scale contract and stages as `Speed(n)`: `OnTravel`, `OnInterval`, `OnHit`; not `OnSpawn`; `n <= 0` is a no-op. It multiplies instance gravity. It does **not** run on `OnTick` and does not add `g * dt` itself — Burst already integrates (ADR-017). Putting a gravity *apply* on OnTick would double-apply and compound every frame.
+- **Why:** Option 2 was “a Gravity modifier.” Once gravity is a Recipe stat applied in the solver, the modifier’s job is to *change* that stat, which is already how `Speed(n)` works. OnTick is for steering (Homing), not for re-applying acceleration.
+- **Consequences:** One new public modifier (`Gravity`). `ModifierContext.Gravity` must be writable (phase 14). Do not add antigravity or a second gravity vector in this phase.
+
+## ADR-017 — Recipe.Gravity is a motion stat, default 0
+
+- **Date:** 2026-09-16
+- **Decision:** Downward acceleration lives on `Recipe.Gravity` (m/s²), default **0**. Copy onto the instance at spawn. The kinematic Burst job applies it: `velocity += (0,-1,0) * gravity * dt`, then `candidate = position + velocity * dt`. `Gravity <= 0` keeps today’s straight integrate. Do not read `Physics.gravity`. Do not bake a spline. Bounce reflects whatever velocity the integrate has produced.
+- **Why:** Bullets and fireballs must stay straight without an extra modifier. A cannonball is the same solver with a non-zero Recipe field, the way speed already works. The arc is the integral of acceleration, so it stays calculated. Unity Rigidbody gravity is a later solver (ADR-005) and would break Edit Mode tests.
+- **Consequences:** One new Recipe/instance field. Existing Recipes need no change. `Gravity(n)` is phase 15 (ADR-018). Ballistic aim is phase 16 (ADR-019). Homing on the same shot will fight the drop; list order still applies, but this phase does not add a Homing+gravity scenario.
+
 ## ADR-016 — AreaEffect overlaps Targets; area damage is not Recipe.Damage
 
 - **Date:** 2026-09-16

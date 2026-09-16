@@ -56,6 +56,10 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 13 | Area-only OnHit | Contact dummy loses area damage, not Recipe damage |
 | 13 | OnTravel AreaEffect | Dummy at muzzle is hit before the shot moves |
 | 13 | Interval aura | Dummy beside the lane ticks each interval while the shot is in range |
+| 14 | Straight Recipe | Still hits DummyTarget; no drop |
+| 14 | Cannonball, aimed up | Visible arc, falls short of the dummy at the same speed as the straight shot |
+| 15 | Cannonball + Gravity(2) on travel | Drops harder than the phase 14 cannonball |
+| 16 | Aimed cannonball | Helper aims at DummyTarget; the shot hits |
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.
 
