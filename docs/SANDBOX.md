@@ -16,7 +16,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
 - Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1); a second wall at −X for Bounce(2)+Multiply(2)
 - Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed scale)
-- On-screen readout: last spawn request, active instances, pool available count, dummy HP, last status id on each dummy
+- On-screen readout: last spawn request, active instances, pool available count, dummy HP, last status id on each dummy, selected Recipe damage / crit / mana / spread / radius / effect radius
 
 ## How to prove a phase
 
@@ -41,6 +41,7 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 7 | Speed(0.5) on interval | Slows by half every 0.5s |
 | 7 | Bounce(1)+Speed(2) | Reflects off the wall and continues faster |
 | 8 | ApplyStatus dummy | Dummy HUD shows `dummy` on a Target hit; wall hits do not |
+| 9 | Straight Recipe with Damage 5 | Dummy loses 5 HP; HUD shows damage, mana, spread, radius |
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.
 

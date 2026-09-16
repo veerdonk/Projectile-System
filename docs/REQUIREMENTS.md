@@ -9,7 +9,7 @@ Agents implement the first version **one phase at a time** ([PHASES.md](PHASES.m
 Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - **Projectile** — the concept of a spell, bullet, missile, or shot (not a live object)
-- **Recipe** — authored definition: base stats (speed, radius, lifetime, presentation id) plus six modifier lists
+- **Recipe** — authored definition: base stats (speed, radius, lifetime, presentation id, combat/cast numbers) plus six modifier lists
 - **Instance** — one live simulated projectile
 - **Modifier** — a named behavior with a magnitude, written `Name(magnitude)` (see below)
 - **Stage list** — one of the six ordered modifier lists on a Recipe (`OnSpawn`, `OnTravel`, `OnTick`, `OnInterval`, `OnHit`, `OnExpire`). See [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -21,6 +21,12 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Effect** — presentation or gameplay reaction associated with a modifier or event (VFX, audio). Damage is a sandbox effect, not package logic
 - **Status effect** — a named gameplay condition requested on a Target hit (burn, poison, shock, …). The package delivers the request; the game simulates it. v1 ships `DummyStatusEffect` only
 - **Pool** — inactive instances reused on spawn; despawn returns an instance to the pool
+- **Damage** — authored hit amount copied onto the instance and `HitInfo`. The package does not apply HP
+- **Critical chance** — probability 0–1 on the instance and `HitInfo`. The package does not roll a crit
+- **Mana cost** — authored cast cost on the Recipe only. The package does not spend mana
+- **Spread** — cone in degrees for the original spawn direction (`SpreadDegrees`). 0 is exact
+- **Effect radius** — authored radius for a hit/expire gameplay effect (explosion, etc.). Distinct from projectile `Radius`. The package does not run AoE queries from this field in v1
+- **Size** — projectile collision size. This **is** `Recipe.Radius`; there is no second size field
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
   - **Strength** for homing (how hard it turns)
@@ -52,7 +58,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - Pixel or material physics
 - Networking
 - Unity Physics / Entities Graphics (hybrid ECS is in; full DOTS stack is later)
-- Player controller, inventory, wand UI, mana / spell points
+- Player controller, inventory, wand UI, mana / spell points (Recipe may still *store* `ManaCost` for the game to read; the package does not spend it)
 - A second composition model (Noita wrap-the-next-spell, behaviour trees, visual graphs)
 - HP / damage application inside the runtime package (sandbox listens to `Hit` and applies damage). `IDamageable` is a Target-classification marker only; see [DECISIONS.md](DECISIONS.md) ADR-004
 - Burn / poison / shock simulation, duration, stacking, or cleansing inside the runtime package (phase 8 delivers the apply request only; see [DECISIONS.md](DECISIONS.md) ADR-011)
@@ -187,6 +193,24 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** the same `ApplyStatus` Recipe
 - **When:** the instance records a `World` hit
 - **Then:** `StatusApplied` is not raised
+
+### Phase 9 — Hit carries Recipe damage
+
+- **Given:** a Recipe with `Damage = 5` and no extra modifiers
+- **When:** the instance records a `Target` hit
+- **Then:** `HitInfo.Damage` is 5 and the sandbox dummy loses 5 HP
+
+### Phase 9 — Zero spread is exact
+
+- **Given:** a Recipe with `SpreadDegrees = 0`
+- **When:** the instance is spawned
+- **Then:** travel direction matches `SpawnRequest.Direction`
+
+### Phase 9 — Mana cost is Recipe data
+
+- **Given:** a Recipe with `ManaCost = 12`
+- **When:** the Recipe is spawned and ticked
+- **Then:** `Recipe.ManaCost` is still 12; the package does not change or spend it
 
 ## Product constraints
 

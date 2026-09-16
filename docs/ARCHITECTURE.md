@@ -11,7 +11,7 @@ Do not add a second composition model. Stage lists are the only one ([DECISIONS.
 | Layer | Lives in | Responsibility |
 | --- | --- | --- |
 | Definition | ScriptableObjects / serializable data | Recipe: base stats + six ordered modifier lists |
-| Simulation | Internal `IComponentData` in an isolated Entities `World` | Position, velocity, remaining lifetime, pierce/bounce remaining, interval clocks. No `UnityEngine.Object` fields |
+| Simulation | Internal `IComponentData` in an isolated Entities `World` | Position, velocity, remaining lifetime, pierce/bounce remaining, interval clocks, combat stats that can change in flight. No `UnityEngine.Object` fields |
 | Movement | Swappable solver | Kinematic first (Burst integrate); optional Rigidbody later |
 | Hits | Query + callback pipeline | PhysX SphereCast / overlap; `HitInfo` events, not `OnCollisionEnter` |
 | Presentation | Views bound to instance id | Mesh, trail, VFX GameObjects; may be disabled in tests |
@@ -42,6 +42,7 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 Recipe
   Id
   Speed, Radius, LifetimeSeconds
+  Damage, CriticalChance, ManaCost, SpreadDegrees, EffectRadius
   PresentationId
   OnSpawn[], OnTravel[], OnTick[], OnInterval[], OnHit[], OnExpire[]
 ```
@@ -53,7 +54,8 @@ Recipe
 A modifier may:
 
 - Read instance simulation state
-- Mutate motion fields (velocity, speed) and remaining pierce/bounce/interval
+- Mutate motion fields (velocity, speed, radius) and remaining pierce/bounce/interval
+- Mutate combat stats on the instance (damage, critical chance, effect radius, spread)
 - Cancel despawn on the current hit
 - Request spawns of **explicit child Recipes** (never implied inherit)
 - Request a status effect on the current `Target` hit (flushed as `StatusApplied` after `OnHit`; see ADR-011)
@@ -86,6 +88,9 @@ struct HitInfo
     Vector3 Point;
     Vector3 Normal;
     // TargetId is a sandbox/game id; package stores it opaquely
+    float Damage;           // instance value at contact; Hit fires before OnHit
+    float CriticalChance;   // 0–1; package does not roll
+    float EffectRadius;     // authored; package does not AoE-query from this
 }
 ```
 
@@ -93,7 +98,7 @@ struct HitInfo
 - `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`. `ApplyStatus` ignores World
 - Projectile-vs-projectile: ignore until an ADR.
 
-The package does **not** apply HP or simulate status effects. Sandbox listens to `Hit` for dummy health and to `StatusApplied` to call `IStatusReceiver.Apply`.
+The package does **not** apply HP, roll crits, spend mana, or run AoE from `EffectRadius`. Sandbox listens to `Hit` for dummy health (`Hit.Damage`) and to `StatusApplied` to call `IStatusReceiver.Apply`. Size is `Radius`. `ManaCost` is read from the Recipe at fire time.
 
 ## Public API sketch
 

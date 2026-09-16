@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-012 — Combat and cast numbers are Recipe stats
+
+- **Date:** 2026-09-16
+- **Decision:** Damage, critical chance, mana cost, spread, effect radius, and size are **authored stats**, not named modifiers. They live on `Recipe` next to `Speed`, `Radius`, and `LifetimeSeconds`. Size **is** `Radius` — do not add a second field. Damage, crit chance, effect radius, and radius copy onto the live instance at spawn and onto `HitInfo` at contact so a later modifier can mutate them the way `Speed(n)` mutates `Speed`. `ManaCost` stays on the Recipe only; the package never spends it. `SpreadDegrees` jitters the original spawn direction; multicast extras still take directions from `IMulticastPattern` (ADR-006). This phase does not add `Damage(n)` / `Size(n)` modifiers.
+- **Why:** A straight shot must have damage without putting `Damage(10)` on a stage list. Modifiers are behaviors with a magnitude; they should *change* stats, not *be* the only place a stat exists. That is already how speed works: `Recipe.Speed` from phase 1, `Speed(n)` later. Mana and crit application are game combat (ADR-004); storing the numbers is enough for a game to read them.
+- **Consequences:** `HitInfo` grows combat fields. Default `Damage` is 1 so sandbox HP that used to subtract 1 per hit keeps working. Default crit, mana, spread, and effect radius are 0. `ModifierContext` must expose the mutable combat stats or a later modifier cannot write them. Do not roll crit, run AoE queries, or spend mana in the package. OnHit damage modifiers, if added later, would not affect the `Hit` event that already fired.
+
 ## ADR-011 — Status is a hit request, not package combat
 
 - **Date:** 2026-09-16

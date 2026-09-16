@@ -183,6 +183,27 @@ Apply a status effect on `HitKind.Target`. Do not simulate burn, poison, or shoc
 
 **Stop.**
 
+## Phase 9 — Combat and cast stats
+
+Store game numbers on the Recipe (and on the instance when they can change in flight). Do **not** add a modifier per field. Later `Damage(n)` / `Size(n)` modifiers will mutate these fields the way `Speed(n)` mutates `Speed`. ADR-012.
+
+**In scope**
+
+- Recipe fields: `Damage`, `CriticalChance` (0–1), `ManaCost`, `SpreadDegrees`, `EffectRadius`. **Size is `Radius`** — do not add a `Size` field
+- Copy damage, crit chance, effect radius, and radius onto the live instance at spawn; expose them on `ModifierContext` so a later modifier can write them without new plumbing
+- `ManaCost` stays Recipe-only (read at fire time). Package does not spend mana
+- `HitInfo` carries `Damage`, `CriticalChance`, and `EffectRadius` from the instance at contact (today `Hit` fires before `OnHit`)
+- `SpreadDegrees` jitters the **original** spawn direction (0 = exact). Multicast still owns extra directions ([ADR-006](DECISIONS.md)); do not double-apply spread on extras
+- Default `Damage = 1` so existing dummy HP (currently −1 per hit) keeps working when the sandbox uses `Hit.Damage`. Other new fields default to 0
+- Edit Mode tests: `Hit.Damage` matches Recipe; zero spread is deterministic; nonzero spread changes direction; `ManaCost` readable on Recipe, unchanged by `Tick`
+- Sandbox HUD shows selected Recipe damage, crit, mana, spread, radius, effect radius. Dummy HP subtracts `Hit.Damage`
+
+**Out of scope:** `Damage(n)` / `Crit(n)` / `Size(n)` modifiers; rolling crit; AoE overlap queries; spending mana; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire a Recipe with Damage 5 — dummy loses 5 HP. HUD shows mana/spread/radius. A spread Recipe leaves the muzzle off the exact spawn direction.
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
