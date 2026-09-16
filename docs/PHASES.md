@@ -368,6 +368,25 @@ A fire-time solver that returns a launch **direction** so a given speed and grav
 
 **Stop.**
 
+## Phase 17 — Projectile protection
+
+Collider marker, same idea as `IDamageable`: the package classifies the hit; it still does not subtract HP. Two levels. ADR-020. This **does** belong in the package — it changes bounce, pierce, despawn, and which events fire, not how a health bar works.
+
+**In scope**
+
+- `IProjectileProtection { ProtectionLevel Level { get; } }` with `ProtectionLevel { None, Basic, Strong }`. `PhysicsHitQuery` uses `GetComponentInParent` like `IDamageable`. If both markers exist, `Kind` still comes from `IDamageable`; `HitInfo.Protection` comes from the protection marker
+- **Basic:** run `OnHit` (Bounce and Pierce still apply — Pierce also consumes on Basic even when `Kind` is World). `AreaEffect` still runs. Do **not** flush `ApplyStatus` for this contact. Raise Direct `Hit` with `Protection = Basic` so the game can skip HP (and still play a block spark if it wants). Sandbox ignores HP when `Protection != None`
+- **Strong:** return the instance to the pool immediately. No Direct `Hit`, no `StatusApplied`, no `OnHit` (no bounce, pierce, area, multiply-on-hit), no `OnExpire`. Still raise `Expired` so pool counts stay honest
+- Area overlap (phase 13): skip Strong colliders; Basic colliders may appear, and those Area Hits carry `Protection = Basic`
+- Edit Mode tests via `ScriptedHitQuery`: Basic + Bounce(1) reflects and no `StatusApplied`; Basic + Pierce(1) continues; Strong eats a bouncing shot with no `Hit` and no child from `OnHit`/`OnExpire` Multiply; unprotected Target is unchanged
+- Sandbox: Basic dummy (invulnerable) next to DummyTarget; Strong shield cube. Straight shot at Basic — bounce/despawn as World-like motion, dummy HP unchanged. Straight shot at Strong — disappears, no splash Recipe if you fire AreaEffect at it
+
+**Out of scope:** factions, i-frames, shield HP, projectile-vs-projectile; applying HP in the package; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire at the Basic dummy — it does not lose HP; a Bounce Recipe reflects. Fire at the Strong shield — the shot is gone, no `Hit`, no area splash.
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

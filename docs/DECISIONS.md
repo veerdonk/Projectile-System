@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-020 — Protection is a collider marker, not HP
+
+- **Date:** 2026-09-16
+- **Decision:** `IProjectileProtection` marks a collider with `ProtectionLevel.Basic` or `Strong`, the same way `IDamageable` marks `HitKind.Target` (ADR-004). **Basic** runs `OnHit` (pierce and bounce still consume; `AreaEffect` still runs) but does not flush `ApplyStatus` for that contact. Direct `Hit` is still raised with `HitInfo.Protection = Basic` so the game can refuse HP. **Strong** despawns the instance with no Direct `Hit`, no `StatusApplied`, no `OnHit`, and no `OnExpire`; `Expired` still fires. Area overlap skips Strong; Basic may be included with `Protection = Basic`. `Kind` stays Target if `IDamageable` is present. Pierce consumes on `HitKind.Target` **or** `Protection = Basic`. The package still does not subtract HP.
+- **Why:** Invulnerability and shields change *projectile* lifetime and events (bounce, pierce, splash, despawn). That is hit classification, not a health model. Putting it in the game would fork bounce/pierce/area for every consumer. HP, shield hit points, and i-frames stay in the game; they can implement the interface and ignore `Hit` when `Protection != None`.
+- **Consequences:** Two new public types (`IProjectileProtection`, `ProtectionLevel`) and `HitInfo.Protection`. Sandbox ships a Basic dummy and a Strong shield. Do not add factions, shield HP, or a second façade.
+
 ## ADR-019 — Ballistic aim is a fire-time helper, not a path
 
 - **Date:** 2026-09-16
