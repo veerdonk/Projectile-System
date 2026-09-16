@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-011 — Status is a hit request, not package combat
+
+- **Date:** 2026-09-16
+- **Decision:** `ApplyStatus` is an `OnHit` modifier for `HitKind.Target`. It requests an `IStatusEffect`; it does not tick burn, poison, shock, duration, or stacking. The package raises `IProjectileWorld.StatusApplied` **after** the `OnHit` list (the existing `Hit` event stays HP-only and still fires before `OnHit`). The world does not call `IStatusReceiver` or `GetComponent` for status — tests have no GameObjects. Sandbox (or the game) implements `IStatusReceiver` and applies from `StatusApplied`. v1 ships one effect, `DummyStatusEffect` (`Id` `"dummy"`). World hits never request status.
+- **Why:** Games will want burn/poison/shock later without the package owning combat. That split already exists for HP (ADR-004). Status cannot ride on `Hit` because that event fires before `OnHit` modifiers run. An apply interface on the dummy plus an event keeps Edit Mode tests and the sandbox on the same contract.
+- **Consequences:** Five new public types (`IStatusEffect`, `DummyStatusEffect`, `IStatusReceiver`, `ApplyStatus`, `StatusInfo`) and one new façade event. Do not add per-status classes, DoT systems, or a second world. Pierce + `ApplyStatus` on the same `OnHit` list raises `StatusApplied` for each Target hit, including a killing hit.
+
 ## ADR-010 — Homing retargets after a Target hit; Bounce reflects Target too
 
 - **Date:** 2026-09-15

@@ -19,10 +19,12 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Target** — the object described by a `Target` hit
 - **Homing target** — the object an instance is steering toward (may differ from what it eventually hits)
 - **Effect** — presentation or gameplay reaction associated with a modifier or event (VFX, audio). Damage is a sandbox effect, not package logic
+- **Status effect** — a named gameplay condition requested on a Target hit (burn, poison, shock, …). The package delivers the request; the game simulates it. v1 ships `DummyStatusEffect` only
 - **Pool** — inactive instances reused on spawn; despawn returns an instance to the pool
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
   - **Strength** for homing (how hard it turns)
+  - **Scale** for speed (multiplier: `Speed(2)` doubles current speed, `Speed(0.5)` halves it)
 
 ### Named modifiers (v1)
 
@@ -31,6 +33,8 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Homing(n)** — `OnTick`: steer toward a homing target; higher `n` turns faster. A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel
 - **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
 - **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`)
+- **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
+- **ApplyStatus** — `OnHit` + `Target`: request an `IStatusEffect` on the hit Target. The package does not simulate the effect (see [DECISIONS.md](DECISIONS.md) ADR-011)
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
 
 ## Goals
@@ -51,6 +55,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - Player controller, inventory, wand UI, mana / spell points
 - A second composition model (Noita wrap-the-next-spell, behaviour trees, visual graphs)
 - HP / damage application inside the runtime package (sandbox listens to `Hit` and applies damage). `IDamageable` is a Target-classification marker only; see [DECISIONS.md](DECISIONS.md) ADR-004
+- Burn / poison / shock simulation, duration, stacking, or cleansing inside the runtime package (phase 8 delivers the apply request only; see [DECISIONS.md](DECISIONS.md) ADR-011)
 - New folders or patterns without an ADR
 
 ## Package vs game boundary
@@ -66,7 +71,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - Cameras, lighting, URP
 - Input handling and debug compose / fire UI
-- Dummy targets (HP, `IDamageable` if useful)
+- Dummy targets (HP, `IDamageable`, `IStatusReceiver`)
 - Player or enemy objects if you add them later
 
 If a type needs `Player`, `Enemy`, or camera code, it does not belong in the package.
@@ -146,6 +151,42 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** `Bounce(2)` and `Multiply(2)` on `OnHit` with an explicit child Recipe
 - **When:** the instance records two `World` hits
 - **Then:** each hit reflects the parent and does not despawn it; each of those hits also spawns two child instances from the child Recipe (four children total after two walls)
+
+### Phase 7 — Speed(2) at spawn
+
+- **Given:** `Speed(2)` on `OnTravel`; Recipe base speed is the same as the straight shot
+- **When:** the instance is spawned
+- **Then:** it travels at twice `Recipe.Speed` before the first move
+
+### Phase 7 — Speed(0.5) every 0.5s
+
+- **Given:** `Speed(0.5)` on `OnInterval` with interval 0.5s
+- **When:** the instance has travelled 0.5s, then 1.0s
+- **Then:** speed is half of spawn speed after the first interval, then a quarter after the second
+
+### Phase 7 — Speed(2) after bounce
+
+- **Given:** `Bounce(1)` then `Speed(2)` on `OnHit`
+- **When:** the instance records a `World` hit
+- **Then:** it reflects, does not despawn, and continues at twice the speed it had before the hit
+
+### Phase 7 — Speed(0.5) after pierce
+
+- **Given:** `Pierce(1)` then `Speed(0.5)` on `OnHit`
+- **When:** the instance records a `Target` hit
+- **Then:** Pierce cancels despawn and the instance continues at half the speed it had before the hit
+
+### Phase 8 — Dummy status on Target hit
+
+- **Given:** `ApplyStatus` with `DummyStatusEffect` on `OnHit`
+- **When:** the instance records a `Target` hit
+- **Then:** `StatusApplied` is raised with that effect and Target id; the sandbox dummy receives it; the instance still despawns unless Pierce/Bounce cancel that
+
+### Phase 8 — Status does not apply on World
+
+- **Given:** the same `ApplyStatus` Recipe
+- **When:** the instance records a `World` hit
+- **Then:** `StatusApplied` is not raised
 
 ## Product constraints
 

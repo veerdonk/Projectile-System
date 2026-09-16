@@ -24,17 +24,17 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 | Stage | When it runs | Typical modifiers |
 | --- | --- | --- |
 | `OnSpawn` | Once when the instance is created | `Multicast(n)` |
-| `OnTravel` | Once after spawn, before the first move | Initial speed, size, direction |
+| `OnTravel` | Once after spawn, before the first move | `Speed(n)` (start faster/slower), size, direction |
 | `OnTick` | Every `ProjectileWorld.Tick` | `Homing(n)` |
-| `OnInterval` | When that modifier’s elapsed interval elapses during flight | `Multiply(n)` every 0.5s |
-| `OnHit` | On each hit from the pipeline | Damage event, `Pierce`, `Bounce`, `Multiply` spawn |
+| `OnInterval` | When that modifier’s elapsed interval elapses during flight | `Multiply(n)` every 0.5s, `Speed(n)` every 0.5s |
+| `OnHit` | On each hit from the pipeline | Damage event, `Pierce`, `Bounce`, `Multiply` spawn, `Speed(n)`, `ApplyStatus` |
 | `OnExpire` | When the instance is ending | `Multiply` on death |
 
 **Hit then expire:** a hit that despawns the instance runs `OnHit` first, then `OnExpire`.
 
 **Pierce / bounce** are `OnHit` modifiers. They may **cancel despawn** (see Hit pipeline). Pierce inspects `HitInfo.Kind` (`Target` only). Bounce reflects any hit.
 
-`OnTravel` is one-shot setup. Continuous steering is `OnTick`. Periodic spawn is `OnInterval`, not `OnTravel`.
+`OnTravel` is one-shot setup. Continuous steering is `OnTick`. Periodic spawn or speed change is `OnInterval`, not `OnTravel`. `Speed(n)` on `OnTravel` is the spawn-time start scale; do not put it on `OnSpawn`.
 
 ## Recipe
 
@@ -56,6 +56,7 @@ A modifier may:
 - Mutate motion fields (velocity, speed) and remaining pierce/bounce/interval
 - Cancel despawn on the current hit
 - Request spawns of **explicit child Recipes** (never implied inherit)
+- Request a status effect on the current `Target` hit (flushed as `StatusApplied` after `OnHit`; see ADR-011)
 
 A modifier may not:
 
@@ -63,7 +64,7 @@ A modifier may not:
 - Call `Instantiate` / `Destroy`
 - Subscribe to Unity messages
 
-Magnitude meaning is per modifier (count vs strength) as in [REQUIREMENTS.md](REQUIREMENTS.md).
+Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMENTS.md](REQUIREMENTS.md).
 
 **Child Recipes:** each spawn modifier carries the Recipe to spawn. Phase 1 `OnHit` spawn takes that Recipe in the modifier. Later modifiers decide their own copy rules; default remains “explicit Recipe, no inherit.”
 
@@ -88,11 +89,11 @@ struct HitInfo
 }
 ```
 
-- `Target` — dummy (or later enemy). Default: raise `Hit`, despawn unless `Pierce` or `Bounce` cancels despawn. Bounce still raises `Hit` so dummy HP drops.
-- `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`.
+- `Target` — dummy (or later enemy). Default: raise `Hit`, despawn unless `Pierce` or `Bounce` cancels despawn. Bounce still raises `Hit` so dummy HP drops. `ApplyStatus` may also request a status; that is raised as `StatusApplied` **after** the `OnHit` list, not on `Hit`
+- `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`. `ApplyStatus` ignores World
 - Projectile-vs-projectile: ignore until an ADR.
 
-The package does **not** apply HP. Sandbox listens to `Hit` and updates dummy health.
+The package does **not** apply HP or simulate status effects. Sandbox listens to `Hit` for dummy health and to `StatusApplied` to call `IStatusReceiver.Apply`.
 
 ## Public API sketch
 
@@ -117,7 +118,19 @@ interface IProjectileWorld
     void RemoveHomingCandidate(TargetId id);
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
+    event Action<StatusInfo> StatusApplied; // after OnHit; phase 8 (ADR-011)
 }
+
+struct StatusInfo
+{
+    ProjectileId InstanceId;
+    TargetId TargetId;
+    IStatusEffect Effect;
+}
+
+interface IStatusEffect { string Id { get; } }
+
+interface IStatusReceiver { void Apply(IStatusEffect effect); }
 ```
 
 Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for example from one `Update`). Instances do not have their own `Update`. `ProjectileWorld` is `IDisposable` (dispose the Entities `World`).
