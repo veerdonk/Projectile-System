@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-012 — One interval per instance, set by `Interval(n)` on `OnSpawn`
+
+- **Date:** 2026-09-16
+- **Decision:** How many seconds pass between `OnInterval` runs belongs to the instance, not to each modifier on the list. `Interval(n)` is an `OnSpawn` modifier that writes that period; every modifier on `OnInterval` then fires on the same crossings, in list order, once per crossing. `Multiply` and `Speed` no longer take `intervalSeconds`. A Recipe with an `OnInterval` list but no `Interval(n)` has a period of 0 and never runs that list.
+- **Why:** Two modifiers on one `OnInterval` list carried two periods that the author had to repeat and keep in sync, and nothing made "every 0.5s" a property of the shot. The instance already owns the clock those periods were read against (`Projectile.ElapsedSeconds`), so the period sits next to it. `Interval` is a modifier rather than a `Recipe.IntervalSeconds` field because base stats are the ones every instance has (speed, radius, lifetime, presentation) and a period only means something for a Recipe that carries `OnInterval`; authoring it in a list keeps it beside the modifiers it drives. This is not the `Timer` that [ADR-003](#adr-003--lifetime-is-recipe-data-not-a-timer-modifier) rejected: `Interval` cannot end an instance, so `LifetimeSeconds` is still the only despawn clock.
+- **Consequences:** One new public type (`Interval`) and one changed signature on each of `Multiply` and `Speed`. `Projectile.IntervalSeconds` rides on the entity row and `ModifierContext.IntervalSeconds` exposes it, so a future modifier could retime a live instance. `Prewarm` reads the period from the parent Recipe's `OnSpawn` `Interval` instead of from the `Multiply` modifier. Mixed periods on one Recipe are no longer expressible; a Recipe that wants them needs a second Recipe.
+
 ## ADR-011 — Status is a hit request, not package combat
 
 - **Date:** 2026-09-16

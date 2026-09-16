@@ -6,21 +6,18 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// <summary>
     /// Scales current speed by <see cref="Scale"/> and keeps travel direction.
     /// Speed(2) doubles, Speed(0.5) halves. Scale &lt;= 0 is a no-op.
-    /// OnTravel is the spawn-time start scale; OnInterval uses <see cref="IntervalSeconds"/>
-    /// the same way Multiply does; OnHit scales after earlier modifiers in that list
+    /// OnTravel is the spawn-time start scale; on OnInterval the period comes from <see cref="Interval"/>
+    /// on the Recipe's OnSpawn list; OnHit scales after earlier modifiers in that list
     /// (so Bounce then Speed scales the reflected velocity).
     /// </summary>
     public sealed class Speed : IModifier
     {
-        public Speed(float scale, float intervalSeconds = 0f)
+        public Speed(float scale)
         {
             Scale = scale;
-            IntervalSeconds = intervalSeconds;
         }
 
         public float Scale { get; }
-
-        public float IntervalSeconds { get; }
 
         public void Apply(ModifierContext context)
         {

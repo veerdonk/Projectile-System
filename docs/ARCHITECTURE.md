@@ -23,10 +23,10 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 
 | Stage | When it runs | Typical modifiers |
 | --- | --- | --- |
-| `OnSpawn` | Once when the instance is created | `Multicast(n)` |
+| `OnSpawn` | Once when the instance is created | `Multicast(n)`, `Interval(n)` |
 | `OnTravel` | Once after spawn, before the first move | `Speed(n)` (start faster/slower), size, direction |
 | `OnTick` | Every `ProjectileWorld.Tick` | `Homing(n)` |
-| `OnInterval` | When that modifier’s elapsed interval elapses during flight | `Multiply(n)` every 0.5s, `Speed(n)` every 0.5s |
+| `OnInterval` | Each time the instance’s interval elapses during flight | `Multiply(n)`, `Speed(n)` |
 | `OnHit` | On each hit from the pipeline | Damage event, `Pierce`, `Bounce`, `Multiply` spawn, `Speed(n)`, `ApplyStatus` |
 | `OnExpire` | When the instance is ending | `Multiply` on death |
 
@@ -35,6 +35,8 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 **Pierce / bounce** are `OnHit` modifiers. They may **cancel despawn** (see Hit pipeline). Pierce inspects `HitInfo.Kind` (`Target` only). Bounce reflects any hit.
 
 `OnTravel` is one-shot setup. Continuous steering is `OnTick`. Periodic spawn or speed change is `OnInterval`, not `OnTravel`. `Speed(n)` on `OnTravel` is the spawn-time start scale; do not put it on `OnSpawn`.
+
+**Interval:** the seconds between `OnInterval` runs belong to the instance, not to the modifiers on the list. `Interval(n)` on `OnSpawn` sets that one period and every modifier on `OnInterval` fires on those crossings, in list order ([DECISIONS.md](DECISIONS.md) ADR-012). A Recipe with no `Interval(n)` never runs `OnInterval`. `Interval` is not a despawn clock; `LifetimeSeconds` still is.
 
 ## Recipe
 

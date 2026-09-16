@@ -322,6 +322,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Radius = recipe.Radius,
                 RemainingLifetime = recipe.LifetimeSeconds,
                 ElapsedSeconds = 0f,
+                IntervalSeconds = 0f,
                 RemainingPierce = remainingPierce,
                 RemainingBounce = remainingBounce,
                 MultiplyGenerationsLeft = multiplyLeft,
@@ -406,6 +407,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             if (modifiers == null)
                 return;
 
+            float intervalSeconds = onInterval ? ReadIntervalSeconds(recipe) : 0f;
             for (int i = 0; i < modifiers.Length; i++)
             {
                 if (modifiers[i] is not Multiply multiply || multiply.Count <= 0)
@@ -413,7 +415,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
                 Recipe child = multiply.ChildRecipe;
                 int perParent = onInterval
-                    ? multiply.Count * IntervalSpawnsInFlight(recipe, child, multiply.IntervalSeconds)
+                    ? multiply.Count * IntervalSpawnsInFlight(recipe, child, intervalSeconds)
                     : multiply.Count;
                 PrewarmChain(
                     child,
@@ -433,6 +435,23 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             float window = Mathf.Min(parent.LifetimeSeconds, child.LifetimeSeconds);
             int spawns = Mathf.CeilToInt(window / intervalSeconds);
             return spawns > 1 ? spawns : 1;
+        }
+
+        /// <summary>The period an instance of <paramref name="recipe"/> will carry, from <see cref="Interval"/> on its OnSpawn list.</summary>
+        static float ReadIntervalSeconds(Recipe recipe)
+        {
+            IModifier[] onSpawn = recipe.OnSpawn;
+            if (onSpawn == null)
+                return 0f;
+
+            float seconds = 0f;
+            for (int i = 0; i < onSpawn.Length; i++)
+            {
+                if (onSpawn[i] is Interval interval)
+                    seconds = interval.Seconds > 0f ? interval.Seconds : 0f;
+            }
+
+            return seconds;
         }
 
         static void ReadHitRemaining(Recipe recipe, out int remainingPierce, out int remainingBounce)

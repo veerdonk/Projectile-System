@@ -25,6 +25,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
   - **Count** for pierce, bounce, multicast, multiply (how many)
   - **Strength** for homing (how hard it turns)
   - **Scale** for speed (multiplier: `Speed(2)` doubles current speed, `Speed(0.5)` halves it)
+  - **Seconds** for interval (`Interval(0.5)` runs `OnInterval` every half second)
 
 ### Named modifiers (v1)
 
@@ -34,6 +35,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
 - **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`)
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
+- **Interval(n)** — `OnSpawn`: seconds between `OnInterval` runs for this instance. One period per Recipe drives every modifier on that list; without it `OnInterval` never runs (see [DECISIONS.md](DECISIONS.md) ADR-012)
 - **ApplyStatus** — `OnHit` + `Target`: request an `IStatusEffect` on the hit Target. The package does not simulate the effect (see [DECISIONS.md](DECISIONS.md) ADR-011)
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
 
@@ -112,7 +114,7 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 ### Phase 3 — Multiply(2) every 0.5s of travel
 
-- **Given:** `Multiply(2)` on `OnInterval` with interval 0.5s and an explicit child Recipe
+- **Given:** `Multiply(2)` on `OnInterval`, `Interval(0.5)` on `OnSpawn`, and an explicit child Recipe
 - **When:** the parent has travelled for 0.5 seconds
 - **Then:** two child instances spawn roughly in the direction of travel (small random spread is allowed)
 
@@ -160,7 +162,7 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 ### Phase 7 — Speed(0.5) every 0.5s
 
-- **Given:** `Speed(0.5)` on `OnInterval` with interval 0.5s
+- **Given:** `Speed(0.5)` on `OnInterval` and `Interval(0.5)` on `OnSpawn`
 - **When:** the instance has travelled 0.5s, then 1.0s
 - **Then:** speed is half of spawn speed after the first interval, then a quarter after the second
 

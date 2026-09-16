@@ -11,7 +11,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         {
             Recipe child = SimulationTestHelper.CreateRecipe("interval-child", speed: 8f, lifetime: 2f);
             Recipe parent = SimulationTestHelper.CreateRecipe("interval-parent", speed: 10f, lifetime: 5f);
-            parent.OnInterval = new IModifier[] { new Multiply(2, child, intervalSeconds: 0.5f) };
+            parent.OnSpawn = new IModifier[] { new Interval(0.5f) };
+            parent.OnInterval = new IModifier[] { new Multiply(2, child) };
 
             var hits = new ScriptedHitQuery();
             var world = new ProjectileWorld(hits, createViews: false);
@@ -58,7 +59,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         {
             Recipe child = SimulationTestHelper.CreateRecipe("dt-child", speed: 8f, lifetime: 2f);
             Recipe parent = SimulationTestHelper.CreateRecipe("dt-parent", speed: 10f, lifetime: 5f);
-            parent.OnInterval = new IModifier[] { new Multiply(2, child, intervalSeconds: 0.5f) };
+            parent.OnSpawn = new IModifier[] { new Interval(0.5f) };
+            parent.OnInterval = new IModifier[] { new Multiply(2, child) };
 
             var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false);
             using (world)
@@ -84,7 +86,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         {
             Recipe child = SimulationTestHelper.CreateRecipe("expire-skip-child", speed: 8f, lifetime: 2f);
             Recipe parent = SimulationTestHelper.CreateRecipe("expire-skip-parent", speed: 10f, lifetime: 0.5f);
-            parent.OnInterval = new IModifier[] { new Multiply(2, child, intervalSeconds: 0.5f) };
+            parent.OnSpawn = new IModifier[] { new Interval(0.5f) };
+            parent.OnInterval = new IModifier[] { new Multiply(2, child) };
 
             var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false);
             using (world)
@@ -205,7 +208,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         {
             Recipe child = SimulationTestHelper.CreateRecipe("prewarm-interval-child", speed: 8f, lifetime: 2f);
             Recipe parent = SimulationTestHelper.CreateRecipe("prewarm-interval-parent", speed: 10f, lifetime: 5f);
-            parent.OnInterval = new IModifier[] { new Multiply(2, child, intervalSeconds: 0.5f) };
+            parent.OnSpawn = new IModifier[] { new Interval(0.5f) };
+            parent.OnInterval = new IModifier[] { new Multiply(2, child) };
 
             var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false);
             using (world)

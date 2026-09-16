@@ -167,51 +167,28 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 return;
 
             float elapsed = projectile.ElapsedSeconds;
-            float previous = elapsed - dt;
-            bool bound = false;
-            for (int i = 0; i < modifiers.Length; i++)
-            {
-                IModifier modifier = modifiers[i];
-                if (modifier == null)
-                    continue;
-                if (modifier is Multiply && projectile.MultiplyGenerationsLeft <= 0)
-                    continue;
-
-                float interval = IntervalSecondsOf(modifier);
-                int fires = IntervalCrossings(previous, elapsed, interval);
-                if (fires <= 0)
-                    continue;
-
-                if (!bound)
-                {
-                    BindContext(entity, hasHit: false, default, dt);
-                    bound = true;
-                }
-
-                for (int f = 0; f < fires; f++)
-                    modifier.Apply(Bridge.ModifierContext);
-            }
-
-            if (!bound)
+            int fires = IntervalCrossings(elapsed - dt, elapsed, projectile.IntervalSeconds);
+            if (fires <= 0)
                 return;
+
+            BindContext(entity, hasHit: false, default, dt);
+            for (int f = 0; f < fires; f++)
+            {
+                for (int i = 0; i < modifiers.Length; i++)
+                {
+                    IModifier modifier = modifiers[i];
+                    if (modifier == null)
+                        continue;
+                    if (modifier is Multiply && !Bridge.ModifierContext.AllowsMultiply)
+                        continue;
+                    modifier.Apply(Bridge.ModifierContext);
+                }
+            }
 
             ProjectileVelocity velocity = em.GetComponentData<ProjectileVelocity>(entity);
             Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
             em.SetComponentData(entity, projectile);
             em.SetComponentData(entity, velocity);
-        }
-
-        static float IntervalSecondsOf(IModifier modifier)
-        {
-            switch (modifier)
-            {
-                case Multiply multiply:
-                    return multiply.IntervalSeconds;
-                case Speed speed:
-                    return speed.IntervalSeconds;
-                default:
-                    return 0f;
-            }
         }
 
         static int IntervalCrossings(float previousElapsed, float elapsed, float interval)
@@ -274,6 +251,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 projectile.RemainingPierce,
                 projectile.RemainingBounce,
                 projectile.Radius,
+                projectile.IntervalSeconds,
                 projectile.MultiplyGenerationsLeft,
                 hasHit,
                 hit,

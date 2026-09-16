@@ -78,6 +78,7 @@ namespace Sandbox
         float travelSpeedScale = 2f;
         float intervalSpeedScale = 0.5f;
         float bounceSpeedScale = 2f;
+        float intervalSeconds = 0.5f;
 
         int requestCount;
         Vector3 lastRequestPosition;
@@ -177,6 +178,7 @@ namespace Sandbox
             FireButtonWithScale("Speed on travel", 12, travelSpeedRecipe, ref travelSpeedScale, 0.25f, 8f, 0.25f);
             FireButtonWithScale("Speed on interval", 13, intervalSpeedRecipe, ref intervalSpeedScale, 0.25f, 8f, 0.25f);
             FireButtonWithScale("Bounce then Speed", 14, bounceSpeedRecipe, ref bounceSpeedScale, 0.25f, 8f, 0.25f);
+            ScaleRow($"Interval {intervalSeconds:0.##}s (keys 6 and T)", ref intervalSeconds, 0.1f, 3f, 0.1f);
 
             GUILayout.Space(6f);
             GUILayout.Label(hasRequest
@@ -248,6 +250,17 @@ namespace Sandbox
 
             selectedRecipe = slot;
             Fire(recipe);
+        }
+
+        void ScaleRow(string label, ref float value, float min, float max, float step)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, GUILayout.Height(28f));
+            if (GUILayout.Button("-", GUILayout.Width(28), GUILayout.Height(28)))
+                value = Mathf.Max(min, value - step);
+            if (GUILayout.Button("+", GUILayout.Width(28), GUILayout.Height(28)))
+                value = Mathf.Min(max, value + step);
+            GUILayout.EndHorizontal();
         }
 
         [ContextMenu("Fire")]
@@ -398,7 +411,10 @@ namespace Sandbox
             if (bounceRecipe != null)
                 bounceRecipe.OnHit = new IModifier[] { new Bounce(bounceCount) };
             if (intervalRecipe != null)
-                intervalRecipe.OnInterval = new IModifier[] { new Multiply(multiplyIntervalCount, childRecipe, intervalSeconds: 0.5f) };
+            {
+                intervalRecipe.OnSpawn = new IModifier[] { new Interval(intervalSeconds) };
+                intervalRecipe.OnInterval = new IModifier[] { new Multiply(multiplyIntervalCount, childRecipe) };
+            }
             if (expireRecipe != null)
                 expireRecipe.OnExpire = new IModifier[] { new Multiply(multiplyExpireCount, childRecipe) };
             if (multicastRecipe != null)
@@ -410,7 +426,10 @@ namespace Sandbox
             if (travelSpeedRecipe != null)
                 travelSpeedRecipe.OnTravel = new IModifier[] { new Speed(travelSpeedScale) };
             if (intervalSpeedRecipe != null)
-                intervalSpeedRecipe.OnInterval = new IModifier[] { new Speed(intervalSpeedScale, intervalSeconds: 0.5f) };
+            {
+                intervalSpeedRecipe.OnSpawn = new IModifier[] { new Interval(intervalSeconds) };
+                intervalSpeedRecipe.OnInterval = new IModifier[] { new Speed(intervalSpeedScale) };
+            }
             if (bounceSpeedRecipe != null)
                 bounceSpeedRecipe.OnHit = new IModifier[] { new Bounce(1), new Speed(bounceSpeedScale) };
         }

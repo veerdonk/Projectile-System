@@ -11,6 +11,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public float Radius;
         public float RemainingLifetime;
         public float ElapsedSeconds;
+        public float IntervalSeconds;
         public int RemainingPierce;
         public int RemainingBounce;
         public int MultiplyGenerationsLeft;

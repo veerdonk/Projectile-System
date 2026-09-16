@@ -44,7 +44,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 "speed-interval",
                 speed: 10f,
                 lifetime: 10f,
-                onInterval: new IModifier[] { new Speed(0.5f, intervalSeconds: 0.5f) });
+                onSpawn: new IModifier[] { new Interval(0.5f) },
+                onInterval: new IModifier[] { new Speed(0.5f) });
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
@@ -140,7 +141,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 "speed-child",
                 speed: 10f,
                 lifetime: 5f,
-                onInterval: new IModifier[] { new Speed(0.5f, intervalSeconds: 0.5f) });
+                onSpawn: new IModifier[] { new Interval(0.5f) },
+                onInterval: new IModifier[] { new Speed(0.5f) });
             Recipe parent = SimulationTestHelper.CreateRecipe(
                 "speed-parent",
                 speed: 10f,
