@@ -106,7 +106,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
-        public void Homing_DoesNotRetargetAfterAcquire()
+        public void Homing_DoesNotRetargetUntilATargetHit()
         {
             Recipe recipe = HomingRecipe("home-lock", 100f);
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
@@ -129,6 +129,76 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
 
                 Assert.IsTrue(world.TryGetHomingTarget(id, out HomingTarget locked));
                 Assert.AreEqual(new TargetId(1), locked.Id);
+            }
+        }
+
+        [Test]
+        public void Homing_OnTargetHit_DropsLock_AndDoesNotReacquireThatTargetWhileItStaysAhead()
+        {
+            Recipe recipe = HomingPierceRecipe("home-retarget", 90f);
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var first = new TargetId(1);
+                world.SetHomingCandidate(first, new Vector3(0f, 0f, 8f));
+
+                ProjectileId id = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                world.Tick(0.1f);
+                Assert.IsTrue(world.TryGetHomingTarget(id, out HomingTarget locked));
+                Assert.AreEqual(first, locked.Id);
+
+                hits.Queue(HitKind.Target, new Vector3(0f, 0f, 2f), Vector3.back, first);
+                world.Tick(0.1f);
+                Assert.AreEqual(1, world.ActiveCount);
+                Assert.IsTrue(world.TryGetHomingTarget(id, out locked));
+                Assert.IsFalse(locked.IsAssigned);
+
+                world.Tick(0.1f);
+                Assert.AreEqual(1, world.ActiveCount);
+                Assert.IsTrue(world.TryGetHomingTarget(id, out locked));
+                Assert.IsFalse(locked.IsAssigned);
+            }
+        }
+
+        [Test]
+        public void Homing_WorldHit_DoesNotDropLock()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "home-world",
+                speed: 10f,
+                lifetime: 10f,
+                onTick: new IModifier[] { new Homing(90f) },
+                onHit: new IModifier[] { new Bounce(1) });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var targetId = new TargetId(1);
+                world.SetHomingCandidate(targetId, new Vector3(10f, 0f, 10f));
+
+                ProjectileId id = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward,
+                    HomingTarget = HomingTarget.Assigned(targetId)
+                });
+
+                world.Tick(0.1f);
+                Assert.IsTrue(world.TryGetHomingTarget(id, out HomingTarget locked));
+                Assert.AreEqual(targetId, locked.Id);
+
+                hits.Queue(HitKind.World, new Vector3(0f, 0f, 1f), Vector3.back);
+                world.Tick(0.1f);
+
+                Assert.AreEqual(1, world.ActiveCount);
+                Assert.IsTrue(world.TryGetHomingTarget(id, out locked));
+                Assert.AreEqual(targetId, locked.Id);
             }
         }
 
@@ -211,6 +281,16 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 speed: 10f,
                 lifetime: 10f,
                 onTick: new IModifier[] { new Homing(turnRate) });
+        }
+
+        static Recipe HomingPierceRecipe(string id, float turnRate)
+        {
+            return SimulationTestHelper.CreateRecipe(
+                id,
+                speed: 10f,
+                lifetime: 10f,
+                onTick: new IModifier[] { new Homing(turnRate) },
+                onHit: new IModifier[] { new Pierce(1) });
         }
     }
 }

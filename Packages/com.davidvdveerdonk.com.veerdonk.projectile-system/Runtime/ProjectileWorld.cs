@@ -326,7 +326,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 RemainingBounce = remainingBounce,
                 MultiplyGenerationsLeft = multiplyLeft,
                 HomingHasTarget = request.HomingTarget.IsAssigned,
-                HomingTargetId = request.HomingTarget.Id
+                HomingTargetId = request.HomingTarget.Id,
+                HomingHasIgnoredTarget = false,
+                HomingIgnoredTargetId = default
             });
             em.SetComponentData(entity, new ProjectilePosition { Value = position });
             em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });

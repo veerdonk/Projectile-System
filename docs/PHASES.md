@@ -79,7 +79,7 @@ Keep phase 1 behaviour. Move live instances onto Entities.
 **In scope**
 
 - `Pierce(n)` on `OnHit` for `HitKind.Target`
-- `Bounce(n)` on `OnHit` for `HitKind.World` (reflect velocity around `HitInfo.Normal`)
+- `Bounce(n)` on `OnHit` (reflect velocity around `HitInfo.Normal`; v1 started as World-only, [ADR-010](DECISIONS.md) also reflects `Target`)
 - Remaining counts on the instance; despawn when the relevant count cannot absorb the hit
 - Scenarios: Pierce(2), Bounce(1) then target
 - Tests for remaining counts and reflection
@@ -133,15 +133,15 @@ Prove that named modifiers from phases 2–5 still do their jobs when they share
 
 **In scope**
 
-- One Recipe with `Pierce(1)` on `OnHit` and `Homing(100)` on `OnTick`: pierce the first `Target`, stay live, keep steering toward `SpawnRequest.HomingTarget` (a second dummy). No retarget API.
-- One Recipe with `Bounce(2)` and `Multiply(2)` on `OnHit` (explicit child Recipe): each of two `World` hits reflects the parent and spawns two children. Children do not inherit Bounce/Multiply ([ADR-002](DECISIONS.md)).
-- Edit Mode tests for both scenarios (scripted hits). Assert remaining counts, that the parent stays live after the absorbed hits, child spawn count (2 per bounce), and that homing still turns after pierce.
+- One Recipe with `Pierce(1)` on `OnHit` and `Homing(300)` on `OnTick`: pierce the first `Target`, stay live, drop that homing lock, skip the pierced dummy while it stays in front of travel, then acquire the next dummy and steer. No public retarget API ([ADR-010](DECISIONS.md)). Sandbox uses 300°/s so the instance can leave DummyTarget instead of looping back at 20 speed.
+- One Recipe with `Bounce(2)` and `Multiply(2)` on `OnHit` (explicit child Recipe): each of two `World` hits reflects the parent and spawns two children. Children do not inherit Bounce/Multiply ([ADR-002](DECISIONS.md)). Bounce also reflects `Target` hits while still raising `Hit`.
+- Edit Mode tests for both scenarios (scripted hits). Assert remaining counts, that the parent stays live after the absorbed hits, child spawn count (2 per bounce), and that homing acquires a new target after pierce.
 - Sandbox Recipes and Play Mode proofs for both scenarios. Add a second World wall only if the current wall cannot produce two bounces.
 - Confirm existing list rules: the full `OnHit` list runs even when Pierce/Bounce sets `CancelDespawn`; a surviving instance still runs `OnTick` on later ticks. See [ARCHITECTURE.md](ARCHITECTURE.md) invariants.
 
-**Out of scope:** new modifiers; homing retarget or new `SpawnRequest` fields; cartesian product of every modifier pair; editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** new modifiers or `SpawnRequest` fields; cartesian product of every modifier pair; editor tooling; Unity Physics; Entities Graphics
 
-**Proof:** fire Pierce(1)+Homing(100): first dummy is pierced, instance curves into the homing dummy. Fire Bounce(2)+Multiply(2): two wall hits, two extra instances per bounce, parent still alive.
+**Proof:** fire Pierce(1)+Homing(300): first dummy is pierced, instance curves into DummyBounce after it leaves the first dummy ahead. Fire Bounce(2)+Multiply(2): two wall hits, two extra instances per bounce, parent still alive. Bounce off a dummy still drops dummy HP.
 
 **Stop.**
 

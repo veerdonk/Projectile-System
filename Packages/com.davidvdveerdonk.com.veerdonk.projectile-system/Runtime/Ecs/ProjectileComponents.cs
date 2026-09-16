@@ -16,6 +16,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public int MultiplyGenerationsLeft;
         public bool HomingHasTarget;
         public TargetId HomingTargetId;
+        public bool HomingHasIgnoredTarget;
+        public TargetId HomingIgnoredTargetId;
     }
 
     struct ProjectilePosition : IComponentData

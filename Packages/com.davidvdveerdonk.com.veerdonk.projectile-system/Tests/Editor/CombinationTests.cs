@@ -7,7 +7,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
     public sealed class CombinationTests
     {
         [Test]
-        public void Pierce1_Homing_StaysLiveAfterTargetHit_AndKeepsSteeringTowardAssignedTarget()
+        public void Pierce1_Homing_ReleasesLockOnTargetHit_ThenAcquiresTheNextCandidate()
         {
             Recipe recipe = SimulationTestHelper.CreateRecipe(
                 "pierce-homing",
@@ -19,41 +19,36 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             using (world)
             {
                 var pierced = new TargetId(1);
-                var homing = new TargetId(2);
+                var next = new TargetId(2);
                 world.SetHomingCandidate(pierced, new Vector3(0f, 0f, 8f));
-                world.SetHomingCandidate(homing, new Vector3(10f, 0f, 10f));
+                world.SetHomingCandidate(next, new Vector3(10f, 0f, 10f));
 
                 ProjectileId id = world.Spawn(new SpawnRequest
                 {
                     Recipe = recipe,
                     Position = Vector3.zero,
-                    Direction = Vector3.forward,
-                    HomingTarget = HomingTarget.Assigned(homing)
+                    Direction = Vector3.forward
                 });
 
                 world.Tick(0.1f);
-                Assert.AreEqual(1, world.ActiveCount);
-                Assert.IsTrue(world.TryGetState(id, out _, out Vector3 afterFirst, out _));
-                float angleAfterFirst = Vector3.Angle(Vector3.forward, afterFirst);
-                Assert.AreEqual(9f, angleAfterFirst, 0.05f);
                 Assert.IsTrue(world.TryGetHomingTarget(id, out HomingTarget locked));
-                Assert.AreEqual(homing, locked.Id);
+                Assert.AreEqual(pierced, locked.Id);
 
                 hits.Queue(HitKind.Target, new Vector3(0f, 0f, 2f), Vector3.back, pierced);
                 world.Tick(0.1f);
 
                 Assert.AreEqual(1, world.ActiveCount);
-                Assert.IsTrue(world.TryGetRemaining(id, out int pierce, out int bounce));
+                Assert.IsTrue(world.TryGetRemaining(id, out int pierce, out _));
                 Assert.AreEqual(0, pierce);
-                Assert.AreEqual(0, bounce);
                 Assert.IsTrue(world.TryGetHomingTarget(id, out locked));
-                Assert.AreEqual(homing, locked.Id);
+                Assert.IsFalse(locked.IsAssigned);
 
                 world.Tick(0.1f);
                 Assert.AreEqual(1, world.ActiveCount);
-                Assert.IsTrue(world.TryGetState(id, out _, out Vector3 afterPierce, out _));
-                Assert.Greater(Vector3.Angle(Vector3.forward, afterPierce), angleAfterFirst);
-                Assert.Less(Vector3.Angle(afterPierce, new Vector3(1f, 0f, 1f)), Vector3.Angle(afterFirst, new Vector3(1f, 0f, 1f)));
+                Assert.IsTrue(world.TryGetHomingTarget(id, out locked));
+                Assert.AreEqual(next, locked.Id);
+                Assert.IsTrue(world.TryGetState(id, out _, out Vector3 afterRetarget, out _));
+                Assert.AreEqual(9f, Vector3.Angle(Vector3.forward, afterRetarget), 0.05f);
             }
         }
 

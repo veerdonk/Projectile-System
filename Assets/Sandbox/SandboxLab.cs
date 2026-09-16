@@ -160,7 +160,7 @@ namespace Sandbox
             FireButtonWithMagnitude("Multicast", 7, multicastRecipe, ref multicastCount, 1, 8);
             FireButtonWithMagnitude("Homing A", 8, strongHomingRecipe, ref homingStrong, 0, 300, 10);
             FireButtonWithMagnitude("Homing B", 9, weakHomingRecipe, ref homingWeak, 0, 300, 10);
-            FireButton("Fire Pierce(1)+Homing(100)", 10, pierceHomingRecipe);
+            FireButton("Fire Pierce(1)+Homing(300)", 10, pierceHomingRecipe);
             FireButton("Fire Bounce(2)+Multiply(2)", 11, bounceMultiplyRecipe);
 
             GUILayout.Space(6f);
@@ -248,8 +248,7 @@ namespace Sandbox
             {
                 Recipe = recipe,
                 Position = lastRequestPosition,
-                Direction = lastRequestDirection,
-                HomingTarget = HomingLock(recipe)
+                Direction = lastRequestDirection
             });
 
             Debug.DrawRay(lastRequestPosition, lastRequestDirection * 6f, Color.yellow, 3f);
@@ -289,27 +288,6 @@ namespace Sandbox
             }
         }
 
-        HomingTarget HomingLock(Recipe recipe)
-        {
-            if (recipe != pierceHomingRecipe)
-                return default;
-
-            SandboxDummyTarget lockTarget = FindDummy(DummyBounceName);
-            return lockTarget != null ? HomingTarget.Assigned(lockTarget.TargetId) : default;
-        }
-
-        SandboxDummyTarget FindDummy(string name)
-        {
-            for (int i = 0; i < dummies.Length; i++)
-            {
-                SandboxDummyTarget dummy = dummies[i];
-                if (dummy != null && dummy.name == name)
-                    return dummy;
-            }
-
-            return null;
-        }
-
         Vector3 FireDirection(Recipe recipe)
         {
             if (recipe == bounceRecipe)
@@ -337,7 +315,7 @@ namespace Sandbox
             weakHomingRecipe = CreateRecipe("homing-weak", speed: 20f, lifetime: 5f);
             pierceHomingRecipe = CreateRecipe("pierce-homing", speed: 20f, lifetime: 5f);
             pierceHomingRecipe.OnHit = new IModifier[] { new Pierce(1) };
-            pierceHomingRecipe.OnTick = new IModifier[] { new Homing(100f) };
+            pierceHomingRecipe.OnTick = new IModifier[] { new Homing(300f) };
             bounceMultiplyRecipe = CreateRecipe("bounce-multiply", speed: 20f, lifetime: 5f);
             bounceMultiplyRecipe.OnHit = new IModifier[] { new Bounce(2), new Multiply(2, childRecipe) };
             ApplyMagnitudes();
