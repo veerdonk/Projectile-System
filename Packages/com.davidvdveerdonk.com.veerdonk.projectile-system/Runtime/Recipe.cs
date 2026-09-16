@@ -13,6 +13,18 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public float LifetimeSeconds { get; set; }
 
+        /// <summary>Hit amount copied onto the instance and onto <see cref="HitInfo"/>. The package never applies HP.</summary>
+        public float Damage { get; set; } = 1f;
+
+        /// <summary>Probability 0–1. The package never rolls a crit.</summary>
+        public float CriticalChance { get; set; }
+
+        /// <summary>Fire-time cost for the game to read. The package never spends mana.</summary>
+        public float ManaCost { get; set; }
+
+        /// <summary>Radius of the area-effect overlap sphere a later phase queries. Distinct from <see cref="Radius"/>.</summary>
+        public float EffectRadius { get; set; }
+
         public string PresentationId { get; set; }
 
         /// <summary>

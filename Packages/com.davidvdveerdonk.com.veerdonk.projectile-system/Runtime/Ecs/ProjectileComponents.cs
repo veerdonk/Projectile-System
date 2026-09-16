@@ -9,6 +9,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public int RecipeIndex;
         public float Speed;
         public float Radius;
+        public float Damage;
+        public float CriticalChance;
+        public float EffectRadius;
         public float RemainingLifetime;
         public float ElapsedSeconds;
         public float IntervalSeconds;

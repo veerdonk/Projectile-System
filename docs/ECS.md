@@ -9,7 +9,7 @@ How this package uses DOTS. Not a Unity ECS tutorial. Read this if you already k
 | **DOTS** | A stack of libraries, not one feature | Entities + Burst + Collections + Mathematics. We use a slice. |
 | **`World`** | Unit of work / a private database, **not** the scene | Created and disposed by `ProjectileWorld`. Isolated from Unity’s default ECS world. Not in the Player Loop. |
 | **Entity** | A row id | One live (or pooled) instance. Not a GameObject. |
-| **`IComponentData`** | Columns on that row; structs in contiguous chunks | `Projectile` (including remaining pierce/bounce, `ElapsedSeconds`, `IntervalSeconds`, multiply generations left, and the homing lock id), `ProjectilePosition`, `ProjectileVelocity`, `ProjectileCandidate` |
+| **`IComponentData`** | Columns on that row; structs in contiguous chunks | `Projectile` (including remaining pierce/bounce, `ElapsedSeconds`, `IntervalSeconds`, multiply generations left, the homing lock id, and the combat stats copied from the Recipe: `Damage`, `CriticalChance`, `EffectRadius`), `ProjectilePosition`, `ProjectileVelocity`, `ProjectileCandidate` |
 | **`Disabled`** | Soft-deleted / pooled row | Default queries skip it. Rent = enable; return = disable. No `Destroy` on despawn. |
 | **System** | A pipeline stage over a query, not `Update` on each object | `LifetimeSystem` (Burst) then `ProjectileSimulationSystem` (managed) |
 | **Burst** | AOT compiler for jobs over those structs (no GC, no managed refs) | Lifetime decrement + candidate position only |
@@ -45,6 +45,7 @@ SandboxLab.Update
                  Burst integrate: candidate = pos + vel * dt
                  move/hit on the same list; skip if a hit already disabled the entity
                  IHitQuery.TryCast (ScriptedHitQuery in Edit Mode, PhysicsHitQuery in Play Mode)
+                 sample the instance combat stats (damage, crit chance, effect radius) onto that HitInfo
                  on hit: Hit event, OnHit, StatusApplied after OnHit once per ApplyStatus request on a Target
                  despawn unless Pierce/Bounce CancelDespawn
                  CancelDespawn: keep remaining counts, place at hit point along current velocity

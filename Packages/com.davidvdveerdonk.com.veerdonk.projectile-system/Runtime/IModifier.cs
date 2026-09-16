@@ -46,6 +46,15 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public float Radius { get; internal set; }
 
+        /// <summary>Instance damage, copied from the Recipe at spawn. Sampled onto <see cref="HitInfo"/> at contact.</summary>
+        public float Damage { get; set; }
+
+        /// <summary>Instance critical chance 0–1, copied from the Recipe at spawn. The package does not roll it.</summary>
+        public float CriticalChance { get; set; }
+
+        /// <summary>Instance area-effect radius, copied from the Recipe at spawn.</summary>
+        public float EffectRadius { get; set; }
+
         /// <summary>Seconds between <c>OnInterval</c> runs. <see cref="Interval"/> writes it on <c>OnSpawn</c>; 0 never fires.</summary>
         public float IntervalSeconds { get; set; }
 
@@ -142,6 +151,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             int remainingPierce,
             int remainingBounce,
             float radius,
+            float damage,
+            float criticalChance,
+            float effectRadius,
             float intervalSeconds,
             int multiplyGenerationsLeft,
             bool hasHit,
@@ -159,6 +171,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             RemainingPierce = remainingPierce;
             RemainingBounce = remainingBounce;
             Radius = radius;
+            Damage = damage;
+            CriticalChance = criticalChance;
+            EffectRadius = effectRadius;
             IntervalSeconds = intervalSeconds;
             HasHit = hasHit;
             Hit = hit;
@@ -175,6 +190,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             projectile.RemainingLifetime = RemainingLifetime;
             projectile.RemainingPierce = RemainingPierce;
             projectile.RemainingBounce = RemainingBounce;
+            projectile.Damage = Damage;
+            projectile.CriticalChance = CriticalChance;
+            projectile.EffectRadius = EffectRadius;
             projectile.IntervalSeconds = IntervalSeconds;
             projectile.HomingHasTarget = HomingTarget.IsAssigned;
             projectile.HomingTargetId = HomingTarget.Id;

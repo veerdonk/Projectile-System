@@ -43,7 +43,7 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 8 | ApplyStatus (key **U**) | DummyTarget HUD shows `dummy, dummy` and the cube flashes green; instance despawns |
 | 8 | ApplyStatus at wall (key **O**) | Hits WorldWall; no dummy status or flash |
 | 8 | Pierce(1)+ApplyStatus (key **I**) | DummyTarget and DummyTarget2 both show `dummy, dummy` and flash green; instance dies on the second |
-| 9 | Straight Recipe with Damage 5 | Dummy loses 5 HP; HUD shows damage, mana, radius |
+| 9 | Damage 5 Recipe (key **P**) | Dummy loses 5 HP; HUD shows the selected Recipe damage / crit / mana / radius / effect radius |
 | 10 | Damage(2) on travel | Dummy loses twice the Recipe damage |
 | 10 | Pierce + OnHit Damage(2) | First dummy takes base damage; second takes double |
 | 11 | Square Multiply 5 / 7 / 9 | Die 5, then H, then 3×3 on the dummy |

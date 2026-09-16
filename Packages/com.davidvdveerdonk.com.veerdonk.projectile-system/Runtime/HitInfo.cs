@@ -33,7 +33,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public override string ToString() => value.ToString();
     }
 
-    /// <summary>One contact from SphereCast / overlap.</summary>
+    /// <summary>One contact from SphereCast / overlap. Combat stats are the instance values at contact.</summary>
     public struct HitInfo
     {
         public ProjectileId InstanceId;
@@ -41,5 +41,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public Vector3 Point;
         public Vector3 Normal;
         public TargetId TargetId;
+        public float Damage;
+        public float CriticalChance;
+        public float EffectRadius;
     }
 }
