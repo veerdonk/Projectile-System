@@ -14,6 +14,12 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         /// <summary>Advances all live instances by <paramref name="dt"/> seconds.</summary>
         void Tick(float dt);
 
+        /// <summary>Publishes a live pose Homing can lock onto and steer toward. Call again to move it.</summary>
+        void SetHomingCandidate(TargetId id, Vector3 position);
+
+        /// <summary>Drops a previously published homing pose. Locked instances that used it fly straight.</summary>
+        void RemoveHomingCandidate(TargetId id);
+
         /// <summary>Raised for each hit produced by the query pipeline.</summary>
         event Action<HitInfo> Hit;
 
@@ -56,11 +62,19 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public override string ToString() => value.ToString();
     }
 
-    /// <summary>Optional homing target on spawn. Ignored until phase 5.</summary>
+    /// <summary>
+    /// Homing lock for one instance. When <see cref="IsAssigned"/>, Homing uses this id and does not acquire.
+    /// The pose still comes from <see cref="IProjectileWorld.SetHomingCandidate"/>.
+    /// </summary>
     public struct HomingTarget
     {
         public bool IsAssigned;
-        public int Id;
+        public TargetId Id;
+
+        public static HomingTarget Assigned(TargetId id)
+        {
+            return new HomingTarget { IsAssigned = true, Id = id };
+        }
     }
 
     /// <summary>Payload for <see cref="IProjectileWorld.Expired"/>.</summary>

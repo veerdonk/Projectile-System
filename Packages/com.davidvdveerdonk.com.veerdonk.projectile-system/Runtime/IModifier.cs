@@ -19,9 +19,13 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         readonly List<SpawnRequest> pendingSpawns;
         Unity.Mathematics.Random random;
 
-        internal ModifierContext(List<SpawnRequest> pendingSpawns, uint seed = 1u)
+        internal ModifierContext(
+            List<SpawnRequest> pendingSpawns,
+            HomingCatalog homingCatalog,
+            uint seed = 1u)
         {
             this.pendingSpawns = pendingSpawns ?? throw new ArgumentNullException(nameof(pendingSpawns));
+            HomingCatalog = homingCatalog ?? throw new ArgumentNullException(nameof(homingCatalog));
             random = Unity.Mathematics.Random.CreateFromIndex(seed);
         }
 
@@ -46,6 +50,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public HitInfo Hit { get; internal set; }
 
         public bool CancelDespawn { get; set; }
+
+        /// <summary>Seconds this stage is advancing.</summary>
+        public float DeltaTime { get; internal set; }
+
+        /// <summary>Lock for this instance. Homing writes here after a successful acquire.</summary>
+        public HomingTarget HomingTarget { get; set; }
+
+        public HomingCatalog HomingCatalog { get; }
 
         /// <summary>Queues an instance of an explicit child Recipe. Spawned after the current instance finishes this stage.</summary>
         public void RequestSpawn(Recipe recipe, Vector3 position, Vector3 direction)
@@ -107,7 +119,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             float radius,
             int multiplyGenerationsLeft,
             bool hasHit,
-            in HitInfo hit)
+            in HitInfo hit,
+            float deltaTime,
+            HomingTarget homingTarget)
         {
             MultiplyGenerationsLeft = multiplyGenerationsLeft;
             InstanceId = instanceId;
@@ -121,6 +135,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             HasHit = hasHit;
             Hit = hit;
             CancelDespawn = false;
+            DeltaTime = deltaTime;
+            HomingTarget = homingTarget;
         }
 
         internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
@@ -129,6 +145,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             projectile.RemainingLifetime = RemainingLifetime;
             projectile.RemainingPierce = RemainingPierce;
             projectile.RemainingBounce = RemainingBounce;
+            projectile.HomingHasTarget = HomingTarget.IsAssigned;
+            projectile.HomingTargetId = HomingTarget.Id;
             velocity.Value = new Unity.Mathematics.float3(Velocity.x, Velocity.y, Velocity.z);
         }
     }

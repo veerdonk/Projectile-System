@@ -104,7 +104,7 @@ struct SpawnRequest
     Recipe Recipe;
     Vector3 Position;
     Vector3 Direction;
-    HomingTarget HomingTarget; // optional; ignored until phase 5
+    HomingTarget HomingTarget; // optional; Homing acquires if unassigned (ADR-009)
 }
 
 struct ProjectileId { /* opaque handle */ }
@@ -113,6 +113,8 @@ interface IProjectileWorld
 {
     ProjectileId Spawn(in SpawnRequest request);
     void Tick(float dt);
+    void SetHomingCandidate(TargetId id, Vector3 position);
+    void RemoveHomingCandidate(TargetId id);
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
 }
@@ -130,7 +132,7 @@ Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for exa
 - Simulation components have no `MonoBehaviour`, `GameObject`, or other `UnityEngine.Object` fields
 - The simulation `World` is package-owned, not `DefaultGameObjectInjectionWorld`, and is not ticked from the Player Loop
 - No `FindObjectOfType` (or equivalent global search) in the runtime package
-- Deterministic given the same Recipe, spawn pose, `dt` sequence, and seed (interval spread may use a seed on the world)
+- Deterministic given the same Recipe, spawn pose, `dt` sequence, seed, and homing candidate catalog (interval spread may use a seed on the world)
 
 ## Folder map
 

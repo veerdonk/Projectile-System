@@ -14,6 +14,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public int RemainingPierce;
         public int RemainingBounce;
         public int MultiplyGenerationsLeft;
+        public bool HomingHasTarget;
+        public TargetId HomingTargetId;
     }
 
     struct ProjectilePosition : IComponentData

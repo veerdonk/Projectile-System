@@ -9,7 +9,7 @@ How this package uses DOTS. Not a Unity ECS tutorial. Read this if you already k
 | **DOTS** | A stack of libraries, not one feature | Entities + Burst + Collections + Mathematics. We use a slice. |
 | **`World`** | Unit of work / a private database, **not** the scene | Created and disposed by `ProjectileWorld`. Isolated from Unity’s default ECS world. Not in the Player Loop. |
 | **Entity** | A row id | One live (or pooled) instance. Not a GameObject. |
-| **`IComponentData`** | Columns on that row; structs in contiguous chunks | `Projectile` (including remaining pierce/bounce, `ElapsedSeconds`, and the multiply generations left), `ProjectilePosition`, `ProjectileVelocity`, `ProjectileCandidate` |
+| **`IComponentData`** | Columns on that row; structs in contiguous chunks | `Projectile` (including remaining pierce/bounce, `ElapsedSeconds`, multiply generations left, and the homing lock id), `ProjectilePosition`, `ProjectileVelocity`, `ProjectileCandidate` |
 | **`Disabled`** | Soft-deleted / pooled row | Default queries skip it. Rent = enable; return = disable. No `Destroy` on despawn. |
 | **System** | A pipeline stage over a query, not `Update` on each object | `LifetimeSystem` (Burst) then `ProjectileSimulationSystem` (managed) |
 | **Burst** | AOT compiler for jobs over those structs (no GC, no managed refs) | Lifetime decrement + candidate position only |
@@ -40,7 +40,7 @@ SandboxLab.Update
             2. ProjectileSimulationSystem  managed:
                  snapshot entities whose lifetime <= 0; expire them (OnExpire, return to pool)
                  snapshot remaining live entities **once**
-                 OnTick modifiers (same list)
+                 OnTick modifiers (same list); Homing acquires if unassigned, then steers at n degrees/second
                  OnInterval: each `Multiply` whose interval elapsed this tick (more than once if `dt` skips a beat), unless this instance's multiply generations are spent
                  Burst integrate: candidate = pos + vel * dt
                  move/hit on the same list; skip if a hit already disabled the entity
@@ -72,6 +72,8 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/ChainBudget.cs` | The counted-down "how many more generations" value both chaining modifiers ride on |
 | `Runtime/Multicast.cs` | `OnSpawn`: total instances is `n`; extras use an explicit sibling Recipe and only multicast again if `Recipe.MulticastGenerations` pays for it |
 | `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math; `Multiply` samples it too |
+| `Runtime/Homing.cs` | `OnTick`: steer at n degrees/second toward a lock. Acquires once via `IHomingAcquisition` when spawn did not assign a target |
+| `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest candidate in front of travel |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views |
 | `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap; ignore last collider so pierce/bounce can leave the surface |
 | `Runtime/ProjectileView.cs` | Presentation adapter (MonoBehaviour) |
