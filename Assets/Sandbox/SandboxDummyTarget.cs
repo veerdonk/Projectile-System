@@ -1,3 +1,4 @@
+using System.Collections;
 using Davidvdveerdonk.ComVeerdonkProjectileSystem;
 using UnityEngine;
 
@@ -9,12 +10,19 @@ namespace Sandbox
     /// </summary>
     public sealed class SandboxDummyTarget : MonoBehaviour, IDamageable, IStatusReceiver
     {
+        static readonly Color StatusFlashColor = new Color(0.15f, 0.9f, 0.28f);
+        const float StatusFlashSeconds = 0.6f;
+
         [SerializeField] int maxHp = 10;
         [SerializeField] int hp = 10;
         [SerializeField] int targetId = 1;
 
         IProjectileWorld subscribed;
         string lastStatusId = "";
+        Renderer cachedRenderer;
+        Color restColor;
+        bool hasRestColor;
+        Coroutine flashRoutine;
 
         public int MaxHp => maxHp;
         public int Hp => hp;
@@ -49,6 +57,11 @@ namespace Sandbox
             subscribed = null;
         }
 
+        void Start()
+        {
+            CaptureRestColor();
+        }
+
         void OnDestroy()
         {
             Unbind();
@@ -67,6 +80,85 @@ namespace Sandbox
         public void Apply(IStatusEffect effect)
         {
             lastStatusId = effect != null ? effect.Id : "";
+            if (effect == null || !isActiveAndEnabled)
+                return;
+
+            if (flashRoutine != null)
+                StopCoroutine(flashRoutine);
+            flashRoutine = StartCoroutine(FlashStatus());
+        }
+
+        IEnumerator FlashStatus()
+        {
+            if (!hasRestColor)
+                CaptureRestColor();
+
+            float elapsed = 0f;
+            while (elapsed < StatusFlashSeconds)
+            {
+                float t = elapsed / StatusFlashSeconds;
+                SetColor(Color.Lerp(StatusFlashColor, restColor, t));
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            SetColor(restColor);
+            flashRoutine = null;
+        }
+
+        void CaptureRestColor()
+        {
+            if (!TryGetTintMaterial(out Material mat))
+                return;
+
+            restColor = ReadColor(mat);
+            hasRestColor = true;
+        }
+
+        void SetColor(Color color)
+        {
+            if (!TryGetTintMaterial(out Material mat))
+                return;
+
+            WriteColor(mat, color);
+        }
+
+        bool TryGetTintMaterial(out Material mat)
+        {
+            if (cachedRenderer == null)
+                cachedRenderer = GetComponent<Renderer>();
+            if (cachedRenderer == null)
+            {
+                mat = null;
+                return false;
+            }
+
+            Material source = cachedRenderer.sharedMaterial;
+            bool alreadyInstanced = source != null && source.name.IndexOf("(Instance)", System.StringComparison.Ordinal) >= 0;
+            mat = alreadyInstanced
+                ? source
+                : source != null
+                    ? new Material(source)
+                    : new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            cachedRenderer.sharedMaterial = mat;
+            return mat != null;
+        }
+
+        static Color ReadColor(Material mat)
+        {
+            if (mat.HasProperty("_BaseColor"))
+                return mat.GetColor("_BaseColor");
+            if (mat.HasProperty("_Color"))
+                return mat.GetColor("_Color");
+            return Color.white;
+        }
+
+        static void WriteColor(Material mat, Color color)
+        {
+            if (mat.HasProperty("_BaseColor"))
+                mat.SetColor("_BaseColor", color);
+            if (mat.HasProperty("_Color"))
+                mat.SetColor("_Color", color);
         }
 
         void OnDrawGizmos()
