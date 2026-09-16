@@ -52,6 +52,12 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         /// <summary>Instance critical chance 0–1, copied from the Recipe at spawn. The package does not roll it.</summary>
         public float CriticalChance { get; set; }
 
+        /// <summary>
+        /// Instance mana-cost copy, taken from <see cref="Recipe.ManaCost"/> at spawn.
+        /// <see cref="Mana"/> mutates this; the Recipe field stays the authored fire-time cost.
+        /// </summary>
+        public float ManaCost { get; set; }
+
         /// <summary>Instance area-effect radius, copied from the Recipe at spawn.</summary>
         public float EffectRadius { get; set; }
 
@@ -153,6 +159,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             float radius,
             float damage,
             float criticalChance,
+            float manaCost,
             float effectRadius,
             float intervalSeconds,
             int multiplyGenerationsLeft,
@@ -173,6 +180,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Radius = radius;
             Damage = damage;
             CriticalChance = criticalChance;
+            ManaCost = manaCost;
             EffectRadius = effectRadius;
             IntervalSeconds = intervalSeconds;
             HasHit = hasHit;
@@ -192,6 +200,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             projectile.RemainingBounce = RemainingBounce;
             projectile.Damage = Damage;
             projectile.CriticalChance = CriticalChance;
+            projectile.ManaCost = ManaCost;
             projectile.EffectRadius = EffectRadius;
             projectile.IntervalSeconds = IntervalSeconds;
             projectile.HomingHasTarget = HomingTarget.IsAssigned;

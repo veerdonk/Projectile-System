@@ -16,7 +16,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
 - Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1); a second wall at −X for Bounce(2)+Multiply(2); a splash dummy near DummyTarget for phase 13 OnHit area
 - Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed / Damage / Critical / Mana / Spread / EffectRadius / Size scale), plus one **- / +** row for the shared interval length in seconds, plus Multiply **pattern** (Square / Circle / RandomCircle) and **Spread** meters
-- On-screen readout: last spawn request, active instances, pool available count, dummy HP, status ids on each dummy, selected Recipe damage / crit / mana / radius / effect radius
+- On-screen readout: last spawn request, active instances, pool available count, dummy HP, status ids on each dummy, selected Recipe damage / crit / mana / radius / effect radius, last instance mana after fire
 
 ## How to prove a phase
 
@@ -44,8 +44,9 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 8 | ApplyStatus at wall (key **O**) | Hits WorldWall; no dummy status or flash |
 | 8 | Pierce(1)+ApplyStatus (key **I**) | DummyTarget and DummyTarget2 both show `dummy, dummy` and flash green; instance dies on the second |
 | 9 | Damage 5 Recipe (key **P**) | Dummy loses 5 HP; HUD shows the selected Recipe damage / crit / mana / radius / effect radius |
-| 10 | Damage(2) on travel | Dummy loses twice the Recipe damage |
-| 10 | Pierce + OnHit Damage(2) | First dummy takes base damage; second takes double |
+| 10 | Damage(2) on travel (key **F**) | Dummy loses twice the Recipe damage |
+| 10 | Pierce + OnHit Damage(2) (key **G**) | First dummy takes base damage; second takes double |
+| 10 | Mana(2) on travel (key **H**) | HUD last instance mana doubles; Recipe mana stays |
 | 11 | Square Multiply 5 / 7 / 9 | Die 5, then H, then 3×3 on the dummy |
 | 11 | Circle Multiply 3 / 6 | Triangle; then center + pentagon |
 | 11 | RandomCircle Multiply | Scatter inside a disk of radius Spread |

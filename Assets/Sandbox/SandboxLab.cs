@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 8 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
+    /// Phase 10 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -64,6 +64,9 @@ namespace Sandbox
         Recipe applyStatusRecipe;
         Recipe pierceApplyStatusRecipe;
         Recipe combatStatsRecipe;
+        Recipe travelDamageRecipe;
+        Recipe pierceDamageRecipe;
+        Recipe travelManaRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
@@ -81,6 +84,9 @@ namespace Sandbox
         float travelSpeedScale = 2f;
         float intervalSpeedScale = 0.5f;
         float bounceSpeedScale = 2f;
+        float travelDamageScale = 2f;
+        float pierceDamageScale = 2f;
+        float travelManaScale = 2f;
         float intervalSeconds = 0.5f;
 
         int requestCount;
@@ -88,6 +94,8 @@ namespace Sandbox
         Vector3 lastRequestDirection;
         bool hasRequest;
         float requestFlashUntil;
+        bool hasInstanceMana;
+        float lastInstanceManaCost;
 
         void Awake()
         {
@@ -150,6 +158,12 @@ namespace Sandbox
                     selectedRecipe = 17;
                 if (keyboard.pKey.wasPressedThisFrame)
                     selectedRecipe = 18;
+                if (keyboard.fKey.wasPressedThisFrame)
+                    selectedRecipe = 19;
+                if (keyboard.gKey.wasPressedThisFrame)
+                    selectedRecipe = 20;
+                if (keyboard.hKey.wasPressedThisFrame)
+                    selectedRecipe = 21;
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
@@ -173,8 +187,8 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 9 (combat and cast stats)");
-            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, Y, U, I, O, and P select. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 10 (damage, critical, and mana scales)");
+            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, and H select. - / + changes n for the next shot.");
 
             FireButton("Fire straight", 0, straightRecipe);
             FireButton("Fire lifetime (3s)", 1, lifetimeRecipe);
@@ -195,6 +209,9 @@ namespace Sandbox
             FireButton("Fire Pierce(1)+ApplyStatus", 16, pierceApplyStatusRecipe);
             FireButton("Fire ApplyStatus at wall", 17, applyStatusRecipe);
             FireButton("Fire Damage 5", 18, combatStatsRecipe);
+            FireButtonWithScale("Damage on travel", 19, travelDamageRecipe, ref travelDamageScale, 0.25f, 8f, 0.25f);
+            FireButtonWithScale("Pierce then Damage", 20, pierceDamageRecipe, ref pierceDamageScale, 0.25f, 8f, 0.25f);
+            FireButtonWithScale("Mana on travel", 21, travelManaRecipe, ref travelManaScale, 0.25f, 8f, 0.25f);
             ScaleRow($"Interval {intervalSeconds:0.##}s (keys 6 and T)", ref intervalSeconds, 0.1f, 3f, 0.1f);
 
             GUILayout.Space(6f);
@@ -205,6 +222,9 @@ namespace Sandbox
                     $"Selected Recipe {selected.Id}\n" +
                     $"  damage {selected.Damage:0.##}  crit {selected.CriticalChance:0.##}  mana {selected.ManaCost:0.##}\n" +
                     $"  radius {selected.Radius:0.##}  effect radius {selected.EffectRadius:0.##}");
+                GUILayout.Label(hasInstanceMana
+                    ? $"Last instance mana {lastInstanceManaCost:0.##} (Recipe mana stays {selected.ManaCost:0.##})"
+                    : "Last instance mana: (none)");
             }
 
             GUILayout.Space(6f);
@@ -325,12 +345,22 @@ namespace Sandbox
             if (requestMarker != null)
                 requestMarker.gameObject.SetActive(true);
 
-            world.Spawn(new SpawnRequest
+            ProjectileId spawned = world.Spawn(new SpawnRequest
             {
                 Recipe = recipe,
                 Position = lastRequestPosition,
                 Direction = lastRequestDirection
             });
+
+            if (world.TryGetManaCost(spawned, out float instanceMana))
+            {
+                hasInstanceMana = true;
+                lastInstanceManaCost = instanceMana;
+            }
+            else
+            {
+                hasInstanceMana = false;
+            }
 
             Debug.DrawRay(lastRequestPosition, lastRequestDirection * 6f, Color.yellow, 3f);
             Debug.Log(
@@ -377,6 +407,12 @@ namespace Sandbox
                     return pierceApplyStatusRecipe;
                 case 18:
                     return combatStatsRecipe;
+                case 19:
+                    return travelDamageRecipe;
+                case 20:
+                    return pierceDamageRecipe;
+                case 21:
+                    return travelManaRecipe;
                 default:
                     return straightRecipe;
             }
@@ -435,6 +471,12 @@ namespace Sandbox
             combatStatsRecipe.CriticalChance = 0.25f;
             combatStatsRecipe.ManaCost = 12f;
             combatStatsRecipe.EffectRadius = 2f;
+            travelDamageRecipe = CreateRecipe("damage-travel", speed: 20f, lifetime: 5f);
+            travelDamageRecipe.Damage = 5f;
+            pierceDamageRecipe = CreateRecipe("pierce-damage", speed: 20f, lifetime: 5f);
+            pierceDamageRecipe.Damage = 5f;
+            travelManaRecipe = CreateRecipe("mana-travel", speed: 20f, lifetime: 5f);
+            travelManaRecipe.ManaCost = 12f;
             ApplyMagnitudes();
 
             var poolRoot = new GameObject("ProjectilePool");
@@ -458,6 +500,9 @@ namespace Sandbox
             world.Prewarm(applyStatusRecipe, PrewarmCount);
             world.Prewarm(pierceApplyStatusRecipe, PrewarmCount);
             world.Prewarm(combatStatsRecipe, PrewarmCount);
+            world.Prewarm(travelDamageRecipe, PrewarmCount);
+            world.Prewarm(pierceDamageRecipe, PrewarmCount);
+            world.Prewarm(travelManaRecipe, PrewarmCount);
 
             world.StatusApplied += OnStatusApplied;
             BindDummies();
@@ -493,6 +538,12 @@ namespace Sandbox
             }
             if (bounceSpeedRecipe != null)
                 bounceSpeedRecipe.OnHit = new IModifier[] { new Bounce(1), new Speed(bounceSpeedScale) };
+            if (travelDamageRecipe != null)
+                travelDamageRecipe.OnTravel = new IModifier[] { new Damage(travelDamageScale) };
+            if (pierceDamageRecipe != null)
+                pierceDamageRecipe.OnHit = new IModifier[] { new Pierce(1), new Damage(pierceDamageScale) };
+            if (travelManaRecipe != null)
+                travelManaRecipe.OnTravel = new IModifier[] { new Mana(travelManaScale) };
         }
 
         static Recipe CreateRecipe(string id, float speed, float lifetime, float radius = 0.25f)

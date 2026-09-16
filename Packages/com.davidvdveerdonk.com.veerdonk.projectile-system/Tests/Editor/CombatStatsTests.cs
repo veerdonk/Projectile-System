@@ -144,6 +144,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 lifetime: 5f,
                 damage: 5f,
                 criticalChance: 0.25f,
+                manaCost: 12f,
                 effectRadius: 3f,
                 onTravel: new IModifier[] { probe });
             (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe);
@@ -158,6 +159,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
 
                 Assert.AreEqual(5f, probe.Damage, 1e-4f);
                 Assert.AreEqual(0.25f, probe.CriticalChance, 1e-4f);
+                Assert.AreEqual(12f, probe.ManaCost, 1e-4f);
                 Assert.AreEqual(3f, probe.EffectRadius, 1e-4f);
                 Assert.AreEqual(0.25f, probe.Radius, 1e-4f);
             }
@@ -167,6 +169,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         {
             public float Damage { get; private set; }
             public float CriticalChance { get; private set; }
+            public float ManaCost { get; private set; }
             public float EffectRadius { get; private set; }
             public float Radius { get; private set; }
 
@@ -174,6 +177,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             {
                 Damage = context.Damage;
                 CriticalChance = context.CriticalChance;
+                ManaCost = context.ManaCost;
                 EffectRadius = context.EffectRadius;
                 Radius = context.Radius;
             }

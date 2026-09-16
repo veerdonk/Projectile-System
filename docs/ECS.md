@@ -9,7 +9,7 @@ How this package uses DOTS. Not a Unity ECS tutorial. Read this if you already k
 | **DOTS** | A stack of libraries, not one feature | Entities + Burst + Collections + Mathematics. We use a slice. |
 | **`World`** | Unit of work / a private database, **not** the scene | Created and disposed by `ProjectileWorld`. Isolated from Unity’s default ECS world. Not in the Player Loop. |
 | **Entity** | A row id | One live (or pooled) instance. Not a GameObject. |
-| **`IComponentData`** | Columns on that row; structs in contiguous chunks | `Projectile` (including remaining pierce/bounce, `ElapsedSeconds`, `IntervalSeconds`, multiply generations left, the homing lock id, and the combat stats copied from the Recipe: `Damage`, `CriticalChance`, `EffectRadius`), `ProjectilePosition`, `ProjectileVelocity`, `ProjectileCandidate` |
+| **`IComponentData`** | Columns on that row; structs in contiguous chunks | `Projectile` (including remaining pierce/bounce, `ElapsedSeconds`, `IntervalSeconds`, multiply generations left, the homing lock id, and the combat stats copied from the Recipe: `Damage`, `CriticalChance`, `ManaCost`, `EffectRadius`), `ProjectilePosition`, `ProjectileVelocity`, `ProjectileCandidate` |
 | **`Disabled`** | Soft-deleted / pooled row | Default queries skip it. Rent = enable; return = disable. No `Destroy` on despawn. |
 | **System** | A pipeline stage over a query, not `Update` on each object | `LifetimeSystem` (Burst) then `ProjectileSimulationSystem` (managed) |
 | **Burst** | AOT compiler for jobs over those structs (no GC, no managed refs) | Lifetime decrement + candidate position only |
@@ -41,7 +41,7 @@ SandboxLab.Update
                  snapshot entities whose lifetime <= 0; expire them (OnExpire, return to pool)
                  snapshot remaining live entities **once**
                  OnTick modifiers (same list); Homing acquires if unassigned (skips last Target hit while it stays ahead), then steers at n degrees/second
-                 OnInterval: if the instance's interval elapsed this tick, run the whole list in order (more than once if `dt` skips a beat). `Multiply` is skipped when this instance's multiply generations are spent; `Speed` still runs
+                 OnInterval: if the instance's interval elapsed this tick, run the whole list in order (more than once if `dt` skips a beat). `Multiply` is skipped when this instance's multiply generations are spent; `Speed` / `Damage` / `Critical` / `Mana` still run
                  Burst integrate: candidate = pos + vel * dt
                  move/hit on the same list; skip if a hit already disabled the entity
                  IHitQuery.TryCast (ScriptedHitQuery in Edit Mode, PhysicsHitQuery in Play Mode)
@@ -55,7 +55,7 @@ SandboxLab.Update
        → flush RequestSpawn queue (child Recipes)
 ```
 
-Spawn (`OnSpawn` / `OnTravel`) runs in `ProjectileWorld` when an entity is rented, not inside the Burst job. `Multicast` runs there too: it re-aims the rented entity through the modifier context and queues its extras, which `Spawn` flushes before it returns, so all `n` instances exist before the next `Tick`. Those queued requests carry a multicast budget: `Recipe.MulticastGenerations` (0 by default) counted down one per generation, so the extra's `OnSpawn` list normally runs with `Multicast` skipped. Remaining pierce/bounce are copied from `OnHit` `Pierce` / `Bounce` modifiers onto the `Projectile` row at rent. `ElapsedSeconds` starts at 0 and is incremented in the Burst lifetime job; `OnInterval` uses that clock, not a second remaining-lifetime field. The period it is measured against is `Projectile.IntervalSeconds`, written at spawn by `Interval` on `OnSpawn` and 0 (never fires) without one.
+Spawn (`OnSpawn` / `OnTravel`) runs in `ProjectileWorld` when an entity is rented, not inside the Burst job. `Multicast` runs there too: it re-aims the rented entity through the modifier context and queues its extras, which `Spawn` flushes before it returns, so all `n` instances exist before the next `Tick`. Those queued requests carry a multicast budget: `Recipe.MulticastGenerations` (0 by default) counted down one per generation, so the extra's `OnSpawn` list normally runs with `Multicast` skipped. Remaining pierce/bounce are copied from `OnHit` `Pierce` / `Bounce` modifiers onto the `Projectile` row at rent. Combat stats (`Damage`, `CriticalChance`, `ManaCost`, `EffectRadius`) copy from the Recipe at rent; `OnTravel` `Damage` / `Critical` / `Mana` (and `Speed`) scale that copy before the first move. `ElapsedSeconds` starts at 0 and is incremented in the Burst lifetime job; `OnInterval` uses that clock, not a second remaining-lifetime field. The period it is measured against is `Projectile.IntervalSeconds`, written at spawn by `Interval` on `OnSpawn` and 0 (never fires) without one.
 
 Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural change). After expire, one list is reused for `OnTick`, `OnInterval`, and move/hit so a pierce/bounce kill mid-move cannot skip later entities.
 
@@ -76,6 +76,9 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math; `Multiply` samples it too |
 | `Runtime/Homing.cs` | `OnTick`: steer at n degrees/second toward a lock. Acquires via `IHomingAcquisition` when unassigned. A Target hit drops the lock (`Homing.ReleaseLockOnTargetHit` after `OnHit`) |
 | `Runtime/Speed.cs` | Scale current speed by n, keep travel direction. `OnTravel` start scale, `OnInterval` progressive, `OnHit` after bounce/pierce. Scale <= 0 is a no-op |
+| `Runtime/Damage.cs` | Scale instance damage by n. Same stages as `Speed`. Does not apply HP. OnHit scales do not rewrite the `Hit` that already fired |
+| `Runtime/Critical.cs` | Scale instance critical chance by n, then clamp to [0, 1]. Same stages as `Speed`. Does not roll a crit |
+| `Runtime/Mana.cs` | Scale the instance mana-cost copy by n. Same stages as `Speed`. Does not change `Recipe.ManaCost` or spend mana |
 | `Runtime/Interval.cs` | `OnSpawn`: seconds between `OnInterval` runs, onto `Projectile.IntervalSeconds`. One period per instance drives the whole list |
 | `Runtime/ApplyStatus.cs` | `OnHit` Target: request an `IStatusEffect`. Each request on the list is flushed as `StatusApplied` after the list, in order. World hits do nothing |
 | `Runtime/IStatusEffect.cs` | Effect contract plus v1 `DummyStatusEffect` (`Id` `"dummy"`). Package does not tick DoT |
