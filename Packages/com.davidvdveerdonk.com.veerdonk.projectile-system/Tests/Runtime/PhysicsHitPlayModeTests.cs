@@ -454,6 +454,78 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator OnHit_AreaOverlap_IncludesContactedDummy()
+        {
+            GameObject contact = null;
+            GameObject nearby = null;
+            GameObject poolRoot = null;
+            try
+            {
+                contact = CreateDummy(new Vector3(0f, 0f, 4f), new TargetId(1));
+                nearby = CreateDummy(new Vector3(2f, 0f, 4f), new TargetId(2));
+                poolRoot = new GameObject("TestPool");
+                var world = new ProjectileWorld(poolRoot.transform);
+                try
+                {
+                    Recipe recipe = CreateRecipe("area-onhit", speed: 20f, lifetime: 5f);
+                    recipe.EffectRadius = 3f;
+                    recipe.OnHit = new IModifier[] { new AreaEffect(3f) };
+                    world.Prewarm(recipe, 4);
+
+                    var seen = new List<HitInfo>();
+                    world.Hit += info => seen.Add(info);
+
+                    Physics.SyncTransforms();
+                    yield return null;
+                    Physics.SyncTransforms();
+
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = recipe,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward
+                    });
+
+                    TickUntilIdle(world, 1f);
+
+                    HitInfo? direct = null;
+                    HitInfo? areaContact = null;
+                    HitInfo? areaNearby = null;
+                    for (int i = 0; i < seen.Count; i++)
+                    {
+                        HitInfo hit = seen[i];
+                        if (hit.Source == HitSource.Direct && hit.TargetId.Equals(new TargetId(1)))
+                            direct = hit;
+                        else if (hit.Source == HitSource.Area && hit.TargetId.Equals(new TargetId(1)))
+                            areaContact = hit;
+                        else if (hit.Source == HitSource.Area && hit.TargetId.Equals(new TargetId(2)))
+                            areaNearby = hit;
+                    }
+
+                    Assert.IsTrue(direct.HasValue);
+                    Assert.AreEqual(1f, direct.Value.Damage, 1e-4f);
+                    Assert.IsTrue(areaContact.HasValue);
+                    Assert.AreEqual(3f, areaContact.Value.Damage, 1e-4f);
+                    Assert.IsTrue(areaNearby.HasValue);
+                    Assert.AreEqual(3f, areaNearby.Value.Damage, 1e-4f);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
+            }
+            finally
+            {
+                if (nearby != null)
+                    Object.Destroy(nearby);
+                if (contact != null)
+                    Object.Destroy(contact);
+                if (poolRoot != null)
+                    Object.Destroy(poolRoot);
+            }
+        }
+
         static Recipe CreateRecipe(string id, float speed, float lifetime)
         {
             return new Recipe

@@ -76,7 +76,6 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             if (radius <= 0f)
                 return;
 
-            ignoreColliderByInstance.TryGetValue(instanceId, out Collider ignore);
             int count = Physics.OverlapSphereNonAlloc(
                 center,
                 radius,
@@ -87,7 +86,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             for (int i = 0; i < count; i++)
             {
                 Collider collider = overlapBuffer[i];
-                if (collider == null || !collider.enabled || collider == ignore)
+                if (collider == null || !collider.enabled)
                     continue;
 
                 var damageable = collider.GetComponentInParent<IDamageable>();
