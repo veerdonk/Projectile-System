@@ -38,6 +38,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             if (n <= 0)
                 return;
 
+            if (Pattern is RandomCirclePattern randomCircle)
+                randomCircle.MinDistance = ChildRecipe.Radius * 2f;
+
             Vector3 origin;
             Vector3 forward;
             if (context.HasHit)

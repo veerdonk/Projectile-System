@@ -276,7 +276,7 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 - **Given:** `Multiply(8)` with `RandomCirclePattern` and `Spread = 2` on `OnHit`, world seed fixed
 - **When:** the parent records a hit
-- **Then:** eight children lie in the plane disk of radius 2 m about the hit point; the same seed repeats the poses
+- **Then:** eight children lie in the plane disk of radius 2 m about the hit point; no two closer than the child diameter; the same seed repeats the poses
 
 ### Phase 11 — Spread 0 stacks
 

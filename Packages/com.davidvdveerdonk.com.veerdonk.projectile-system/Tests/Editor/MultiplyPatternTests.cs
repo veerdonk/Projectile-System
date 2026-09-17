@@ -151,6 +151,52 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void RandomCirclePattern_SeparatesByMinDistance()
+        {
+            const float minDistance = 0.5f;
+            var pattern = new RandomCirclePattern { MinDistance = minDistance };
+            Vector3[] offsets = Offsets(pattern, 8);
+            AssertPairwiseMinDistance(offsets, minDistance);
+        }
+
+        [Test]
+        public void Multiply8_RandomCircle_OnHit_ChildrenAreAtLeastChildDiameterApart()
+        {
+            Recipe child = SimulationTestHelper.CreateRecipe(
+                "random-sep-child",
+                speed: 8f,
+                lifetime: 2f,
+                radius: 0.25f);
+            Recipe parent = SimulationTestHelper.CreateRecipe("random-sep-parent", speed: 20f, lifetime: 5f);
+            parent.OnHit = new IModifier[] { new Multiply(8, child, S, new RandomCirclePattern()) };
+
+            var hits = new ScriptedHitQuery();
+            var world = new ProjectileWorld(hits, createViews: false, seed: 17u);
+            using (world)
+            {
+                world.Prewarm(parent, 4);
+                world.Prewarm(child, 16);
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = parent,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                hits.Queue(HitKind.Target, new Vector3(1f, 2f, 3f), Vector3.up, new TargetId(1));
+                world.Tick(0.1f);
+
+                List<(ProjectileId id, Vector3 position, Vector3 velocity, Recipe recipe)> children =
+                    Children(world, child.Id);
+                Assert.AreEqual(8, children.Count);
+                var positions = new Vector3[children.Count];
+                for (int i = 0; i < children.Count; i++)
+                    positions[i] = children[i].position;
+                AssertPairwiseMinDistance(positions, child.Radius * 2f);
+            }
+        }
+
+        [Test]
         public void Spread0_StacksForEveryPattern()
         {
             IMultiplyPattern[] patterns =
@@ -326,6 +372,15 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             }
 
             return children;
+        }
+
+        static void AssertPairwiseMinDistance(Vector3[] positions, float minDistance)
+        {
+            for (int i = 0; i < positions.Length; i++)
+            {
+                for (int j = i + 1; j < positions.Length; j++)
+                    Assert.GreaterOrEqual(Vector3.Distance(positions[i], positions[j]), minDistance - 1e-4f);
+            }
         }
 
         static void AssertContainsPosition(

@@ -267,7 +267,7 @@ Rework `Multiply` so children spawn on an `IMultiplyPattern` instead of a 12° r
 
 **RandomCirclePattern**
 
-Disk in the same plane, radius `= spread` (count does not grow the disk). `n = 1` at the origin. `n > 1`: uniform in the disk (world seed via `NextFloat`). `spread = 0` stacks.
+Disk in the same plane, radius `= spread` (count does not grow the disk). `n = 1` at the origin. `n > 1`: uniform in the disk (world seed via `NextFloat`), then reject samples closer than the child diameter (`2 * Radius`). `spread = 0` stacks.
 
 **Out of scope:** `Spread(n)` / `Size(n)` / `EffectRadius(n)` (phase 12); line / arc / cross / triangle patterns; a pattern editor or unused `OffsetPattern` class; original-shot jitter; changing `IMulticastPattern`; editor tooling; Unity Physics; Entities Graphics
 

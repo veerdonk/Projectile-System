@@ -49,7 +49,7 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 10 | Mana(2) on travel (key **H**) | HUD last instance mana doubles; Recipe mana stays |
 | 11 | Square Multiply 5 / 7 / 9 | Die 5, then H, then 3×3 on the dummy (set count with **- / +**, pattern Square, Spread 2 m) |
 | 11 | Circle Multiply 3 / 6 | Triangle; then center + pentagon |
-| 11 | RandomCircle Multiply | Scatter inside a disk of radius Spread |
+| 11 | RandomCircle Multiply | Scatter inside a disk of radius Spread; children at least one child-diameter apart |
 | 11 | Multiply Spread 0 | Children stacked on the hit/parent |
 | 12 | Size(2) on travel | Sphere looks and hits larger |
 | 12 | Spread(2) on travel + Square Spread 2 | Pair 4 m apart |

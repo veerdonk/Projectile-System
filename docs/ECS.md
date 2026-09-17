@@ -77,7 +77,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/IMultiplyPattern.cs` | Where Multiply child offsets come from. Plane is perpendicular to travel or the hit normal; local +X right, +Y up |
 | `Runtime/SquarePattern.cs` | Dice pips through 9, then odd-sized grids. Default Multiply pattern |
 | `Runtime/CirclePattern.cs` | Triangle, then center + ring, then inner hexagon and outer rings |
-| `Runtime/RandomCirclePattern.cs` | Uniform disk of radius Spread; uses the world seed |
+| `Runtime/RandomCirclePattern.cs` | Uniform disk of radius Spread; uses the world seed; rejects samples closer than the child diameter |
 | `Runtime/Homing.cs` | `OnTick`: steer at n degrees/second toward a lock. Acquires via `IHomingAcquisition` when unassigned. A Target hit drops the lock (`Homing.ReleaseLockOnTargetHit` after `OnHit`) |
 | `Runtime/Speed.cs` | Scale current speed by n, keep travel direction. `OnTravel` start scale, `OnInterval` progressive, `OnHit` after bounce/pierce. Scale <= 0 is a no-op |
 | `Runtime/Damage.cs` | Scale instance damage by n. Same stages as `Speed`. Does not apply HP. OnHit scales do not rewrite the `Hit` that already fired |
