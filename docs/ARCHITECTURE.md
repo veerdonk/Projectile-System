@@ -120,7 +120,7 @@ struct HitInfo
 - `Protection = Strong` — despawn with no Direct `Hit`, no `OnHit`, no `OnExpire`. `Expired` still fires. No field is planted
 - Projectile-vs-projectile: ignore until an ADR.
 
-The package does **not** apply HP, roll crits, spend mana, or tick DoT. Direct contact `HitInfo` is sampled before `OnHit` and raised after that list (ADR-016) so `AreaEffect` can suppress it; sampled damage still ignores OnHit `Damage(n)` on this contact. Sandbox listens to `Hit` for dummy health (`Hit.Damage`) when `Protection == None`, and to `StatusApplied` to call `IStatusReceiver.Apply`. Size is `Radius`. `ManaCost` is read from the Recipe at fire time. `EffectRadius` is the `AreaEffect` overlap radius. A `GroundField` disk uses the modifier’s own radius and lifetime.
+The package does **not** apply HP, roll crits, spend mana, or tick DoT. Direct contact `HitInfo` is sampled before `OnHit` and raised after that list (ADR-016) so `AreaEffect` can suppress it; sampled damage still ignores OnHit `Damage(n)` on this contact. Sandbox listens to `Hit` for dummy health (`Hit.Damage`) when `Protection == None`, and to `StatusApplied` to call `IStatusReceiver.Apply`. Size is `Radius`. `Recipe.ManaCost` is the authored fire-time cost; `Mana(n)` scales the instance copy. `EffectRadius` is the `AreaEffect` overlap radius. A `GroundField` disk uses the modifier’s own radius and lifetime.
 
 ## Public API sketch
 

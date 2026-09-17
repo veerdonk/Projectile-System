@@ -5,23 +5,29 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
     /// <summary>
     /// Spawns <see cref="Count"/> instances of an explicit child Recipe from OnHit, OnExpire, or OnInterval.
-    /// On a hit, children start at the hit point along the hit normal. Count &gt; 1 uses a small random cone.
+    /// Children keep the parent travel direction, or the hit normal on a hit. Positions come from
+    /// <see cref="Pattern"/>; <see cref="Spread"/> is meters between adjacent pips (0 stacks).
     /// On OnInterval the period comes from <see cref="Interval"/> on the Recipe's OnSpawn list.
     /// </summary>
     public sealed class Multiply : IModifier
     {
-        const float SpreadDegrees = 12f;
         const float SurfaceSkin = 0.01f;
 
-        public Multiply(int count, Recipe childRecipe)
+        public Multiply(int count, Recipe childRecipe, float spread = 0f, IMultiplyPattern pattern = null)
         {
             Count = count;
             ChildRecipe = childRecipe ?? throw new ArgumentNullException(nameof(childRecipe));
+            Spread = spread;
+            Pattern = pattern ?? new SquarePattern();
         }
 
         public int Count { get; }
 
         public Recipe ChildRecipe { get; }
+
+        public float Spread { get; }
+
+        public IMultiplyPattern Pattern { get; }
 
         public void Apply(ModifierContext context)
         {
@@ -32,29 +38,28 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             if (n <= 0)
                 return;
 
-            Vector3 position;
-            Vector3 direction;
+            if (Pattern is RandomCirclePattern randomCircle)
+                randomCircle.MinDistance = ChildRecipe.Radius * 2f;
+
+            Vector3 origin;
+            Vector3 forward;
             if (context.HasHit)
             {
-                position = context.Hit.Point;
-                direction = context.Hit.Normal;
+                origin = context.Hit.Point;
+                forward = context.Hit.Normal;
             }
             else
             {
-                position = context.Position;
-                direction = context.Velocity;
+                origin = context.Position;
+                forward = context.Velocity;
             }
 
-            bool spread = n > 1;
             for (int i = 0; i < n; i++)
             {
-                Vector3 spawnDirection = spread
-                    ? RandomConePattern.Sample(context, direction, SpreadDegrees)
-                    : direction;
-                Vector3 spawnPosition = context.HasHit
-                    ? OffsetOffSurface(position, spawnDirection, ChildRecipe.Radius)
-                    : position;
-                context.RequestMultiplyChild(ChildRecipe, spawnPosition, spawnDirection);
+                Vector3 spawnPosition = origin + Pattern.GetOffset(context, forward, Spread, i, n);
+                if (context.HasHit)
+                    spawnPosition = OffsetOffSurface(spawnPosition, forward, ChildRecipe.Radius);
+                context.RequestMultiplyChild(ChildRecipe, spawnPosition, forward);
             }
         }
 

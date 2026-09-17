@@ -104,6 +104,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                     projectile.Radius,
                     out HitInfo hit))
             {
+                hit.Damage = projectile.Damage;
+                hit.CriticalChance = projectile.CriticalChance;
+                hit.EffectRadius = projectile.EffectRadius;
                 Bridge.Hit?.Invoke(hit);
                 Despawn(entity, runOnHit: true, hit);
                 return;
@@ -276,6 +279,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 projectile.RemainingPierce,
                 projectile.RemainingBounce,
                 projectile.Radius,
+                projectile.Damage,
+                projectile.CriticalChance,
+                projectile.ManaCost,
+                projectile.EffectRadius,
                 projectile.IntervalSeconds,
                 projectile.MultiplyGenerationsLeft,
                 hasHit,
