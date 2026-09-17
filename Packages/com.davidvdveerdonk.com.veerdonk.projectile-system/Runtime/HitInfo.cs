@@ -10,6 +10,13 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         World
     }
 
+    /// <summary>How a <see cref="HitInfo"/> was produced. Direct is the movement cast; Area is an overlap.</summary>
+    public enum HitSource
+    {
+        Direct,
+        Area
+    }
+
     /// <summary>Opaque sandbox/game id stored on a <see cref="HitKind.Target"/> hit.</summary>
     public readonly struct TargetId : IEquatable<TargetId>
     {
@@ -38,6 +45,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     {
         public ProjectileId InstanceId;
         public HitKind Kind;
+        public HitSource Source;
         public Vector3 Point;
         public Vector3 Normal;
         public TargetId TargetId;

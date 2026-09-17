@@ -14,7 +14,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - Camera looking down the lane
 - Spawn point with a visible gizmo
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
-- Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1); a second wall at −X for Bounce(2)+Multiply(2); a splash dummy near DummyTarget for phase 13 OnHit area; a Basic-protection dummy and a Strong shield for phase 17
+- Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1); a second wall at −X for Bounce(2)+Multiply(2); a splash dummy near DummyTarget for phase 13 OnHit area; a muzzle dummy beside spawn for OnTravel burst; a Basic-protection dummy and a Strong shield for phase 17
 - Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed / Damage / Critical / Mana / Spread / EffectRadius / Size scale), plus one **- / +** row for the shared interval length in seconds, plus Multiply **pattern** (Square / Circle / RandomCircle) and **Spread** meters
 - On-screen readout: last spawn request, active instances, pool available count, dummy HP, status ids on each dummy, selected Recipe damage / crit / mana / radius / effect radius, last instance mana and radius after fire
 
@@ -53,10 +53,10 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 11 | Multiply Spread 0 | Children stacked on the hit/parent |
 | 12 | Size(2) on travel (key **J**) | Sphere looks and hits larger; HUD last instance radius doubles |
 | 12 | Spread(2) on travel + Square Spread 2 (key **K**) | Pair 4 m apart |
-| 13 | OnHit AreaEffect | DummyTarget and the nearby splash dummy both lose area damage |
-| 13 | Area-only OnHit | Contact dummy loses area damage, not Recipe damage |
-| 13 | OnTravel AreaEffect | Dummy at muzzle is hit before the shot moves |
-| 13 | Interval aura | Dummy beside the lane ticks each interval while the shot is in range |
+| 13 | OnHit AreaEffect (key **L**) | DummyTarget and DummySplash both lose area damage (DummyTarget also loses Recipe damage) |
+| 13 | Area-only OnHit (key **Z**) | Contact dummy loses area damage, not Recipe damage |
+| 13 | OnTravel AreaEffect (key **X**) | DummyMuzzle is hit before the shot moves |
+| 13 | Interval aura (key **C**) | Dummy beside the lane ticks each interval while the shot is in range |
 | 14 | Straight Recipe | Still hits DummyTarget; no drop |
 | 14 | Cannonball, aimed up | Visible arc, falls short of the dummy at the same speed as the straight shot |
 | 15 | Cannonball + Gravity(2) on travel | Drops harder than the phase 14 cannonball |

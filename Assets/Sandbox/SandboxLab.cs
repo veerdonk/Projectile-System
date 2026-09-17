@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 12 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
+    /// Phase 13 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -16,6 +16,8 @@ namespace Sandbox
         public const string Dummy2Name = "DummyTarget2";
         public const string Dummy3Name = "DummyTarget3";
         public const string DummyBounceName = "DummyBounce";
+        public const string DummySplashName = "DummySplash";
+        public const string DummyMuzzleName = "DummyMuzzle";
         public const string WallName = "WorldWall";
         public const string Wall2Name = "WorldWall2";
         const int PrewarmCount = 8;
@@ -26,6 +28,8 @@ namespace Sandbox
         static readonly Vector3 Dummy2Position = new Vector3(0f, 1f, 14f);
         static readonly Vector3 Dummy3Position = new Vector3(0f, 1f, 20f);
         static readonly Vector3 DummyBouncePosition = new Vector3(4f, 1f, 12f);
+        static readonly Vector3 DummySplashPosition = new Vector3(2f, 1f, 8f);
+        static readonly Vector3 DummyMuzzlePosition = new Vector3(2f, 1f, 0f);
         static readonly Vector3 WallPosition = new Vector3(8f, 2f, 8f);
         static readonly Vector3 WallScale = new Vector3(0.5f, 4f, 16f);
         static readonly Vector3 Wall2Position = new Vector3(-6f, 2f, 8f);
@@ -37,6 +41,8 @@ namespace Sandbox
         static readonly Color Dummy2Color = new Color(0.85f, 0.45f, 0.15f);
         static readonly Color Dummy3Color = new Color(0.55f, 0.12f, 0.12f);
         static readonly Color DummyBounceColor = new Color(0.55f, 0.2f, 0.7f);
+        static readonly Color DummySplashColor = new Color(0.2f, 0.55f, 0.85f);
+        static readonly Color DummyMuzzleColor = new Color(0.15f, 0.7f, 0.55f);
 
         [SerializeField] SandboxSpawnPoint spawnPoint;
         [SerializeField] SandboxDummyTarget dummyTarget;
@@ -69,6 +75,10 @@ namespace Sandbox
         Recipe travelManaRecipe;
         Recipe travelSizeRecipe;
         Recipe travelSpreadRecipe;
+        Recipe onHitAreaRecipe;
+        Recipe areaOnlyRecipe;
+        Recipe travelAreaRecipe;
+        Recipe intervalAuraRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
@@ -176,6 +186,14 @@ namespace Sandbox
                     selectedRecipe = 22;
                 if (keyboard.kKey.wasPressedThisFrame)
                     selectedRecipe = 23;
+                if (keyboard.lKey.wasPressedThisFrame)
+                    selectedRecipe = 24;
+                if (keyboard.zKey.wasPressedThisFrame)
+                    selectedRecipe = 25;
+                if (keyboard.xKey.wasPressedThisFrame)
+                    selectedRecipe = 26;
+                if (keyboard.cKey.wasPressedThisFrame)
+                    selectedRecipe = 27;
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
@@ -199,8 +217,8 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 12 (size, spread, and effect-radius scales)");
-            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, and K select. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 13 (area effects)");
+            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, and C select. - / + changes n for the next shot.");
 
             FireButton("Fire straight", 0, straightRecipe);
             FireButton("Fire lifetime (3s)", 1, lifetimeRecipe);
@@ -226,7 +244,11 @@ namespace Sandbox
             FireButtonWithScale("Mana on travel", 21, travelManaRecipe, ref travelManaScale, 0.25f, 8f, 0.25f);
             FireButtonWithScale("Size on travel", 22, travelSizeRecipe, ref travelSizeScale, 0.25f, 8f, 0.25f);
             FireButtonWithScale("Spread on travel", 23, travelSpreadRecipe, ref travelSpreadScale, 0.25f, 8f, 0.25f);
-            ScaleRow($"Interval {intervalSeconds:0.##}s (keys 6 and T)", ref intervalSeconds, 0.1f, 3f, 0.1f);
+            FireButton("OnHit AreaEffect", 24, onHitAreaRecipe);
+            FireButton("Area-only OnHit", 25, areaOnlyRecipe);
+            FireButton("OnTravel AreaEffect", 26, travelAreaRecipe);
+            FireButton("Interval aura", 27, intervalAuraRecipe);
+            ScaleRow($"Interval {intervalSeconds:0.##}s (keys 6, T, and C)", ref intervalSeconds, 0.1f, 3f, 0.1f);
             CycleMultiplyPatternRow();
             ScaleRow($"Multiply spread {multiplySpread:0.##}m", ref multiplySpread, 0f, 8f, 0.5f);
 
@@ -486,6 +508,14 @@ namespace Sandbox
                     return travelSizeRecipe;
                 case 23:
                     return travelSpreadRecipe;
+                case 24:
+                    return onHitAreaRecipe;
+                case 25:
+                    return areaOnlyRecipe;
+                case 26:
+                    return travelAreaRecipe;
+                case 27:
+                    return intervalAuraRecipe;
                 default:
                     return straightRecipe;
             }
@@ -551,6 +581,15 @@ namespace Sandbox
             travelManaRecipe.ManaCost = 12f;
             travelSizeRecipe = CreateRecipe("size-travel", speed: 20f, lifetime: 5f);
             travelSpreadRecipe = CreateRecipe("spread-travel", speed: 20f, lifetime: 5f);
+            onHitAreaRecipe = CreateRecipe("area-onhit", speed: 20f, lifetime: 5f);
+            onHitAreaRecipe.EffectRadius = 3f;
+            areaOnlyRecipe = CreateRecipe("area-only", speed: 20f, lifetime: 5f);
+            areaOnlyRecipe.Damage = 5f;
+            areaOnlyRecipe.EffectRadius = 3f;
+            travelAreaRecipe = CreateRecipe("area-travel", speed: 20f, lifetime: 5f);
+            travelAreaRecipe.EffectRadius = 3f;
+            intervalAuraRecipe = CreateRecipe("area-aura", speed: 20f, lifetime: 5f);
+            intervalAuraRecipe.EffectRadius = 3f;
             ApplyMagnitudes();
 
             var poolRoot = new GameObject("ProjectilePool");
@@ -579,6 +618,10 @@ namespace Sandbox
             world.Prewarm(travelManaRecipe, PrewarmCount);
             world.Prewarm(travelSizeRecipe, PrewarmCount);
             world.Prewarm(travelSpreadRecipe, PrewarmCount);
+            world.Prewarm(onHitAreaRecipe, PrewarmCount);
+            world.Prewarm(areaOnlyRecipe, PrewarmCount);
+            world.Prewarm(travelAreaRecipe, PrewarmCount);
+            world.Prewarm(intervalAuraRecipe, PrewarmCount);
 
             world.StatusApplied += OnStatusApplied;
             BindDummies();
@@ -628,6 +671,17 @@ namespace Sandbox
             {
                 travelSpreadRecipe.OnTravel = new IModifier[] { new Spread(travelSpreadScale) };
                 travelSpreadRecipe.OnHit = new IModifier[] { CreateMultiply(2) };
+            }
+            if (onHitAreaRecipe != null)
+                onHitAreaRecipe.OnHit = new IModifier[] { new AreaEffect(3f) };
+            if (areaOnlyRecipe != null)
+                areaOnlyRecipe.OnHit = new IModifier[] { new AreaEffect(3f, includeDirectHit: false) };
+            if (travelAreaRecipe != null)
+                travelAreaRecipe.OnTravel = new IModifier[] { new AreaEffect(3f) };
+            if (intervalAuraRecipe != null)
+            {
+                intervalAuraRecipe.OnSpawn = new IModifier[] { new Interval(intervalSeconds) };
+                intervalAuraRecipe.OnInterval = new IModifier[] { new AreaEffect(3f) };
             }
         }
 
@@ -749,6 +803,8 @@ namespace Sandbox
             created |= EnsureDummy(root, Dummy2Name, Dummy2Position, 2, Dummy2Color);
             created |= EnsureDummy(root, Dummy3Name, Dummy3Position, 3, Dummy3Color);
             created |= EnsureDummy(root, DummyBounceName, DummyBouncePosition, 4, DummyBounceColor);
+            created |= EnsureDummy(root, DummySplashName, DummySplashPosition, 5, DummySplashColor);
+            created |= EnsureDummy(root, DummyMuzzleName, DummyMuzzlePosition, 6, DummyMuzzleColor);
             created |= EnsureWall(root, WallName, WallPosition, WallScale);
             created |= EnsureWall(root, Wall2Name, Wall2Position, Wall2Scale);
 

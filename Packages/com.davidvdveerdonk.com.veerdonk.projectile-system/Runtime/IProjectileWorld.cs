@@ -27,7 +27,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         event Action<ExpireInfo> Expired;
 
         /// <summary>
-        /// Raised after the OnHit list when <see cref="ApplyStatus"/> requested an effect on a Target.
+        /// Raised after the OnHit list (and after area flush) when a status was requested.
         /// The package does not apply the effect.
         /// </summary>
         event Action<StatusInfo> StatusApplied;
