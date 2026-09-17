@@ -24,7 +24,7 @@ How this package uses DOTS. Not a Unity ECS tutorial. Read this if you already k
 | --- | --- |
 | Unity Physics | Dummy, wall, and Play Mode hits stay PhysX colliders + `IDamageable`. |
 | Entities Graphics | Visible spheres stay `ProjectileView` GameObjects. Tests can run with views off. |
-| Baking / SubScenes | Recipes are C# objects, not baked authoring prefabs. |
+| Baking / SubScenes | `RecipeAsset` is a ScriptableObject that builds a `Recipe`. Not ECS baker / SubScene authoring. |
 | Default ECS world / Player Loop | Tests need an isolated `World`. Sandbox already ticks from one `Update`. |
 
 Those can become later adapters without rewriting Recipes, stage lists, or `IProjectileWorld`.
