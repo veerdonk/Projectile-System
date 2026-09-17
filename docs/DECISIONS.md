@@ -2,6 +2,20 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-022 — GroundField is a planted disk, not a Recipe
+
+- **Date:** 2026-09-17
+- **Decision:** `GroundField` is a modifier on `OnHit`, `OnExpire`, and `OnTravel`. It plants a lingering **horizontal disk** owned by `ProjectileWorld`, ticked from the same `Tick`. Size (`radius`), `lifetimeSeconds`, `damage`, optional `IStatusEffect`, and `intervalSeconds` are authored on the modifier, not on `Recipe` / `EffectRadius`. The overlap is XZ distance ≤ radius (Y ignored). Pulses use the existing `Hit` (`HitSource.Area`) and `StatusApplied` events, immediately on plant and then every interval, the same way `AreaEffect` talks to the game. The field is not a projectile: no SphereCast, no stage lists, no child Recipe, no `Expired`. `IHitQuery.OverlapDisk` is the query; modifiers only queue a plant via `ModifierContext`. `intervalSeconds <= 0` never pulses. Occupancy enter/exit and per-frame `OnTick` auras stay later. No second façade.
+- **Why:** Phase 13’s interval `AreaEffect` is an aura on the **flying** instance; it dies with the shot. A fire pool has to outlive the projectile, sit still, and hit a circle on the ground rather than a sphere (a sphere of puddle radius would tick a dummy on a ledge above). Spawning a Speed-0 child Recipe would still SphereCast, still use a sphere overlap, and would pretend a zone is a bullet. The field is not a Recipe because it has no stage lists to compose; stuffing one in would be a second instance type behind the Recipe door. Pulse period lives on the modifier because ADR-012’s `Interval(n)` belongs to a projectile’s `OnInterval` list, and the field is not one.
+- **Consequences:** One new public modifier (`GroundField`) and `OverlapDisk` on `IHitQuery` / `ScriptedHitQuery`. Views are a thin primitive disk. Do not scale field radius/damage with `EffectRadius(n)` / `Damage(n)` in this phase. Do not raycast to terrain. Do not raise `Expired` for fields.
+
+## ADR-021 — Views come from a factory; hits stay a sphere
+
+- **Date:** 2026-09-16
+- **Decision:** `ProjectilePool` does not `CreatePrimitive` itself. It calls `IProjectileViewFactory.Create(recipe, poolParent)`. `Recipe.PresentationId` selects the look. The default factory is the current sphere primitive, scaled to `2 * Radius`. A `PrefabViewFactory` maps ids to prefabs and does not rescale them. Unknown ids fall back to the primitive. `ProjectileView` is public so prefabs can carry it. Colliders on views stay disabled. SphereCast of `Recipe.Radius` is still the hit shape. Tests with `createViews: false` never call the factory. No Addressables, no Entities Graphics, no mesh colliders for hits.
+- **Why:** Games need their own meshes and particles without forking the pool or putting `UnityEngine.Object` on simulation components. `PresentationId` has been on the Recipe since phase 1 and was unused. A factory is the same shape as `IHitQuery` / `IMulticastPattern`: one method, swap the implementation. Scaling a user prefab to the sim radius would squash authored art; the lab sphere can keep scaling.
+- **Consequences:** Three new public types (`IProjectileViewFactory`, `PrimitiveViewFactory`, `PrefabViewFactory`) and a public `ProjectileView`. `ProjectileWorld` gains an optional factory argument. v1 ships two prefabs (`sphere`, `cube`) for tests and the sandbox. Hit/expire one-shot VFX stay game listeners on `Hit` / `Expired`.
+
 ## ADR-020 — Protection is a collider marker, not HP
 
 - **Date:** 2026-09-16

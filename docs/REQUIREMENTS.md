@@ -29,13 +29,15 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Multiply pattern** — layout of those child spawn points in the plane perpendicular to travel or the hit normal (`SquarePattern`, `CirclePattern`, `RandomCirclePattern` in v1)
 - **Effect radius** — authored radius of an `AreaEffect` overlap sphere, copied onto the instance. Distinct from projectile `Radius`. Unused until phase 13 queries it
 - **Area effect** — overlap sphere around a spawn, hit point, or flying instance that applies area damage and optional status to Targets inside. Not a lingering ground field
+- **Ground field** — flat lingering disk planted by `GroundField`. Has its own size, lifetime, damage, optional status, and pulse period. Stays after the projectile despawns. Not a Recipe and not an `AreaEffect` aura
+- **Presentation** — GameObject view for an instance. Selected by `Recipe.PresentationId` through `IProjectileViewFactory`. Not the hit shape
 - **Size** — projectile collision size. This **is** `Recipe.Radius`; there is no second size field
 - **Gravity** — downward acceleration in m/s² on the Recipe (default 0) and the instance. Burst adds it to velocity each tick. 0 is a straight shot
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
   - **Strength** for homing (how hard it turns)
   - **Scale** for speed, damage, critical chance, mana cost, multiply spread, effect radius, size, and gravity (multiplier: `Speed(2)` doubles, `Speed(0.5)` halves; same for `Damage`, `Critical`, `Mana`, `Spread`, `EffectRadius`, `Size`, `Gravity`)
-  - **Seconds** for interval (`Interval(0.5)` runs `OnInterval` every half second)
+  - **Seconds** for interval (`Interval(0.5)` runs `OnInterval` every half second) and for `GroundField` lifetime / pulse period
   - **Distance** for multiply spread (`Multiply` `Spread` is meters between adjacent pips on the multiply pattern)
 
 ### Named modifiers (v1)
@@ -55,6 +57,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Size(n)** — scale `Radius` by `n`. Same stages as `Speed(n)`. There is no separate size field
 - **ApplyStatus** — `OnHit` + `Target`: request one or more `IStatusEffect`s on the hit Target. The package does not simulate the effects (see [DECISIONS.md](DECISIONS.md) ADR-011)
 - **AreaEffect** — overlap Targets in instance `EffectRadius` and raise Area `Hit` / `StatusApplied`. Own damage on the modifier. `OnHit` (splash at the hit point), `OnTravel` (burst at spawn), `OnInterval` (aura on the flying instance). Flags choose whether the projectile’s own contact damage/status still apply. See [DECISIONS.md](DECISIONS.md) ADR-016
+- **GroundField** — plant a lingering horizontal disk (`OnHit` at the hit point, `OnExpire` at the instance, `OnTravel` at spawn). Own radius, lifetime, damage, optional status, and pulse period on the modifier. Same `Hit` / `StatusApplied` events as `AreaEffect`. See [DECISIONS.md](DECISIONS.md) ADR-022
 - **Gravity(n)** — scale instance gravity by `n`. Same stages as `Speed(n)`. Burst still applies gravity; this modifier does not add `g * dt` itself
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
 
@@ -382,6 +385,42 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** a Strong-protected collider and a Recipe with `Bounce(1)`, `AreaEffect`, and `Multiply` on `OnHit` / `OnExpire`
 - **When:** the instance records a hit on that collider
 - **Then:** the instance returns to the pool; no Direct `Hit`; no Area `Hit`; no child instances; `Expired` fires
+
+### Phase 18 — Cube presentation is not a cube hit
+
+- **Given:** a Recipe with `PresentationId = "cube"`, the same `Radius` as the sphere Recipe, and `PrefabViewFactory` mapping `"cube"` and `"sphere"`
+- **When:** the instance records a `Target` hit on DummyTarget
+- **Then:** the view is the cube prefab; `Hit` still uses `Radius` (same contact as the sphere Recipe)
+
+### Phase 18 — Unknown PresentationId falls back to a sphere
+
+- **Given:** `PresentationId = "missing"` and the same factory
+- **When:** the instance is spawned with views on
+- **Then:** the view is the primitive sphere fallback
+
+### Phase 19 — Ground field lingers after the shot
+
+- **Given:** `GroundField` on `OnHit` with radius large enough for DummyTarget and the nearby splash dummy, `lifetimeSeconds` longer than one interval, damage 3, `intervalSeconds = 0.5`
+- **When:** the instance records a `Target` hit on DummyTarget and despawns
+- **Then:** DummyTarget and the splash dummy each receive an Area `Hit` (3) immediately and again at 0.5s; after `lifetimeSeconds` no further field Hits are raised
+
+### Phase 19 — Ground field is a disk, not a sphere
+
+- **Given:** the same field radius, and a dummy whose XZ distance from the plant point is greater than radius but whose 3D distance is less than radius
+- **When:** the field pulses
+- **Then:** that dummy receives no Area `Hit`
+
+### Phase 19 — OnExpire plants where the shot died
+
+- **Given:** `GroundField` on `OnExpire` only, a lifetime-only Recipe that dies short of DummyTarget
+- **When:** the instance expires
+- **Then:** the disk is at the expire position; DummyTarget is not hit unless it stands in that disk
+
+### Phase 19 — Ground field status matches AreaEffect
+
+- **Given:** `GroundField` with `DummyStatusEffect` on `OnHit`
+- **When:** a Target stands in the disk at a pulse
+- **Then:** that Target receives `StatusApplied` with the field effect (same event as a projectile `ApplyStatus` / `AreaEffect`)
 
 ## Product constraints
 

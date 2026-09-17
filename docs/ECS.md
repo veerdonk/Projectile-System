@@ -52,6 +52,7 @@ SandboxLab.Update
                  Multiply children spawn slightly off the surface along that normal and inherit the parent's ignored collider so they do not immediately overlap-hit the same dummy
                  else: Position = Candidate, sync ProjectileView
        → flush RequestSpawn queue (child Recipes)
+       → tick live ground fields (ADR-022): decrement lifetime; OverlapDisk on plant and each interval; Area Hit / StatusApplied; disable view when lifetime ends
 ```
 
 Spawn (`OnSpawn` / `OnTravel`) runs in `ProjectileWorld` when an entity is rented, not inside the Burst job. `Multicast` runs there too: it re-aims the rented entity through the modifier context and queues its extras, which `Spawn` flushes before it returns, so all `n` instances exist before the next `Tick`. Those queued requests carry a multicast budget: `Recipe.MulticastGenerations` (0 by default) counted down one per generation, so the extra's `OnSpawn` list normally runs with `Multicast` skipped. Remaining pierce/bounce are copied from `OnHit` `Pierce` / `Bounce` modifiers onto the `Projectile` row at rent. `ElapsedSeconds` starts at 0 and is incremented in the Burst lifetime job; `OnInterval` uses that clock, not a second remaining-lifetime field. The period it is measured against is `Projectile.IntervalSeconds`, written at spawn by `Interval` on `OnSpawn` and 0 (never fires) without one.
