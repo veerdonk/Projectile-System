@@ -366,7 +366,7 @@ A fire-time solver that returns a launch **direction** so a given speed and grav
 
 **Proof:** fire the aimed cannonball — it hits DummyTarget. Fire with speed too low — helper returns false and the lab does not spawn.
 
-**Stop.**
+**Stop.** After phases 14–16 are implemented, **schedule a new phase** (do not build it in the same session) for the sample-scene items that waited on gravity: turret **barrel pitch** and a **ballistic preset** that calls `BallisticAim.TrySolve` (phase 21 left these under Later). Hold-to-fire, WASD, and orbit camera stay Later unless that follow-up says otherwise.
 
 ## Phase 17 — Projectile protection
 
@@ -431,12 +431,57 @@ The pool stops hard-coding `CreatePrimitive(Sphere)`. It asks an `IProjectileVie
 
 **Stop.**
 
+## Phase 20 — Recipe editor
+
+Create and edit Recipes in Unity as ScriptableObjects. The inspector is the six stage lists; each list’s **Add** menu only offers modifiers that belong on that stage. `Spawn` still takes a `Recipe`. ADR-023.
+
+**In scope**
+
+- `RecipeAsset` (`Create > Projectile > Recipe`) in the runtime assembly. Same stats as `Recipe` (whatever fields exist at implementation: id, speed, radius, lifetime, combat/cast numbers, presentation id, multicast/multiply generations). Six `[SerializeReference] IModifier[]` lists
+- `Recipe ToRecipe()`. Tests and `IProjectileWorld.Spawn` keep using `Recipe`. Do **not** make `Recipe` a ScriptableObject and do not put `RecipeAsset` on `SpawnRequest`
+- `[Flags] RecipeStage` and `[ModifierStage(RecipeStage)]` on each **existing** `IModifier` class, matching the six-list table in [ARCHITECTURE.md](ARCHITECTURE.md). Types with no attribute do not appear in any Add menu. `TypeCache.GetTypesDerivedFrom<IModifier>()` is the discovery (game assemblies with the attribute show up; no registry)
+- Existing modifiers become `[Serializable]` with a serializer-friendly ctor. Public parameterized ctors stay. `Apply` behavior does not change
+- Multiply / Multicast child and sibling slots on the asset are `RecipeAsset` references. `ToRecipe()` fills `ChildRecipe` / `ExtraRecipe` with a visited-asset map so a cycle shares one `Recipe`. Homing keeps default `ClosestInTravelDirectionAcquisition`. Multicast keeps default `RandomConePattern`. Multiply `Pattern` is a type choice among the three shipped `IMultiplyPattern`s (null = Square). ApplyStatus authors `DummyStatusEffect` (or a SerializeReference `IStatusEffect`)
+- Custom inspector (`Editor/RecipeAssetEditor`): base stats, then six reorderable lists (order is list order). **Add** filtered by `[ModifierStage]`. Remove and reorder. Draw serialized magnitude / child-asset / pattern fields. Not a graph window, not a default managed-reference picker that lists every type
+- Edit Mode tests: Pierce is in the OnHit catalog and not OnSpawn; `ToRecipe()` copies stats and a `Pierce(2)` on OnHit; Multiply child asset resolves to `ChildRecipe`; a self-child asset does not throw in `ToRecipe()`
+- Sandbox: one sample `RecipeAsset` (straight Pierce or similar). Optional inspector slot on `SandboxLab` to fire `asset.ToRecipe()`. Do **not** delete the C# Recipes the lab already builds
+
+**Out of scope:** EditorWindow / node graph; one ScriptableObject per modifier; converting every sandbox Recipe to an asset; visual `IMultiplyPattern` editor; inspector “fire preview”; Addressables; baking / SubScenes; unimplemented modifiers (AreaEffect, GroundField, Gravity appear when those types ship); Unity Physics; Entities Graphics
+
+**Proof:** **Create > Projectile > Recipe**, set speed/lifetime, add Pierce on **OnHit** — OnSpawn’s Add menu does not list Pierce. `ToRecipe()` has that Pierce. Fire the sample asset from the sandbox if a slot is wired — same hit as a C# Pierce Recipe.
+
+**Stop.**
+
+## Phase 21 — Sample scene
+
+Replace the keyboard lab with a Play Mode sample: turret, mouse aim, preset dropdown, on-screen recipe sheet, reset. It shows the system, it does not grow another 24-slot HUD. ADR-024. Depends on phase 20 `RecipeAsset`. Camera, input, HP, and turret stay in `Assets/`.
+
+**In scope**
+
+- New default scene (replace `Sandbox.unity` as the Play Mode scene, or `Assets/Scenes/Sample.unity` with that as the opened scene). **Projectile Lab > Rebuild** rebuilds this layout. Drop the number-key / letter-key fire grid and the per-modifier `-/+` HUD
+- **Turret:** sphere body + cylinder barrel. Spawn at the barrel tip. No PhysX collider (shots must not World-hit the gun). Camera sits behind/above looking at the yard, not the old side-on lane
+- **Mouse aim:** camera ray vs the ground plane; turret yaws so the barrel’s flattened forward points at the hit. Horizontal shots only (no pitch). Pointer over UI does not aim-fire
+- **Fire:** click in the world or an on-screen Fire control (Space may stay). `SpawnRequest.Direction` is barrel forward. One driver `Tick`s
+- **Presets:** dropdown of `RecipeAsset`s. Curated, named for what they show, **only modifiers that exist in code**. Suggested set: Straight, Pierce, Bounce, Multiply on hit (Square), Interval multiply, Multicast, Homing, Pierce+Homing, Bounce+Multiply, Speed on travel, ApplyStatus, Size. One layout still has a pierce line of dummies, a bounce wall, DummyBounce off-lane, and the existing splash dummy. Homing candidates stay published from dummy poses
+- **Recipe sheet:** base stats (speed, radius, lifetime, damage, crit, mana, effect radius, presentation id) as labeled fields; then the six lists as rows (`Pierce(2)`, `Speed(0.5)`, Multiply spread/pattern, …). This is the visual of “what is on this Recipe.” Magnitudes and those properties are editable. **Do not** add/remove modifiers or stages here (that is phase 20). Child/sibling Recipes show as a name, not a nested editor
+- **Working copy:** dropdown/`ToRecipe()` fills a runtime `Recipe`. Edits mutate that copy. The `RecipeAsset` on disk does not change. Switching preset discards tweaks and copies again
+- **Reset:** button restores dummy HP and status, turret yaw, and the working copy from the current preset; `Dispose` the `ProjectileWorld` and create a new one (clears live shots and pool); re-prewarm; re-subscribe `Hit` / `StatusApplied`. Do not exit Play Mode
+- Colored dummy cubes and status flash stay. Tiny HUD: active count, pool available, selected dummy HP/status. No wall of last-spawn dumps
+- Edit Mode tests where they fit: ground-aim direction is horizontal toward the point; `ToRecipe()` then changing Pierce count on the copy leaves the asset’s count unchanged. Play Mode proof is the scene
+- Rewrite [SANDBOX.md](SANDBOX.md) proofs to preset names. Replace the AGENTS.md “24 fire slots” note
+
+**Out of scope:** implementing phases 13–19 (add those presets when the types exist); barrel pitch / `BallisticAim` (schedule after 14–16 — see phase 16 stop); hold-to-auto-fire; WASD turret move; orbit camera; saving Play Mode tweaks back to `RecipeAsset`; add/remove modifiers in Play Mode; world-space 3D modifier icons; UPM `Samples/` folder split; putting turret/input/HP in the runtime package; Unity Physics; Entities Graphics
+
+**Proof:** Play Mode, pick Pierce, aim at the dummy line, fire — first two live through. Tweak Pierce to 1 on the sheet, fire — dies on the second; the asset is still 2. Reset — dummy HP back, no leftover shots, Pierce on the sheet is 2 again. Aim does not fire when clicking the dropdown.
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
-- Editor Recipe authoring
 - Multiply patterns: line, arc, cross, triangle; a pattern editor that authors an `IMultiplyPattern`
 - Occupancy enter/exit; `OnTick` auras
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
-- Package samples vs sandbox split cleanup
+- Barrel pitch / ballistic sample (schedule after phase 16 is implemented); hold-to-fire; save Play Mode tweaks to `RecipeAsset`
+- Convert remaining sandbox C# Recipes; package `Samples/` vs `Assets/` split
 - Rename the UPM id if the double `com.davidvdveerdonk.com.veerdonk` prefix should go

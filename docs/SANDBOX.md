@@ -5,7 +5,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 ## Current project
 
 - Editor: Unity 6 LTS `6000.6.0f1`
-- Default scene today: `Assets/Scenes/Sandbox.unity` (phase 0 lab; `SampleScene.unity` is unused lighting leftover)
+- Default scene today: `Assets/Scenes/Sandbox.unity` (phase 0 lab; phase 21 replaces this as the Play Mode sample). `SampleScene.unity` is unused lighting leftover
 - Package: `Packages/com.davidvdveerdonk.com.veerdonk.projectile-system`
 
 ## Lab layout (phase 0 builds this)
@@ -15,8 +15,8 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - Spawn point with a visible gizmo
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
 - Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1); a second wall at −X for Bounce(2)+Multiply(2); a splash dummy near DummyTarget for phase 13 OnHit area; a muzzle dummy beside spawn for OnTravel burst; a Basic-protection dummy and a Strong shield for phase 17
-- Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed / Damage / Critical / Mana / Spread / EffectRadius / Size scale), plus one **- / +** row for the shared interval length in seconds, plus Multiply **pattern** (Square / Circle / RandomCircle) and **Spread** meters
-- On-screen readout: last spawn request, active instances, pool available count, dummy HP, status ids on each dummy, selected Recipe damage / crit / mana / radius / effect radius, last instance mana and radius after fire
+- Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed / Damage / Critical / Mana / Spread / EffectRadius / Size scale), plus one **- / +** row for the shared interval length in seconds, plus Multiply **pattern** (Square / Circle / RandomCircle) and **Spread** meters. **Phase 21** replaces this key grid with a turret, preset dropdown, recipe sheet, and Reset
+- On-screen readout: last spawn request, active instances, pool available count, dummy HP, status ids on each dummy, selected Recipe damage / crit / mana / radius / effect radius, last instance mana and radius after fire. **Phase 21** keeps dummy HP/status plus a small active/pool line
 
 ## How to prove a phase
 
@@ -68,6 +68,11 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 19 | OnHit GroundField | Flat disk at DummyTarget; DummyTarget and splash dummy tick field damage each interval; disk gone after its lifetime |
 | 19 | OnExpire GroundField | Lifetime-only shot; disk appears where it died, not at DummyTarget |
 | 19 | GroundField + DummyStatusEffect | Dummy standing in the disk shows `dummy` each pulse |
+| 20 | Create > Projectile > Recipe | Inspector shows six lists; OnHit Add offers Pierce; OnSpawn Add does not |
+| 20 | Sample RecipeAsset Pierce | Optional sandbox slot fires `ToRecipe()`; dummy is pierced like the C# Pierce Recipe |
+| 21 | Sample scene, Pierce preset | Mouse-aim the turret, fire; first two dummies live through |
+| 21 | Tweak Pierce on the sheet | Count 1 dies on the second dummy; asset still 2 after Play Mode |
+| 21 | Reset | HP/status restored, in-flight shots gone, sheet matches the preset |
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.
 

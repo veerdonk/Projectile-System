@@ -9,7 +9,8 @@ Agents implement the first version **one phase at a time** ([PHASES.md](PHASES.m
 Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - **Projectile** — the concept of a spell, bullet, missile, or shot (not a live object)
-- **Recipe** — authored definition: base stats (speed, radius, lifetime, gravity, presentation id, combat/cast numbers) plus six modifier lists
+- **Recipe** — authored definition: base stats (speed, radius, lifetime, gravity, presentation id, combat/cast numbers) plus six modifier lists. Unity authors a `RecipeAsset`; `Spawn` still takes `Recipe` ([DECISIONS.md](DECISIONS.md) ADR-023)
+- **Recipe asset** — ScriptableObject that creates and edits a Recipe in the Inspector. Six stage lists; Add menus are filtered by `[ModifierStage]`. `ToRecipe()` builds the runtime `Recipe`
 - **Instance** — one live simulated projectile
 - **Modifier** — a named behavior with a magnitude, written `Name(magnitude)` (see below)
 - **Stage list** — one of the six ordered modifier lists on a Recipe (`OnSpawn`, `OnTravel`, `OnTick`, `OnInterval`, `OnHit`, `OnExpire`). See [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -89,12 +90,12 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - Spawn, simulate, compose (stage lists), pool
 - Hit pipeline and events
 - Hybrid ECS simulation (`com.unity.entities`; see [ECS.md](ECS.md))
-- Later: developer tooling for Recipes (not before the “later” phase)
+- Later: developer tooling for Recipes (phase 20 inspector)
 
 **Game / sandbox (`Assets/`)**
 
 - Cameras, lighting, URP
-- Input handling and debug compose / fire UI
+- Input handling, turret, sample HUD (preset dropdown, recipe sheet, fire, reset)
 - Dummy targets (HP, `IDamageable`, `IStatusReceiver`, optional `IProjectileProtection`)
 - Player or enemy objects if you add them later
 
@@ -421,6 +422,48 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** `GroundField` with `DummyStatusEffect` on `OnHit`
 - **When:** a Target stands in the disk at a pulse
 - **Then:** that Target receives `StatusApplied` with the field effect (same event as a projectile `ApplyStatus` / `AreaEffect`)
+
+### Phase 20 — Inspector Add menu is per stage
+
+- **Given:** a new `RecipeAsset` in the Editor
+- **When:** the user opens the OnHit Add menu and the OnSpawn Add menu
+- **Then:** OnHit offers Pierce (and other OnHit types that exist); OnSpawn does not offer Pierce; OnSpawn offers Interval and Multicast
+
+### Phase 20 — ToRecipe matches the asset
+
+- **Given:** a `RecipeAsset` with Speed 20, LifetimeSeconds 3, and `Pierce(2)` on OnHit
+- **When:** `ToRecipe()` is called
+- **Then:** the `Recipe` has those stats and one OnHit modifier whose type is `Pierce` and count is 2
+
+### Phase 20 — Child RecipeAsset resolves
+
+- **Given:** parent and child `RecipeAsset`s; parent OnHit Multiply references the child asset
+- **When:** `parent.ToRecipe()` is called
+- **Then:** `Multiply.ChildRecipe` is the child’s `ToRecipe()` result (same Id/stats)
+
+### Phase 21 — Preset dropdown fires a named Recipe
+
+- **Given:** Play Mode on the sample scene, Pierce preset selected
+- **When:** the user aims at the dummy line and fires
+- **Then:** the shot uses that preset’s working copy; the first two dummies are pierced as in phase 2
+
+### Phase 21 — Sheet edits the copy, not the asset
+
+- **Given:** a Pierce `RecipeAsset` with count 2, selected in the sample
+- **When:** the user sets Pierce to 1 on the recipe sheet and fires
+- **Then:** the shot has Pierce(1); after Play Mode the asset is still Pierce(2)
+
+### Phase 21 — Reset restores the scene
+
+- **Given:** dummy HP has changed and a shot is still in the air
+- **When:** the user presses Reset
+- **Then:** dummy HP and status are initial; no live instances remain; the working copy matches the selected preset again; turret yaw is the default
+
+### Phase 21 — UI clicks do not fire
+
+- **Given:** the pointer is over the preset dropdown or recipe sheet
+- **When:** the user clicks
+- **Then:** no `Spawn` runs
 
 ## Product constraints
 
