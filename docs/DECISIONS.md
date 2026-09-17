@@ -2,6 +2,48 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-022 — GroundField is a planted disk, not a Recipe
+
+- **Date:** 2026-09-17
+- **Decision:** `GroundField` is a modifier on `OnHit`, `OnExpire`, and `OnTravel`. It plants a lingering **horizontal disk** owned by `ProjectileWorld`, ticked from the same `Tick`. Size (`radius`), `lifetimeSeconds`, `damage`, optional `IStatusEffect`, and `intervalSeconds` are authored on the modifier, not on `Recipe` / `EffectRadius`. The overlap is XZ distance ≤ radius (Y ignored). Pulses use the existing `Hit` (`HitSource.Area`) and `StatusApplied` events, immediately on plant and then every interval, the same way `AreaEffect` talks to the game. The field is not a projectile: no SphereCast, no stage lists, no child Recipe, no `Expired`. `IHitQuery.OverlapDisk` is the query; modifiers only queue a plant via `ModifierContext`. `intervalSeconds <= 0` never pulses. Occupancy enter/exit and per-frame `OnTick` auras stay later. No second façade.
+- **Why:** Phase 13’s interval `AreaEffect` is an aura on the **flying** instance; it dies with the shot. A fire pool has to outlive the projectile, sit still, and hit a circle on the ground rather than a sphere (a sphere of puddle radius would tick a dummy on a ledge above). Spawning a Speed-0 child Recipe would still SphereCast, still use a sphere overlap, and would pretend a zone is a bullet. The field is not a Recipe because it has no stage lists to compose; stuffing one in would be a second instance type behind the Recipe door. Pulse period lives on the modifier because ADR-012’s `Interval(n)` belongs to a projectile’s `OnInterval` list, and the field is not one.
+- **Consequences:** One new public modifier (`GroundField`) and `OverlapDisk` on `IHitQuery` / `ScriptedHitQuery`. Views are a thin primitive disk. Do not scale field radius/damage with `EffectRadius(n)` / `Damage(n)` in this phase. Do not raycast to terrain. Do not raise `Expired` for fields.
+
+## ADR-021 — Views come from a factory; hits stay a sphere
+
+- **Date:** 2026-09-16
+- **Decision:** `ProjectilePool` does not `CreatePrimitive` itself. It calls `IProjectileViewFactory.Create(recipe, poolParent)`. `Recipe.PresentationId` selects the look. The default factory is the current sphere primitive, scaled to `2 * Radius`. A `PrefabViewFactory` maps ids to prefabs and does not rescale them. Unknown ids fall back to the primitive. `ProjectileView` is public so prefabs can carry it. Colliders on views stay disabled. SphereCast of `Recipe.Radius` is still the hit shape. Tests with `createViews: false` never call the factory. No Addressables, no Entities Graphics, no mesh colliders for hits.
+- **Why:** Games need their own meshes and particles without forking the pool or putting `UnityEngine.Object` on simulation components. `PresentationId` has been on the Recipe since phase 1 and was unused. A factory is the same shape as `IHitQuery` / `IMulticastPattern`: one method, swap the implementation. Scaling a user prefab to the sim radius would squash authored art; the lab sphere can keep scaling.
+- **Consequences:** Three new public types (`IProjectileViewFactory`, `PrimitiveViewFactory`, `PrefabViewFactory`) and a public `ProjectileView`. `ProjectileWorld` gains an optional factory argument. v1 ships two prefabs (`sphere`, `cube`) for tests and the sandbox. Hit/expire one-shot VFX stay game listeners on `Hit` / `Expired`.
+
+## ADR-020 — Protection is a collider marker, not HP
+
+- **Date:** 2026-09-16
+- **Decision:** `IProjectileProtection` marks a collider with `ProtectionLevel.Basic` or `Strong`, the same way `IDamageable` marks `HitKind.Target` (ADR-004). **Basic** runs `OnHit` (pierce and bounce still consume; `AreaEffect` still runs) but does not flush `ApplyStatus` for that contact. Direct `Hit` is still raised with `HitInfo.Protection = Basic` so the game can refuse HP. **Strong** despawns the instance with no Direct `Hit`, no `StatusApplied`, no `OnHit`, and no `OnExpire`; `Expired` still fires. Area overlap skips Strong; Basic may be included with `Protection = Basic`. `Kind` stays Target if `IDamageable` is present. Pierce consumes on `HitKind.Target` **or** `Protection = Basic`. The package still does not subtract HP.
+- **Why:** Invulnerability and shields change *projectile* lifetime and events (bounce, pierce, splash, despawn). That is hit classification, not a health model. Putting it in the game would fork bounce/pierce/area for every consumer. HP, shield hit points, and i-frames stay in the game; they can implement the interface and ignore `Hit` when `Protection != None`.
+- **Consequences:** Two new public types (`IProjectileProtection`, `ProtectionLevel`) and `HitInfo.Protection`. Sandbox ships a Basic dummy and a Strong shield. Do not add factions, shield HP, or a second façade.
+
+## ADR-019 — Ballistic aim is a fire-time helper, not a path
+
+- **Date:** 2026-09-16
+- **Decision:** `BallisticAim.TrySolve` returns a launch direction for a given origin, target, speed, and gravity (world down). Low arc is the default; `highArc` selects the other solution. `false` means unreachable. Games copy the direction into `SpawnRequest`. The instance still flies through the phase 14 Burst integrate. Do not evaluate a closed-form parabola instead of the per-tick SphereCast. Do not add a second `IProjectileWorld` method that spawns-and-aims.
+- **Why:** Hitting a dummy with a cannonball is an aiming problem, not a new motion solver. Replacing the tick integrate with `x(t)` would skip the hit pipeline’s segment casts. A helper keeps `SpawnRequest.Direction` as the only aim input.
+- **Consequences:** One new public type (`BallisticAim`). Sandbox may call it before `Spawn`. Unreachable shots are the caller’s problem.
+
+## ADR-018 — Gravity(n) scales instance gravity, like Speed
+
+- **Date:** 2026-09-16
+- **Decision:** `Gravity(n)` uses the same scale contract and stages as `Speed(n)`: `OnTravel`, `OnInterval`, `OnHit`; not `OnSpawn`; `n <= 0` is a no-op. It multiplies instance gravity. It does **not** run on `OnTick` and does not add `g * dt` itself — Burst already integrates (ADR-017). Putting a gravity *apply* on OnTick would double-apply and compound every frame.
+- **Why:** Option 2 was “a Gravity modifier.” Once gravity is a Recipe stat applied in the solver, the modifier’s job is to *change* that stat, which is already how `Speed(n)` works. OnTick is for steering (Homing), not for re-applying acceleration.
+- **Consequences:** One new public modifier (`Gravity`). `ModifierContext.Gravity` must be writable (phase 14). Do not add antigravity or a second gravity vector in this phase.
+
+## ADR-017 — Recipe.Gravity is a motion stat, default 0
+
+- **Date:** 2026-09-16
+- **Decision:** Downward acceleration lives on `Recipe.Gravity` (m/s²), default **0**. Copy onto the instance at spawn. The kinematic Burst job applies it: `velocity += (0,-1,0) * gravity * dt`, then `candidate = position + velocity * dt`. `Gravity <= 0` keeps today’s straight integrate. Do not read `Physics.gravity`. Do not bake a spline. Bounce reflects whatever velocity the integrate has produced.
+- **Why:** Bullets and fireballs must stay straight without an extra modifier. A cannonball is the same solver with a non-zero Recipe field, the way speed already works. The arc is the integral of acceleration, so it stays calculated. Unity Rigidbody gravity is a later solver (ADR-005) and would break Edit Mode tests.
+- **Consequences:** One new Recipe/instance field. Existing Recipes need no change. `Gravity(n)` is phase 15 (ADR-018). Ballistic aim is phase 16 (ADR-019). Homing on the same shot will fight the drop; list order still applies, but this phase does not add a Homing+gravity scenario.
+
 ## ADR-016 — AreaEffect overlaps Targets; area damage is not Recipe.Damage
 
 - **Date:** 2026-09-16

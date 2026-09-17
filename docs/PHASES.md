@@ -311,9 +311,123 @@ Disk in the same plane, radius `= spread` (count does not grow the disk). `n = 1
 - Edit Mode tests: OnHit splash hits a nearby scripted Target; area-only suppresses the Direct Hit; OnTravel splash at spawn; OnInterval aura hits a Target beside the flight path on the first interval and again on the second; `EffectRadius = 0` hits nobody; World overlap is ignored; area status raises `StatusApplied` per Target
 - Sandbox: OnHit splash with two dummies in radius; area-only (contact dummy takes area damage, not Recipe damage); OnTravel burst if a dummy is at the muzzle; aura flying the lane ticks anyone inside `EffectRadius`
 
-**Out of scope:** lingering ground fields; occupancy enter/exit; `OnTick` aura; `OnExpire` area; scaling area damage with `Damage(n)`; rolling crit; applying HP/DoT in the package; editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** lingering ground fields (phase 19); occupancy enter/exit; `OnTick` aura; `OnExpire` area; scaling area damage with `Damage(n)`; rolling crit; applying HP/DoT in the package; editor tooling; Unity Physics; Entities Graphics
 
 **Proof:** fire OnHit AreaEffect — DummyTarget and a nearby dummy both lose area damage. Fire area-only — contact dummy loses area damage only. Fire OnTravel AreaEffect — dummy at muzzle is hit immediately. Fire interval aura — dummy beside the lane loses HP each interval while the shot is in range, then stops when it has passed.
+
+**Stop.**
+
+## Phase 14 — Recipe gravity
+
+`Recipe.Gravity` is downward acceleration in m/s². Default **0**, so every existing straight shot stays a straight shot. The Burst integrate applies it; the path is calculated each tick, not a predefined curve. ADR-017.
+
+**In scope**
+
+- `Recipe.Gravity` (float, default 0). Copy onto the live instance at spawn (`ModifierContext.Gravity` writable so phase 15 can scale it)
+- Burst integrate: `velocity += worldDown * gravity * dt`, then `candidate = position + velocity * dt` (world down is `(0,-1,0)`, not `Physics.gravity`). `Gravity <= 0` uses the current `candidate = pos + vel * dt` path
+- SphereCast still runs along that segment. Bounce still reflects the current velocity (which may already point down)
+- Edit Mode tests: `Gravity = 0` stays level (y unchanged over several ticks); `Gravity > 0` decreases y while x/z follow launch direction; bounce still reflects
+- Sandbox: a cannonball Recipe with `Gravity > 0`, same speed as the straight shot, aimed ~35° up — it arcs and falls; the straight Recipe is unchanged
+
+**Out of scope:** `Gravity(n)` (phase 15); ballistic aim helper (phase 16); `OnTick` gravity modifier; Rigidbody; `Physics.gravity`; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire the straight Recipe — still hits DummyTarget on the lane. Fire the cannonball aimed up — visible drop, lands short unless you raise speed or flatten the aim.
+
+**Stop.**
+
+## Phase 15 — Gravity scale modifier
+
+`Gravity(n)` scales instance gravity the way `Speed(n)` scales speed (`n > 1` more drop, `0 < n < 1` less, `n <= 0` no-op). ADR-018. The Burst job still applies gravity; the modifier must **not** add `g * dt` itself (that would double-apply, and OnTick would compound every frame).
+
+**In scope**
+
+- `Gravity(n)` on `OnTravel` (start), `OnInterval` (progressive), and `OnHit` (after bounce/pierce). Not `OnSpawn`. Not `OnTick`
+- Edit Mode tests: OnTravel `Gravity(2)` with Recipe `Gravity = 10` drops as 20 m/s²; OnInterval `Gravity(0.5)` halves drop each period; `n <= 0` leaves gravity unchanged; `Recipe.Gravity` stays the authored value
+- Sandbox: cannonball with Gravity(2) on travel falls faster than the phase 14 cannonball
+
+**Out of scope:** ballistic aim (phase 16); changing the Burst integrate; Rigidbody; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire Gravity(2) on travel with the cannonball Recipe — it drops harder than the unscaled cannonball.
+
+**Stop.**
+
+## Phase 16 — Ballistic aim helper
+
+A fire-time solver that returns a launch **direction** so a given speed and gravity pass through a point. Flight is still phase 14 integrate. Not a spline, not a modifier, not a seventh stage. ADR-019.
+
+**In scope**
+
+- Public `BallisticAim.TrySolve(origin, target, speed, gravity, out direction, highArc = false)` → `false` if unreachable. Uses world down. Low arc is the default of the two classic solutions
+- Callers put `direction` on `SpawnRequest.Direction`. Do not add a second façade or a `Spawn` overload that aims for you
+- Edit Mode tests: reachable dummy at sandbox range returns a direction that, when simulated with that speed/gravity, the instance’s path meets the target (within a small tolerance); too-far or `gravity = 0` with a high target returns false (gravity 0 only works if the target lies on the ray)
+- Sandbox: cannonball fire uses the helper toward DummyTarget — it hits; toggle high arc if both solutions exist
+
+**Out of scope:** replacing tick integrate with closed-form `x(t)` during flight; Rigidbody; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire the aimed cannonball — it hits DummyTarget. Fire with speed too low — helper returns false and the lab does not spawn.
+
+**Stop.**
+
+## Phase 17 — Projectile protection
+
+Collider marker, same idea as `IDamageable`: the package classifies the hit; it still does not subtract HP. Two levels. ADR-020. This **does** belong in the package — it changes bounce, pierce, despawn, and which events fire, not how a health bar works.
+
+**In scope**
+
+- `IProjectileProtection { ProtectionLevel Level { get; } }` with `ProtectionLevel { None, Basic, Strong }`. `PhysicsHitQuery` uses `GetComponentInParent` like `IDamageable`. If both markers exist, `Kind` still comes from `IDamageable`; `HitInfo.Protection` comes from the protection marker
+- **Basic:** run `OnHit` (Bounce and Pierce still apply — Pierce also consumes on Basic even when `Kind` is World). `AreaEffect` still runs. Do **not** flush `ApplyStatus` for this contact. Raise Direct `Hit` with `Protection = Basic` so the game can skip HP (and still play a block spark if it wants). Sandbox ignores HP when `Protection != None`
+- **Strong:** return the instance to the pool immediately. No Direct `Hit`, no `StatusApplied`, no `OnHit` (no bounce, pierce, area, multiply-on-hit), no `OnExpire`. Still raise `Expired` so pool counts stay honest
+- Area overlap (phase 13): skip Strong colliders; Basic colliders may appear, and those Area Hits carry `Protection = Basic`
+- Edit Mode tests via `ScriptedHitQuery`: Basic + Bounce(1) reflects and no `StatusApplied`; Basic + Pierce(1) continues; Strong eats a bouncing shot with no `Hit` and no child from `OnHit`/`OnExpire` Multiply; unprotected Target is unchanged
+- Sandbox: Basic dummy (invulnerable) next to DummyTarget; Strong shield cube. Straight shot at Basic — bounce/despawn as World-like motion, dummy HP unchanged. Straight shot at Strong — disappears, no splash Recipe if you fire AreaEffect at it
+
+**Out of scope:** factions, i-frames, shield HP, projectile-vs-projectile; applying HP in the package; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire at the Basic dummy — it does not lose HP; a Bounce Recipe reflects. Fire at the Strong shield — the shot is gone, no `Hit`, no area splash.
+
+**Stop.**
+
+## Phase 18 — View factory
+
+The pool stops hard-coding `CreatePrimitive(Sphere)`. It asks an `IProjectileViewFactory` for a view from `Recipe.PresentationId`. Hits stay the kinematic SphereCast of `Radius` — the mesh is display only. ADR-021.
+
+**In scope**
+
+- Public `IProjectileViewFactory { ProjectileView Create(Recipe recipe, Transform poolParent); }`. Pool still owns rent/return stacks per Recipe. `createViews: false` still creates no views (Edit Mode tests unchanged)
+- `ProjectileView` becomes public (`Bind` / `SetPose` / `Release`). Prefabs may already have it; the factory adds it if missing. Disable/strip colliders on created views (same as today)
+- Default when the game passes none: `PrimitiveViewFactory` — current sphere primitive, scaled to `2 * Radius`
+- `PrefabViewFactory`: map `PresentationId` → prefab. Unknown id falls back to the primitive factory. **Do not** overwrite the prefab’s `localScale` (author at world scale)
+- `ProjectileWorld` takes an optional factory; `new ProjectileWorld(poolParent)` keeps today’s sphere
+- Two test/sandbox prefabs: **sphere** and **cube** (square silhouette). `PresentationId` `"sphere"` and `"cube"`. Live under sandbox or `Tests/Runtime` (not Addressables)
+- Play Mode tests: Recipe `"cube"` rents a cube view; Recipe `"sphere"` rents a sphere view; both still hit DummyTarget using `Radius`; return-to-pool reuses the same view GameObject
+- Sandbox: two Recipes, fire cube vs sphere — different look, same lane hit
+
+**Out of scope:** mesh-shaped hits; Addressables; Entities Graphics; scaling prefabs to `Radius`; hit/expire VFX beyond the flying view; editor tooling; Unity Physics
+
+**Proof:** fire the sphere Recipe — looks like today. Fire the cube Recipe — a cube flies the lane and still hits the dummy.
+
+**Stop.**
+
+## Phase 19 — Lingering ground fields
+
+`GroundField` plants a **flat disk** that stays in the world after the shot is gone. Size, lifetime, damage, and optional status live on the modifier. Pulses use the same `Hit` / `StatusApplied` path as `AreaEffect`. Not a child Recipe, not a seventh stage, not a second façade. ADR-022.
+
+**In scope**
+
+- `GroundField(radius, lifetimeSeconds, damage, status = null, intervalSeconds)` on `OnHit`, `OnExpire`, and `OnTravel`. Not `OnSpawn`, `OnTick`, or `OnInterval` (interval would drop a trail of fields)
+- **OnHit:** plant at `Hit.Point`. **OnExpire:** plant at the instance position. **OnTravel:** plant at spawn, once, before the first move. The modifier queues the plant on `ModifierContext`; it does not call Physics or spawn a Recipe
+- The field is owned by `ProjectileWorld` and ticked from the same `Tick`. It is **not** a projectile instance: no SphereCast, no `Recipe.Speed` / `Radius` / `LifetimeSeconds`, no stage lists. `radius <= 0` or `lifetimeSeconds <= 0` is a no-op (no plant)
+- **Flat overlap:** a Target is inside when its XZ distance to the field center ≤ `radius`. Y does not count (a dummy above the disk but outside the circle is a miss). `IHitQuery.OverlapDisk(center, radius)` — Edit Mode `ScriptedHitQuery`, Play Mode `PhysicsHitQuery` (world-up cylinder of default height 2 so standing colliders are found; still filter to the XZ disk). Only `IDamageable` Targets; ignore World and other projectiles. Skip Strong; Basic may appear with `Protection = Basic`
+- **Pulse:** overlap immediately on plant, then every `intervalSeconds` while the field lives. `intervalSeconds <= 0` never pulses (the disk can still exist until lifetime ends). Each Target in the disk raises `Hit` with `HitSource.Area` and the **modifier** damage, then `StatusApplied` if `status` is set. Package still does not apply HP or tick DoT. Hits use the planting instance’s `ProjectileId` (the parent may already be pooled). Do not mint a second id space
+- Two `GroundField` modifiers plant two disks. `OnHit` then `OnExpire` both plant when both lists carry one
+- Field lifetime is the despawn clock for that disk (independent of the projectile). When it elapses, stop pulsing and return the field view to the pool. Do **not** raise `Expired` for fields (that event is projectile pool accounting)
+- View: a thin primitive cylinder/quad scaled to `2 * radius` on XZ. `createViews: false` creates none. Do not add a second view factory or `PresentationId` on the modifier
+- Edit Mode tests: OnHit plant pulses a scripted Target in the disk immediately and again at the interval; a Target outside XZ (including one that a sphere of that radius would cover) is missed; after `lifetimeSeconds` there are no further Hits; status raises `StatusApplied` per pulse; OnExpire plants at expire position; OnTravel plants at spawn; Strong skipped; `radius = 0` plants nothing
+- Sandbox: OnHit GroundField at DummyTarget — a disk stays on the lane, DummyTarget and the nearby splash dummy lose field damage each interval, a dummy outside the disk does not; after lifetime the disk is gone. OnExpire Recipe leaves a disk where the shot died. Optional status Recipe shows `dummy` on anyone standing in the disk
+
+**Out of scope:** occupancy enter/exit; `OnTick` auras; chaining fields from fields; scaling field radius/damage with `EffectRadius(n)` / `Damage(n)`; ground raycast / terrain snap; Addressables; field prefabs; rolling crit; applying HP/DoT in the package; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire OnHit GroundField — a flat disk appears at the dummy; HP ticks while the dummy stands in it; the disk vanishes when its lifetime ends. Fire a lifetime-only shot with GroundField on OnExpire — the disk is where the shot died, not at the dummy. A dummy beside the disk (inside a sphere of that radius, outside the circle) is not hit.
 
 **Stop.**
 
@@ -322,7 +436,7 @@ Disk in the same plane, radius `= spread` (count does not grow the disk). `n = 1
 - Unity Physics and/or Entities Graphics adapters
 - Editor Recipe authoring
 - Multiply patterns: line, arc, cross, triangle; a pattern editor that authors an `IMultiplyPattern`
-- Lingering ground fields; occupancy enter/exit or `OnTick` auras
+- Occupancy enter/exit; `OnTick` auras
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Package samples vs sandbox split cleanup
 - Rename the UPM id if the double `com.davidvdveerdonk.com.veerdonk` prefix should go
