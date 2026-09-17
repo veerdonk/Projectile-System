@@ -64,6 +64,9 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 17 | Straight at Strong shield | Shot vanishes; no Hit, no splash |
 | 18 | Sphere Recipe | Looks like today; hits DummyTarget |
 | 18 | Cube Recipe | Cube flies the lane; still hits DummyTarget |
+| 19 | OnHit GroundField | Flat disk at DummyTarget; DummyTarget and splash dummy tick field damage each interval; disk gone after its lifetime |
+| 19 | OnExpire GroundField | Lifetime-only shot; disk appears where it died, not at DummyTarget |
+| 19 | GroundField + DummyStatusEffect | Dummy standing in the disk shows `dummy` each pulse |
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.
 
