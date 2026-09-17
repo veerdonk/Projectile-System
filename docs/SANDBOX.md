@@ -27,11 +27,11 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 0 | Space or on-screen **Fire** | Camera looks down the lane; HUD shows a spawn request; dummy and wall are present; nothing flies |
 | 1 | Straight Recipe | Hits dummy, dummy HP drops, pool count returns |
 | 1 | Lifetime-only Recipe | Dies at 3s, no child |
-| 1 / 3 | Multiply on hit (key **3**) | Parent dies on the dummy; **three** children leave the hit point along the hit normal (small random cone until phase 11; then `IMultiplyPattern` positions) |
+| 1 / 3 | Multiply on hit (key **3**) | Parent dies on the dummy; children leave the hit point along the hit normal on the selected `IMultiplyPattern` (default Square, Spread 2 m) |
 | 1b | Same three Recipes as phase 1 | Same proofs; instances are ECS entities under the same HUD |
 | 2 | Pierce(2) (key **4**) | Three +Z dummies: first two live-through, third kills the instance |
 | 2 | Bounce(1) (key **5**) | Fires toward the side wall `(1,0,1)`, reflects, then dies on DummyBounce (remaining bounce is 0). A Bounce shot that hits a dummy first reflects and still drops dummy HP |
-| 3 | Multiply on interval (key **6**) | Extra instances every interval (0.5s by default), roughly along travel |
+| 3 | Multiply on interval (key **6**) | Extra instances every interval (0.5s by default), along travel, laid out by the selected multiply pattern |
 | 3 | Multiply on expire (key **7**) | Child when the parent dies at 1s (before the dummy) |
 | 4 | Multicast(3) (key **8**) | Three instances leave the spawn point immediately in a small random cone |
 | 5 | Homing(100) (key **9**) vs Homing(10) (key **0**) | Fire 25° off +Z; closest dummy in front is DummyTarget. Strong curves in and hits; weak misses |
@@ -47,9 +47,9 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 10 | Damage(2) on travel (key **F**) | Dummy loses twice the Recipe damage |
 | 10 | Pierce + OnHit Damage(2) (key **G**) | First dummy takes base damage; second takes double |
 | 10 | Mana(2) on travel (key **H**) | HUD last instance mana doubles; Recipe mana stays |
-| 11 | Square Multiply 5 / 7 / 9 | Die 5, then H, then 3×3 on the dummy |
+| 11 | Square Multiply 5 / 7 / 9 | Die 5, then H, then 3×3 on the dummy (set count with **- / +**, pattern Square, Spread 2 m) |
 | 11 | Circle Multiply 3 / 6 | Triangle; then center + pentagon |
-| 11 | RandomCircle Multiply | Scatter inside a disk of radius Spread |
+| 11 | RandomCircle Multiply | Scatter inside a disk of radius Spread; children at least one child-diameter apart |
 | 11 | Multiply Spread 0 | Children stacked on the hit/parent |
 | 12 | Size(2) on travel | Sphere looks and hits larger |
 | 12 | Spread(2) on travel + Square Spread 2 | Pair 4 m apart |

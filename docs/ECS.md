@@ -70,10 +70,14 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Ecs/ProjectileSimulationSystem.cs` | Stages, hits, pool return, views; one live snapshot after expire |
 | `Runtime/Pierce.cs` | `OnHit` Target: consume remaining pierce, cancel despawn |
 | `Runtime/Bounce.cs` | `OnHit` World or Target: consume remaining bounce, reflect velocity, cancel despawn; `Hit` still fires |
-| `Runtime/Multiply.cs` | Explicit child Recipe; OnHit / OnExpire / OnInterval. Count > 1 cones around hit normal or travel. Children multiply again only if `Recipe.MultiplyGenerations` pays for it |
+| `Runtime/Multiply.cs` | Explicit child Recipe; OnHit / OnExpire / OnInterval. Positions from `IMultiplyPattern` (default `SquarePattern`); children keep travel or hit-normal direction. `Spread` is meters between pips (0 stacks). Children multiply again only if `Recipe.MultiplyGenerations` pays for it |
 | `Runtime/ChainBudget.cs` | The counted-down "how many more generations" value both chaining modifiers ride on |
 | `Runtime/Multicast.cs` | `OnSpawn`: total instances is `n`; extras use an explicit sibling Recipe and only multicast again if `Recipe.MulticastGenerations` pays for it |
-| `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math; `Multiply` samples it too |
+| `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math |
+| `Runtime/IMultiplyPattern.cs` | Where Multiply child offsets come from. Plane is perpendicular to travel or the hit normal; local +X right, +Y up |
+| `Runtime/SquarePattern.cs` | Dice pips through 9, then odd-sized grids. Default Multiply pattern |
+| `Runtime/CirclePattern.cs` | Triangle, then center + ring, then inner hexagon and outer rings |
+| `Runtime/RandomCirclePattern.cs` | Uniform disk of radius Spread; uses the world seed; rejects samples closer than the child diameter |
 | `Runtime/Homing.cs` | `OnTick`: steer at n degrees/second toward a lock. Acquires via `IHomingAcquisition` when unassigned. A Target hit drops the lock (`Homing.ReleaseLockOnTargetHit` after `OnHit`) |
 | `Runtime/Speed.cs` | Scale current speed by n, keep travel direction. `OnTravel` start scale, `OnInterval` progressive, `OnHit` after bounce/pierce. Scale <= 0 is a no-op |
 | `Runtime/Damage.cs` | Scale instance damage by n. Same stages as `Speed`. Does not apply HP. OnHit scales do not rewrite the `Hit` that already fired |

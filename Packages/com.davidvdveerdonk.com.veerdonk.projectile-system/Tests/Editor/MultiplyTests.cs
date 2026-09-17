@@ -43,14 +43,15 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                         continue;
 
                     childCount++;
+                    Assert.AreEqual(0f, active[i].position.x, 0.0001f);
+                    Assert.AreEqual(0f, active[i].position.y, 0.0001f);
                     Assert.AreEqual(2.5f, active[i].position.z, 0.0001f);
-                    Vector3 dir = active[i].velocity.normalized;
-                    Assert.Greater(Vector3.Dot(dir, Vector3.forward), 0.9f);
-                    Assert.AreEqual(child.Speed, active[i].velocity.magnitude, 0.0001f);
+                    Assert.AreEqual(0f, active[i].velocity.x, 0.0001f);
+                    Assert.AreEqual(0f, active[i].velocity.y, 0.0001f);
+                    Assert.AreEqual(child.Speed, active[i].velocity.z, 0.0001f);
                 }
 
                 Assert.AreEqual(2, childCount);
-                Assert.IsTrue(ChildDirectionsDiffer(active, child.Id));
             }
         }
 
@@ -304,14 +305,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
-        public void Multiply3_OnHit_SpreadsAroundHitNormal()
+        public void Multiply3_OnHit_DefaultSpread0_StacksAlongHitNormal()
         {
             Recipe child = SimulationTestHelper.CreateRecipe("spread-child", speed: 8f, lifetime: 2f);
             Recipe parent = SimulationTestHelper.CreateRecipe("spread-parent", speed: 20f, lifetime: 5f);
             parent.OnHit = new IModifier[] { new Multiply(3, child) };
 
             var hits = new ScriptedHitQuery();
-            var world = new ProjectileWorld(hits, createViews: false, seed: 17u);
+            var world = new ProjectileWorld(hits, createViews: false);
             using (world)
             {
                 world.Prewarm(parent, 4);
@@ -330,28 +331,27 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 world.Tick(0.1f);
 
                 Assert.AreEqual(3, world.ActiveCount);
+                Vector3 expected = SimulationTestHelper.OffSurface(point, normal, child.Radius);
                 List<(ProjectileId id, Vector3 position, Vector3 velocity, Recipe recipe)> active =
                     SimulationTestHelper.CollectActive(world);
                 for (int i = 0; i < active.Count; i++)
                 {
                     Assert.AreEqual(child.Id, active[i].recipe.Id);
-                    Vector3 fromPoint = active[i].position - point;
-                    Assert.AreEqual(child.Radius + 0.01f, fromPoint.magnitude, 0.0001f);
-                    Vector3 dir = active[i].velocity.normalized;
-                    Assert.Greater(Vector3.Dot(fromPoint.normalized, dir), 0.999f);
-                    Assert.Greater(Vector3.Dot(dir, normal), 0.9f);
-                    Assert.AreEqual(child.Speed, active[i].velocity.magnitude, 0.0001f);
+                    Assert.AreEqual(expected.x, active[i].position.x, 0.0001f);
+                    Assert.AreEqual(expected.y, active[i].position.y, 0.0001f);
+                    Assert.AreEqual(expected.z, active[i].position.z, 0.0001f);
+                    Assert.AreEqual(0f, active[i].velocity.x, 0.0001f);
+                    Assert.AreEqual(child.Speed, active[i].velocity.y, 0.0001f);
+                    Assert.AreEqual(0f, active[i].velocity.z, 0.0001f);
                 }
-
-                Assert.IsTrue(ChildDirectionsDiffer(active, child.Id));
             }
         }
 
         [Test]
-        public void Multiply3_OnHit_SameSeed_IsDeterministic()
+        public void Multiply3_OnHit_RandomCircle_SameSeed_IsDeterministic()
         {
-            Vector3[] first = SpawnSpreadChildren(seed: 17u);
-            Vector3[] second = SpawnSpreadChildren(seed: 17u);
+            Vector3[] first = SpawnRandomCircleChildren(seed: 17u);
+            Vector3[] second = SpawnRandomCircleChildren(seed: 17u);
             Assert.AreEqual(first.Length, second.Length);
             for (int i = 0; i < first.Length; i++)
             {
@@ -361,11 +361,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             }
         }
 
-        static Vector3[] SpawnSpreadChildren(uint seed)
+        static Vector3[] SpawnRandomCircleChildren(uint seed)
         {
             Recipe child = SimulationTestHelper.CreateRecipe("det-child", speed: 8f, lifetime: 2f);
             Recipe parent = SimulationTestHelper.CreateRecipe("det-parent", speed: 20f, lifetime: 5f);
-            parent.OnHit = new IModifier[] { new Multiply(3, child) };
+            parent.OnHit = new IModifier[] { new Multiply(3, child, 2f, new RandomCirclePattern()) };
 
             var hits = new ScriptedHitQuery();
             var world = new ProjectileWorld(hits, createViews: false, seed: seed);
@@ -384,15 +384,15 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
 
                 List<(ProjectileId id, Vector3 position, Vector3 velocity, Recipe recipe)> active =
                     SimulationTestHelper.CollectActive(world);
-                var velocities = new Vector3[active.Count];
+                var positions = new Vector3[active.Count];
                 for (int i = 0; i < active.Count; i++)
-                    velocities[i] = active[i].velocity;
-                System.Array.Sort(velocities, CompareVelocity);
-                return velocities;
+                    positions[i] = active[i].position;
+                System.Array.Sort(positions, CompareVector);
+                return positions;
             }
         }
 
-        static int CompareVelocity(Vector3 a, Vector3 b)
+        static int CompareVector(Vector3 a, Vector3 b)
         {
             int x = a.x.CompareTo(b.x);
             if (x != 0)
@@ -410,30 +410,6 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             for (int i = 0; i < active.Count; i++)
             {
                 if (active[i].recipe.Id == recipeId)
-                    return true;
-            }
-
-            return false;
-        }
-
-        static bool ChildDirectionsDiffer(
-            List<(ProjectileId id, Vector3 position, Vector3 velocity, Recipe recipe)> active,
-            string childId)
-        {
-            Vector3? first = null;
-            for (int i = 0; i < active.Count; i++)
-            {
-                if (active[i].recipe.Id != childId)
-                    continue;
-
-                Vector3 dir = active[i].velocity.normalized;
-                if (!first.HasValue)
-                {
-                    first = dir;
-                    continue;
-                }
-
-                if (Vector3.Dot(first.Value, dir) < 0.9999f)
                     return true;
             }
 

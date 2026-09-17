@@ -132,7 +132,7 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 - **Given:** `Multiply(2)` on `OnInterval`, `Interval(0.5)` on `OnSpawn`, and an explicit child Recipe
 - **When:** the parent has travelled for 0.5 seconds
-- **Then:** two child instances spawn roughly in the direction of travel (a small random cone is allowed until phase 11 replaces it with `IMultiplyPattern` positions)
+- **Then:** two child instances spawn along the direction of travel at `IMultiplyPattern` positions (`Spread = 0` stacks)
 
 ### Phase 3 — Multiply(1) on expire
 
@@ -276,7 +276,7 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 - **Given:** `Multiply(8)` with `RandomCirclePattern` and `Spread = 2` on `OnHit`, world seed fixed
 - **When:** the parent records a hit
-- **Then:** eight children lie in the plane disk of radius 2 m about the hit point; the same seed repeats the poses
+- **Then:** eight children lie in the plane disk of radius 2 m about the hit point; no two closer than the child diameter; the same seed repeats the poses
 
 ### Phase 11 — Spread 0 stacks
 
