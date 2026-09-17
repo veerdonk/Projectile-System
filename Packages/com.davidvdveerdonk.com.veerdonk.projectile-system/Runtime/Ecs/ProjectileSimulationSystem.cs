@@ -160,7 +160,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             em.SetComponentData(entity, new ProjectilePosition { Value = p });
             em.SetComponentData(entity, new ProjectileCandidate { Value = p });
             if (Bridge.Pool.TryGetView(entity, out ProjectileView view))
+            {
                 view.SetPose(position, vel);
+                view.SetRadius(projectile.Radius);
+            }
         }
 
         void RunIntervals(Entity entity, float dt)
@@ -195,6 +198,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
             em.SetComponentData(entity, projectile);
             em.SetComponentData(entity, velocity);
+            SyncViewRadius(entity);
         }
 
         static int IntervalCrossings(float previousElapsed, float elapsed, float interval)
@@ -256,6 +260,15 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
             em.SetComponentData(entity, projectile);
             em.SetComponentData(entity, velocity);
+            SyncViewRadius(entity);
+        }
+
+        void SyncViewRadius(Entity entity)
+        {
+            if (!Bridge.Pool.TryGetView(entity, out ProjectileView view))
+                return;
+
+            view.SetRadius(EntityManager.GetComponentData<Projectile>(entity).Radius);
         }
 
         void BindContext(Entity entity, bool hasHit, in HitInfo hit, float dt)
@@ -283,6 +296,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 projectile.CriticalChance,
                 projectile.ManaCost,
                 projectile.EffectRadius,
+                projectile.Spread,
                 projectile.IntervalSeconds,
                 projectile.MultiplyGenerationsLeft,
                 hasHit,

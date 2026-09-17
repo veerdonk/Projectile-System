@@ -16,7 +16,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
 - Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1); a second wall at −X for Bounce(2)+Multiply(2); a splash dummy near DummyTarget for phase 13 OnHit area; a Basic-protection dummy and a Strong shield for phase 17
 - Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed / Damage / Critical / Mana / Spread / EffectRadius / Size scale), plus one **- / +** row for the shared interval length in seconds, plus Multiply **pattern** (Square / Circle / RandomCircle) and **Spread** meters
-- On-screen readout: last spawn request, active instances, pool available count, dummy HP, status ids on each dummy, selected Recipe damage / crit / mana / radius / effect radius, last instance mana after fire
+- On-screen readout: last spawn request, active instances, pool available count, dummy HP, status ids on each dummy, selected Recipe damage / crit / mana / radius / effect radius, last instance mana and radius after fire
 
 ## How to prove a phase
 
@@ -51,8 +51,8 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 11 | Circle Multiply 3 / 6 | Triangle; then center + pentagon |
 | 11 | RandomCircle Multiply | Scatter inside a disk of radius Spread; children at least one child-diameter apart |
 | 11 | Multiply Spread 0 | Children stacked on the hit/parent |
-| 12 | Size(2) on travel | Sphere looks and hits larger |
-| 12 | Spread(2) on travel + Square Spread 2 | Pair 4 m apart |
+| 12 | Size(2) on travel (key **J**) | Sphere looks and hits larger; HUD last instance radius doubles |
+| 12 | Spread(2) on travel + Square Spread 2 (key **K**) | Pair 4 m apart |
 | 13 | OnHit AreaEffect | DummyTarget and the nearby splash dummy both lose area damage |
 | 13 | Area-only OnHit | Contact dummy loses area damage, not Recipe damage |
 | 13 | OnTravel AreaEffect | Dummy at muzzle is hit before the shot moves |

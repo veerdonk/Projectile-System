@@ -25,7 +25,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         /// </summary>
         public float ManaCost { get; set; }
 
-        /// <summary>Radius of the area-effect overlap sphere a later phase queries. Distinct from <see cref="Radius"/>.</summary>
+        /// <summary>
+        /// Radius of the area-effect overlap sphere a later phase queries. Distinct from <see cref="Radius"/>.
+        /// Copied onto the instance at spawn so the EffectRadius modifier can scale that copy.
+        /// </summary>
         public float EffectRadius { get; set; }
 
         public string PresentationId { get; set; }
