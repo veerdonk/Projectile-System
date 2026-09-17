@@ -44,7 +44,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public int RemainingBounce { get; set; }
 
-        public float Radius { get; internal set; }
+        /// <summary>Instance collision radius. <see cref="Size"/> scales it. SphereCast and the view follow this value.</summary>
+        public float Radius { get; set; }
 
         /// <summary>Instance damage, copied from the Recipe at spawn. Sampled onto <see cref="HitInfo"/> at contact.</summary>
         public float Damage { get; set; }
@@ -58,8 +59,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         /// </summary>
         public float ManaCost { get; set; }
 
-        /// <summary>Instance area-effect radius, copied from the Recipe at spawn.</summary>
+        /// <summary>Instance area-effect radius, copied from the Recipe at spawn. Scaled by the EffectRadius modifier.</summary>
         public float EffectRadius { get; set; }
+
+        /// <summary>
+        /// Instance copy of <see cref="Multiply.Spread"/>, taken from the Recipe's Multiply modifiers at spawn.
+        /// The Spread modifier scales this; patterns read it rather than only the modifier field.
+        /// </summary>
+        public float Spread { get; set; }
 
         /// <summary>Seconds between <c>OnInterval</c> runs. <see cref="Interval"/> writes it on <c>OnSpawn</c>; 0 never fires.</summary>
         public float IntervalSeconds { get; set; }
@@ -161,6 +168,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             float criticalChance,
             float manaCost,
             float effectRadius,
+            float spread,
             float intervalSeconds,
             int multiplyGenerationsLeft,
             bool hasHit,
@@ -182,6 +190,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             CriticalChance = criticalChance;
             ManaCost = manaCost;
             EffectRadius = effectRadius;
+            Spread = spread;
             IntervalSeconds = intervalSeconds;
             HasHit = hasHit;
             Hit = hit;
@@ -195,6 +204,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
         {
             projectile.Speed = Speed;
+            projectile.Radius = Radius;
             projectile.RemainingLifetime = RemainingLifetime;
             projectile.RemainingPierce = RemainingPierce;
             projectile.RemainingBounce = RemainingBounce;
@@ -202,6 +212,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             projectile.CriticalChance = CriticalChance;
             projectile.ManaCost = ManaCost;
             projectile.EffectRadius = EffectRadius;
+            projectile.Spread = Spread;
             projectile.IntervalSeconds = IntervalSeconds;
             projectile.HomingHasTarget = HomingTarget.IsAssigned;
             projectile.HomingTargetId = HomingTarget.Id;

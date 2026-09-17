@@ -184,6 +184,61 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             return TryGetCombatStats(id, out _, out _, out manaCost, out _);
         }
 
+        /// <summary>
+        /// Instance radius after spawn and any <see cref="Size"/> scales. The Recipe field is unchanged.
+        /// </summary>
+        public bool TryGetRadius(ProjectileId id, out float radius)
+        {
+            ThrowIfDisposed();
+            EntityManager em = ecsWorld.EntityManager;
+            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
+            try
+            {
+                for (int i = 0; i < entities.Length; i++)
+                {
+                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
+                    if (new ProjectileId(projectile.Id) != id)
+                        continue;
+
+                    radius = projectile.Radius;
+                    return true;
+                }
+            }
+            finally
+            {
+                entities.Dispose();
+            }
+
+            radius = 0f;
+            return false;
+        }
+
+        internal bool TryGetSpread(ProjectileId id, out float spread)
+        {
+            ThrowIfDisposed();
+            EntityManager em = ecsWorld.EntityManager;
+            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
+            try
+            {
+                for (int i = 0; i < entities.Length; i++)
+                {
+                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
+                    if (new ProjectileId(projectile.Id) != id)
+                        continue;
+
+                    spread = projectile.Spread;
+                    return true;
+                }
+            }
+            finally
+            {
+                entities.Dispose();
+            }
+
+            spread = 0f;
+            return false;
+        }
+
         internal bool TryGetCombatStats(
             ProjectileId id,
             out float damage,
@@ -372,6 +427,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 CriticalChance = recipe.CriticalChance,
                 ManaCost = recipe.ManaCost,
                 EffectRadius = recipe.EffectRadius,
+                Spread = ReadMultiplySpread(recipe),
                 RemainingLifetime = recipe.LifetimeSeconds,
                 ElapsedSeconds = 0f,
                 IntervalSeconds = 0f,
@@ -387,9 +443,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });
             em.SetComponentData(entity, new ProjectileCandidate { Value = position });
 
-            view?.Bind(request.Position, recipe.Radius);
             hitQuery.CopyIgnore(request.InheritIgnoreFrom, new ProjectileId(idValue));
             simulation.RunSpawnStages(entity, multicastLeft);
+            if (view != null)
+            {
+                Projectile spawned = em.GetComponentData<Projectile>(entity);
+                view.Bind(request.Position, spawned.Radius);
+            }
+
             return new ProjectileId(idValue);
         }
 
@@ -487,6 +548,29 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             float window = Mathf.Min(parent.LifetimeSeconds, child.LifetimeSeconds);
             int spawns = Mathf.CeilToInt(window / intervalSeconds);
             return spawns > 1 ? spawns : 1;
+        }
+
+        static float ReadMultiplySpread(Recipe recipe)
+        {
+            float spread = 0f;
+            spread = LastMultiplySpread(recipe.OnInterval, spread);
+            spread = LastMultiplySpread(recipe.OnHit, spread);
+            spread = LastMultiplySpread(recipe.OnExpire, spread);
+            return spread;
+        }
+
+        static float LastMultiplySpread(IModifier[] modifiers, float current)
+        {
+            if (modifiers == null)
+                return current;
+
+            for (int i = 0; i < modifiers.Length; i++)
+            {
+                if (modifiers[i] is Multiply multiply)
+                    current = multiply.Spread;
+            }
+
+            return current;
         }
 
         /// <summary>The period an instance of <paramref name="recipe"/> will carry, from <see cref="Interval"/> on its OnSpawn list.</summary>

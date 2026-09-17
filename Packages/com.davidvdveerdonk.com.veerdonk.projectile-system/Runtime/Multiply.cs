@@ -6,7 +6,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// <summary>
     /// Spawns <see cref="Count"/> instances of an explicit child Recipe from OnHit, OnExpire, or OnInterval.
     /// Children keep the parent travel direction, or the hit normal on a hit. Positions come from
-    /// <see cref="Pattern"/>; <see cref="Spread"/> is meters between adjacent pips (0 stacks).
+    /// Positions come from <see cref="Pattern"/>. Pip spacing is the instance copy of
+    /// <see cref="Spread"/> (authored here, scaled by the Spread modifier). 0 stacks.
     /// On OnInterval the period comes from <see cref="Interval"/> on the Recipe's OnSpawn list.
     /// </summary>
     public sealed class Multiply : IModifier
@@ -56,7 +57,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
             for (int i = 0; i < n; i++)
             {
-                Vector3 spawnPosition = origin + Pattern.GetOffset(context, forward, Spread, i, n);
+                Vector3 spawnPosition = origin + Pattern.GetOffset(context, forward, context.Spread, i, n);
                 if (context.HasHit)
                     spawnPosition = OffsetOffSurface(spawnPosition, forward, ChildRecipe.Radius);
                 context.RequestMultiplyChild(ChildRecipe, spawnPosition, forward);

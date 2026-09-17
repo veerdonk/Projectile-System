@@ -27,7 +27,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Mana cost** — authored fire-time cost on the Recipe. Phase 10 copies it onto the instance so `Mana(n)` can scale that copy; the package does not spend mana
 - **Spread** — meters between adjacent child pips when `Multiply` creates more than one instance. Authored on `Multiply`, not on the Recipe. Consumed by `IMultiplyPattern`. 0 stacks children on the same point
 - **Multiply pattern** — layout of those child spawn points in the plane perpendicular to travel or the hit normal (`SquarePattern`, `CirclePattern`, `RandomCirclePattern` in v1)
-- **Effect radius** — authored radius of an `AreaEffect` overlap sphere, copied onto the instance. Distinct from projectile `Radius`. Unused until phase 13 queries it
+- **Effect radius** — authored radius of an `AreaEffect` overlap sphere, copied onto the instance. Distinct from projectile `Radius`. `EffectRadius(n)` scales the instance copy; phase 13 queries it
 - **Area effect** — overlap sphere around a spawn, hit point, or flying instance that applies area damage and optional status to Targets inside. Not a lingering ground field
 - **Ground field** — flat lingering disk planted by `GroundField`. Has its own size, lifetime, damage, optional status, and pulse period. Stays after the projectile despawns. Not a Recipe and not an `AreaEffect` aura
 - **Presentation** — GameObject view for an instance. Selected by `Recipe.PresentationId` through `IProjectileViewFactory`. Not the hit shape

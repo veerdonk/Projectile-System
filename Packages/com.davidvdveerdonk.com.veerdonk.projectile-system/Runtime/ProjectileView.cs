@@ -7,9 +7,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public void Bind(Vector3 position, float radius)
         {
             transform.position = position;
+            SetRadius(radius);
+            gameObject.SetActive(true);
+        }
+
+        public void SetRadius(float radius)
+        {
             float diameter = Mathf.Max(radius, 0.01f) * 2f;
             transform.localScale = new Vector3(diameter, diameter, diameter);
-            gameObject.SetActive(true);
         }
 
         public void SetPose(Vector3 position, Vector3 velocity)

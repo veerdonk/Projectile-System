@@ -33,14 +33,14 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 11 — multiply patterns and spread**
+**Phase 12 — size, spread, and effect-radius scales**
 
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- `ModifierContext.Bind` is still 18 positional parameters. Phase 12 adds instance multiply-spread; passing the `Projectile` row instead would be an improvement, but as its own change, not folded into a phase.
-- The sandbox HUD is still 22 fire slots. Keys in use: `1`–`9`, `0`, `Q`, `E`, `R`, `T`, `Y`, `U`, `I`, `O`, `P`, `F`, `G`, `H`. Phase 11 added Multiply **pattern** cycle and **Spread** meters rows instead of new keys. Phases 12–13 still need a different selector if they add Recipes.
+- `ModifierContext.Bind` is now 19 positional parameters (instance `Spread` appended after `effectRadius`). Passing the `Projectile` row instead would still be an improvement, but as its own change, not folded into a phase.
+- The sandbox HUD is 24 fire slots. Keys in use: `1`–`9`, `0`, `Q`, `E`, `R`, `T`, `Y`, `U`, `I`, `O`, `P`, `F`, `G`, `H`, `J`, `K`. Phase 13 still needs a different selector if it adds Recipes.
 - Sandbox dummy HP is a `float` so it can subtract `Hit.Damage`. `Assets/Scenes/Sandbox.unity` still serializes `hp: 10` / `maxHp: 10` as integers; Unity reads them into the float fields without complaint.
-- `ProjectileWorld.TryGetManaCost` is public so the lab can show the instance copy after `Mana(n)` without putting that query on `IProjectileWorld`.
-- Phase 12 must copy authored `Multiply.Spread` onto the instance (default scale 1). Patterns in this phase read the modifier field only.
+- `ProjectileWorld.TryGetManaCost` and `TryGetRadius` are public so the lab can show instance copies after `Mana(n)` / `Size(n)` without putting those queries on `IProjectileWorld`.
+- Instance `Spread` copies from the last `Multiply` on `OnInterval`, then `OnHit`, then `OnExpire`. Multiply patterns read that instance value. `Spread = 0` still stacks after `Spread(n)`.
 
 ## Do not
 
