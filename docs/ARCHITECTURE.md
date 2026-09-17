@@ -10,7 +10,7 @@ Do not add a second composition model. Stage lists are the only one ([DECISIONS.
 
 | Layer | Lives in | Responsibility |
 | --- | --- | --- |
-| Definition | ScriptableObjects / serializable data | Recipe: base stats + six ordered modifier lists |
+| Definition | ScriptableObjects / serializable data | `RecipeAsset` authors a `Recipe`: base stats + six ordered modifier lists ([DECISIONS.md](DECISIONS.md) ADR-023) |
 | Simulation | Internal `IComponentData` in an isolated Entities `World` | Position, velocity, remaining lifetime, pierce/bounce remaining, interval clocks, combat stats that can change in flight. No `UnityEngine.Object` fields |
 | Movement | Swappable solver | Kinematic first (Burst integrate); optional Rigidbody later |
 | Hits | Query + callback pipeline | PhysX SphereCast / overlap; `HitInfo` events, not `OnCollisionEnter` |
@@ -50,6 +50,8 @@ Recipe
 ```
 
 `LifetimeSeconds` is the only despawn clock. When remaining lifetime reaches 0, run `OnExpire` and return the instance to the pool.
+
+**Authoring:** `RecipeAsset` is the Unity asset ([DECISIONS.md](DECISIONS.md) ADR-023). Tests and `Spawn` keep using `Recipe`. `ToRecipe()` copies stats and builds modifier instances. Multiply/Multicast children on the asset are other `RecipeAsset` references, resolved on build. Do not put `RecipeAsset` on `SpawnRequest`.
 
 **Gravity:** `Recipe.Gravity` is downward acceleration in m/s², default 0 ([DECISIONS.md](DECISIONS.md) ADR-017). Burst integrates it each tick; `Gravity(n)` scales the instance value (ADR-018). Aim-to-point is `BallisticAim.TrySolve` at fire time (ADR-019), not a baked curve.
 
@@ -181,6 +183,22 @@ interface IProjectileViewFactory
 {
     ProjectileView Create(Recipe recipe, Transform poolParent);
 }
+
+[Flags]
+enum RecipeStage { OnSpawn = 1, OnTravel = 2, OnTick = 4, OnInterval = 8, OnHit = 16, OnExpire = 32 }
+
+[AttributeUsage(AttributeTargets.Class)]
+sealed class ModifierStageAttribute : Attribute
+{
+    RecipeStage Stages { get; }
+}
+
+class RecipeAsset : ScriptableObject
+{
+    // Same stats as Recipe. Six SerializeReference IModifier lists.
+    // Multiply/Multicast child slots are RecipeAsset refs.
+    Recipe ToRecipe();
+}
 ```
 
 Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for example from one `Update`). Instances do not have their own `Update`. `ProjectileWorld` is `IDisposable` (dispose the Entities `World`).
@@ -203,7 +221,7 @@ Sandbox fire button calls `Spawn`. A single sandbox driver calls `Tick` (for exa
 Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/
   Runtime/     façade, recipes, modifiers, pooling, PhysX query  (asmdef)
   Runtime/Ecs/ internal components, RecipeStore, systems
-  Editor/      authoring later
+  Editor/      RecipeAsset inspector (ADR-023); more tooling later
   Tests/Runtime
   Tests/Editor
   Samples/     optional package samples; prefer Assets sandbox for the lab
@@ -234,6 +252,6 @@ New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a
 
 ## Tests
 
-- Edit Mode tests for simulation, modifiers, and despawn rules (no scene)
+- Edit Mode tests for simulation, modifiers, despawn rules, `RecipeAsset.ToRecipe`, and stage catalogs (no scene)
 - Play Mode tests only for pooling against Unity objects and physics queries
-- “Looks right in the Editor” is not acceptance
+- “Looks right in the Editor” is not acceptance for simulation. Inspector Add-menu filtering is proven by catalog tests plus a human check (ADR-023)

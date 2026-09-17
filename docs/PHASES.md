@@ -431,12 +431,32 @@ The pool stops hard-coding `CreatePrimitive(Sphere)`. It asks an `IProjectileVie
 
 **Stop.**
 
+## Phase 20 — Recipe editor
+
+Create and edit Recipes in Unity as ScriptableObjects. The inspector is the six stage lists; each list’s **Add** menu only offers modifiers that belong on that stage. `Spawn` still takes a `Recipe`. ADR-023.
+
+**In scope**
+
+- `RecipeAsset` (`Create > Projectile > Recipe`) in the runtime assembly. Same stats as `Recipe` (whatever fields exist at implementation: id, speed, radius, lifetime, combat/cast numbers, presentation id, multicast/multiply generations). Six `[SerializeReference] IModifier[]` lists
+- `Recipe ToRecipe()`. Tests and `IProjectileWorld.Spawn` keep using `Recipe`. Do **not** make `Recipe` a ScriptableObject and do not put `RecipeAsset` on `SpawnRequest`
+- `[Flags] RecipeStage` and `[ModifierStage(RecipeStage)]` on each **existing** `IModifier` class, matching the six-list table in [ARCHITECTURE.md](ARCHITECTURE.md). Types with no attribute do not appear in any Add menu. `TypeCache.GetTypesDerivedFrom<IModifier>()` is the discovery (game assemblies with the attribute show up; no registry)
+- Existing modifiers become `[Serializable]` with a serializer-friendly ctor. Public parameterized ctors stay. `Apply` behavior does not change
+- Multiply / Multicast child and sibling slots on the asset are `RecipeAsset` references. `ToRecipe()` fills `ChildRecipe` / `ExtraRecipe` with a visited-asset map so a cycle shares one `Recipe`. Homing keeps default `ClosestInTravelDirectionAcquisition`. Multicast keeps default `RandomConePattern`. Multiply `Pattern` is a type choice among the three shipped `IMultiplyPattern`s (null = Square). ApplyStatus authors `DummyStatusEffect` (or a SerializeReference `IStatusEffect`)
+- Custom inspector (`Editor/RecipeAssetEditor`): base stats, then six reorderable lists (order is list order). **Add** filtered by `[ModifierStage]`. Remove and reorder. Draw serialized magnitude / child-asset / pattern fields. Not a graph window, not a default managed-reference picker that lists every type
+- Edit Mode tests: Pierce is in the OnHit catalog and not OnSpawn; `ToRecipe()` copies stats and a `Pierce(2)` on OnHit; Multiply child asset resolves to `ChildRecipe`; a self-child asset does not throw in `ToRecipe()`
+- Sandbox: one sample `RecipeAsset` (straight Pierce or similar). Optional inspector slot on `SandboxLab` to fire `asset.ToRecipe()`. Do **not** delete the C# Recipes the lab already builds
+
+**Out of scope:** EditorWindow / node graph; one ScriptableObject per modifier; converting every sandbox Recipe to an asset; visual `IMultiplyPattern` editor; inspector “fire preview”; Addressables; baking / SubScenes; unimplemented modifiers (AreaEffect, GroundField, Gravity appear when those types ship); Unity Physics; Entities Graphics
+
+**Proof:** **Create > Projectile > Recipe**, set speed/lifetime, add Pierce on **OnHit** — OnSpawn’s Add menu does not list Pierce. `ToRecipe()` has that Pierce. Fire the sample asset from the sandbox if a slot is wired — same hit as a C# Pierce Recipe.
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
-- Editor Recipe authoring
 - Multiply patterns: line, arc, cross, triangle; a pattern editor that authors an `IMultiplyPattern`
 - Occupancy enter/exit; `OnTick` auras
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
-- Package samples vs sandbox split cleanup
+- Convert remaining sandbox C# Recipes to `RecipeAsset`s; package samples vs sandbox split cleanup
 - Rename the UPM id if the double `com.davidvdveerdonk.com.veerdonk` prefix should go

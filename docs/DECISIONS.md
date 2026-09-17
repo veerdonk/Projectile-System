@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-023 — Recipes are authored as ScriptableObjects; Spawn still takes Recipe
+
+- **Date:** 2026-09-17
+- **Decision:** Unity authoring is a `RecipeAsset` ScriptableObject with the same base stats as `Recipe` and six `[SerializeReference]` modifier lists. A custom inspector shows those six lists and an **Add** menu of `IModifier` types whose `[ModifierStage]` includes that list. `RecipeAsset.ToRecipe()` builds the `Recipe` that `IProjectileWorld.Spawn` already consumes. `Recipe` stays a plain C# class (`new Recipe()` in tests). Multiply/Multicast child slots on the asset are other `RecipeAsset` references, resolved on `ToRecipe()` (a cycle map shares one `Recipe` so self-multicast cannot stack-overflow in the builder). No EditorWindow graph, no one-SO-per-modifier, no second façade. Unimplemented modifier classes simply do not appear until they exist. Game `IModifier` types with the attribute show up through `TypeCache`; there is no registry.
+- **Why:** The definition layer was already “ScriptableObjects / serializable data.” Making `Recipe` itself a `ScriptableObject` would break Edit Mode tests and put `UnityEngine.Object` on `SpawnRequest`. A graph would be a second composition model (ADR-001). Nested `Recipe` copies would duplicate children instead of referencing them. The six lists *are* the tool — a custom inspector on the asset matches how we author, and stage attributes are the same “one method / one place to extend” shape as `IMulticastPattern`. `SerializeReference` is how Unity stores mixed interface lists; `SerializeField IModifier[]` cannot.
+- **Consequences:** Three new public types (`RecipeAsset`, `RecipeStage`, `ModifierStageAttribute`). Existing `IModifier` types become `[Serializable]` with a serializer ctor; public parameterized ctors stay for tests. `ToRecipe()` must run before `Spawn`. Default inspector type pickers are not enough — they would offer Pierce on `OnSpawn`. A visual pattern editor and converting every sandbox C# Recipe remain later.
+
 ## ADR-022 — GroundField is a planted disk, not a Recipe
 
 - **Date:** 2026-09-17
