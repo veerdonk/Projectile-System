@@ -311,7 +311,7 @@ Disk in the same plane, radius `= spread` (count does not grow the disk). `n = 1
 - Edit Mode tests: OnHit splash hits a nearby scripted Target; area-only suppresses the Direct Hit; OnTravel splash at spawn; OnInterval aura hits a Target beside the flight path on the first interval and again on the second; `EffectRadius = 0` hits nobody; World overlap is ignored; area status raises `StatusApplied` per Target
 - Sandbox: OnHit splash with two dummies in radius; area-only (contact dummy takes area damage, not Recipe damage); OnTravel burst if a dummy is at the muzzle; aura flying the lane ticks anyone inside `EffectRadius`
 
-**Out of scope:** lingering ground fields; occupancy enter/exit; `OnTick` aura; `OnExpire` area; scaling area damage with `Damage(n)`; rolling crit; applying HP/DoT in the package; editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** lingering ground fields (phase 19); occupancy enter/exit; `OnTick` aura; `OnExpire` area; scaling area damage with `Damage(n)`; rolling crit; applying HP/DoT in the package; editor tooling; Unity Physics; Entities Graphics
 
 **Proof:** fire OnHit AreaEffect — DummyTarget and a nearby dummy both lose area damage. Fire area-only — contact dummy loses area damage only. Fire OnTravel AreaEffect — dummy at muzzle is hit immediately. Fire interval aura — dummy beside the lane loses HP each interval while the shot is in range, then stops when it has passed.
 
@@ -408,12 +408,35 @@ The pool stops hard-coding `CreatePrimitive(Sphere)`. It asks an `IProjectileVie
 
 **Stop.**
 
+## Phase 19 — Lingering ground fields
+
+`GroundField` plants a **flat disk** that stays in the world after the shot is gone. Size, lifetime, damage, and optional status live on the modifier. Pulses use the same `Hit` / `StatusApplied` path as `AreaEffect`. Not a child Recipe, not a seventh stage, not a second façade. ADR-022.
+
+**In scope**
+
+- `GroundField(radius, lifetimeSeconds, damage, status = null, intervalSeconds)` on `OnHit`, `OnExpire`, and `OnTravel`. Not `OnSpawn`, `OnTick`, or `OnInterval` (interval would drop a trail of fields)
+- **OnHit:** plant at `Hit.Point`. **OnExpire:** plant at the instance position. **OnTravel:** plant at spawn, once, before the first move. The modifier queues the plant on `ModifierContext`; it does not call Physics or spawn a Recipe
+- The field is owned by `ProjectileWorld` and ticked from the same `Tick`. It is **not** a projectile instance: no SphereCast, no `Recipe.Speed` / `Radius` / `LifetimeSeconds`, no stage lists. `radius <= 0` or `lifetimeSeconds <= 0` is a no-op (no plant)
+- **Flat overlap:** a Target is inside when its XZ distance to the field center ≤ `radius`. Y does not count (a dummy above the disk but outside the circle is a miss). `IHitQuery.OverlapDisk(center, radius)` — Edit Mode `ScriptedHitQuery`, Play Mode `PhysicsHitQuery` (world-up cylinder of default height 2 so standing colliders are found; still filter to the XZ disk). Only `IDamageable` Targets; ignore World and other projectiles. Skip Strong; Basic may appear with `Protection = Basic`
+- **Pulse:** overlap immediately on plant, then every `intervalSeconds` while the field lives. `intervalSeconds <= 0` never pulses (the disk can still exist until lifetime ends). Each Target in the disk raises `Hit` with `HitSource.Area` and the **modifier** damage, then `StatusApplied` if `status` is set. Package still does not apply HP or tick DoT. Hits use the planting instance’s `ProjectileId` (the parent may already be pooled). Do not mint a second id space
+- Two `GroundField` modifiers plant two disks. `OnHit` then `OnExpire` both plant when both lists carry one
+- Field lifetime is the despawn clock for that disk (independent of the projectile). When it elapses, stop pulsing and return the field view to the pool. Do **not** raise `Expired` for fields (that event is projectile pool accounting)
+- View: a thin primitive cylinder/quad scaled to `2 * radius` on XZ. `createViews: false` creates none. Do not add a second view factory or `PresentationId` on the modifier
+- Edit Mode tests: OnHit plant pulses a scripted Target in the disk immediately and again at the interval; a Target outside XZ (including one that a sphere of that radius would cover) is missed; after `lifetimeSeconds` there are no further Hits; status raises `StatusApplied` per pulse; OnExpire plants at expire position; OnTravel plants at spawn; Strong skipped; `radius = 0` plants nothing
+- Sandbox: OnHit GroundField at DummyTarget — a disk stays on the lane, DummyTarget and the nearby splash dummy lose field damage each interval, a dummy outside the disk does not; after lifetime the disk is gone. OnExpire Recipe leaves a disk where the shot died. Optional status Recipe shows `dummy` on anyone standing in the disk
+
+**Out of scope:** occupancy enter/exit; `OnTick` auras; chaining fields from fields; scaling field radius/damage with `EffectRadius(n)` / `Damage(n)`; ground raycast / terrain snap; Addressables; field prefabs; rolling crit; applying HP/DoT in the package; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** fire OnHit GroundField — a flat disk appears at the dummy; HP ticks while the dummy stands in it; the disk vanishes when its lifetime ends. Fire a lifetime-only shot with GroundField on OnExpire — the disk is where the shot died, not at the dummy. A dummy beside the disk (inside a sphere of that radius, outside the circle) is not hit.
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
 - Editor Recipe authoring
 - Multiply patterns: line, arc, cross, triangle; a pattern editor that authors an `IMultiplyPattern`
-- Lingering ground fields; occupancy enter/exit or `OnTick` auras
+- Occupancy enter/exit; `OnTick` auras
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Package samples vs sandbox split cleanup
 - Rename the UPM id if the double `com.davidvdveerdonk.com.veerdonk` prefix should go
