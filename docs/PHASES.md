@@ -446,7 +446,7 @@ Create and edit Recipes in Unity as ScriptableObjects. The inspector is the six 
 - Edit Mode tests: Pierce is in the OnHit catalog and not OnSpawn; `ToRecipe()` copies stats and a `Pierce(2)` on OnHit; Multiply child asset resolves to `ChildRecipe`; a self-child asset does not throw in `ToRecipe()`
 - Sandbox: one sample `RecipeAsset` (straight Pierce or similar). Optional inspector slot on `SandboxLab` to fire `asset.ToRecipe()`. Do **not** delete the C# Recipes the lab already builds
 
-**Out of scope:** EditorWindow / node graph; one ScriptableObject per modifier; Odin; converting every sandbox Recipe to an asset; visual `IMultiplyPattern` editor; inspector “fire preview”; Addressables; baking / SubScenes; unimplemented modifiers (AreaEffect, GroundField, Gravity appear when those types ship); Unity Physics; Entities Graphics
+**Out of scope:** EditorWindow / node graph; one ScriptableObject per modifier; converting every sandbox Recipe to an asset; visual `IMultiplyPattern` editor; inspector “fire preview”; Addressables; baking / SubScenes; unimplemented modifiers (AreaEffect, GroundField, Gravity appear when those types ship); Unity Physics; Entities Graphics
 
 **Proof:** **Create > Projectile > Recipe**, set speed/lifetime, add Pierce on **OnHit** — OnSpawn’s Add menu does not list Pierce. `ToRecipe()` has that Pierce. Fire the sample asset from the sandbox if a slot is wired — same hit as a C# Pierce Recipe.
 
