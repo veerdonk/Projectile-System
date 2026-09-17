@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-024 — Sample scene is the Play Mode demo; turret stays in Assets
+
+- **Date:** 2026-09-17
+- **Decision:** The Play Mode demo is a **sample scene** in `Assets/` (turret, mouse aim, preset dropdown, recipe sheet, reset). It replaces the keyboard-slot lab HUD. Camera, Input System, dummy HP, turret, and sample UI stay out of the runtime package. Presets are `RecipeAsset`s (ADR-023). Play Mode edits a **working `Recipe` copy** from `ToRecipe()`; it must not dirty the assets, add/remove modifiers, or write back. Changing preset or **Reset** rebuilds that copy from the asset. **Reset** also `Dispose`s the `ProjectileWorld` (live shots, pool, ECS allocations), restores dummy HP/status, and recenters the turret. Mouse aim is a camera ray against the ground plane; yaw only; spawn at the barrel tip along flattened forward. Clicks on UI do not fire. The turret has no PhysX collider. The recipe sheet shows stats and the six lists (name + editable magnitudes/properties). Child Recipes are a name only. Dropdown is a curated set of shipped modifiers, not every old lab key. A small active/pool line is enough live readout.
+- **Why:** The lab HUD does not scale (24 keys, one row per `n`). A sample should look like using the package: pick a Recipe, aim, fire, read what the shot is. Rebuilding the phase-20 inspector in Play Mode would duplicate authoring and tempt people to compose in the demo. Mutating `RecipeAsset` in Play Mode dirties source assets. `Dispose` on reset is required because the Entities `World` holds native allocations and leftover instances would keep ticking. Ground-plane yaw matches today’s horizontal shots; pitch waits on gravity. Package Samples/ vs Assets/ split stays later — this is still the sandbox, just a better scene.
+- **Consequences:** No new package types. Sandbox driver, turret, and UI replace `SandboxLab`’s key grid. Later modifiers add a preset when they ship, they do not revive the key HUD. Orbit camera, WASD, hold-to-fire, save-to-asset, and barrel pitch are later.
+
 ## ADR-023 — Recipes are authored as ScriptableObjects; Spawn still takes Recipe
 
 - **Date:** 2026-09-17

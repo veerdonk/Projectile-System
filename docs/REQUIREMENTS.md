@@ -90,12 +90,12 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - Spawn, simulate, compose (stage lists), pool
 - Hit pipeline and events
 - Hybrid ECS simulation (`com.unity.entities`; see [ECS.md](ECS.md))
-- Later: developer tooling for Recipes (not before the “later” phase)
+- Later: developer tooling for Recipes (phase 20 inspector)
 
 **Game / sandbox (`Assets/`)**
 
 - Cameras, lighting, URP
-- Input handling and debug compose / fire UI
+- Input handling, turret, sample HUD (preset dropdown, recipe sheet, fire, reset)
 - Dummy targets (HP, `IDamageable`, `IStatusReceiver`, optional `IProjectileProtection`)
 - Player or enemy objects if you add them later
 
@@ -440,6 +440,30 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** parent and child `RecipeAsset`s; parent OnHit Multiply references the child asset
 - **When:** `parent.ToRecipe()` is called
 - **Then:** `Multiply.ChildRecipe` is the child’s `ToRecipe()` result (same Id/stats)
+
+### Phase 21 — Preset dropdown fires a named Recipe
+
+- **Given:** Play Mode on the sample scene, Pierce preset selected
+- **When:** the user aims at the dummy line and fires
+- **Then:** the shot uses that preset’s working copy; the first two dummies are pierced as in phase 2
+
+### Phase 21 — Sheet edits the copy, not the asset
+
+- **Given:** a Pierce `RecipeAsset` with count 2, selected in the sample
+- **When:** the user sets Pierce to 1 on the recipe sheet and fires
+- **Then:** the shot has Pierce(1); after Play Mode the asset is still Pierce(2)
+
+### Phase 21 — Reset restores the scene
+
+- **Given:** dummy HP has changed and a shot is still in the air
+- **When:** the user presses Reset
+- **Then:** dummy HP and status are initial; no live instances remain; the working copy matches the selected preset again; turret yaw is the default
+
+### Phase 21 — UI clicks do not fire
+
+- **Given:** the pointer is over the preset dropdown or recipe sheet
+- **When:** the user clicks
+- **Then:** no `Spawn` runs
 
 ## Product constraints
 
