@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
 {
     sealed class ScriptedHitQuery : IHitQuery
     {
+        readonly List<OverlapBody> overlapBodies = new List<OverlapBody>();
         HitInfo? queued;
         bool hasQueued;
         bool filterInstance;
@@ -35,6 +37,25 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             queuedInstance = instanceId;
         }
 
+        public void AddOverlapTarget(TargetId targetId, Vector3 position)
+        {
+            overlapBodies.Add(new OverlapBody
+            {
+                Kind = HitKind.Target,
+                TargetId = targetId,
+                Position = position
+            });
+        }
+
+        public void AddOverlapWorld(Vector3 position)
+        {
+            overlapBodies.Add(new OverlapBody
+            {
+                Kind = HitKind.World,
+                Position = position
+            });
+        }
+
         public bool TryCast(ProjectileId instanceId, Vector3 origin, Vector3 direction, float distance, float radius, out HitInfo hit)
         {
             if (!hasQueued)
@@ -57,8 +78,43 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             return true;
         }
 
+        public void Overlap(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
+        {
+            results.Clear();
+            if (radius <= 0f)
+                return;
+
+            float radiusSq = radius * radius;
+            for (int i = 0; i < overlapBodies.Count; i++)
+            {
+                OverlapBody body = overlapBodies[i];
+                if (body.Kind != HitKind.Target)
+                    continue;
+
+                Vector3 delta = body.Position - center;
+                if (delta.sqrMagnitude > radiusSq)
+                    continue;
+
+                results.Add(new HitInfo
+                {
+                    InstanceId = instanceId,
+                    Kind = HitKind.Target,
+                    TargetId = body.TargetId,
+                    Point = body.Position,
+                    Normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up
+                });
+            }
+        }
+
         public void CopyIgnore(ProjectileId from, ProjectileId to)
         {
+        }
+
+        struct OverlapBody
+        {
+            public HitKind Kind;
+            public TargetId TargetId;
+            public Vector3 Position;
         }
     }
 }

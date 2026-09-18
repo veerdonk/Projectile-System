@@ -21,6 +21,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     [DisableAutoCreation]
     partial class ProjectileSimulationSystem : SystemBase
     {
+        readonly List<HitInfo> overlapResults = new List<HitInfo>();
+        readonly List<TargetId> seenAreaTargets = new List<TargetId>();
+
         public SimulationBridge Bridge;
 
         protected override void OnUpdate()
@@ -80,6 +83,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Bridge.ModifierContext.MulticastGenerationsForExtras = multicastGenerationsLeft - 1;
             RunStage(recipe.OnSpawn, entity, hasHit: false, default, dt: 0f, skipMulticast: multicastGenerationsLeft <= 0);
             RunStage(recipe.OnTravel, entity, hasHit: false, default, dt: 0f);
+            FlushAreaOverlaps(entity);
         }
 
         void TryMoveOrHit(Entity entity)
@@ -107,7 +111,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 hit.Damage = projectile.Damage;
                 hit.CriticalChance = projectile.CriticalChance;
                 hit.EffectRadius = projectile.EffectRadius;
-                Bridge.Hit?.Invoke(hit);
+                hit.Source = HitSource.Direct;
                 Despawn(entity, runOnHit: true, hit);
                 return;
             }
@@ -132,7 +136,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Projectile afterHit = em.GetComponentData<Projectile>(entity);
                 Homing.ReleaseLockOnTargetHit(ref afterHit, hit);
                 em.SetComponentData(entity, afterHit);
-                FlushStatusApplied(hit);
+                if (!Bridge.ModifierContext.DirectHitSuppressed)
+                    Bridge.Hit?.Invoke(hit);
+                if (!Bridge.ModifierContext.DirectStatusSuppressed)
+                    FlushStatusApplied(hit);
+                FlushAreaOverlaps(entity);
                 if (Bridge.ModifierContext.CancelDespawn)
                 {
                     ContinueAfterHit(entity, hit);
@@ -183,6 +191,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             BindContext(entity, hasHit: false, default, dt);
             for (int f = 0; f < fires; f++)
             {
+                Bridge.ModifierContext.ClearAreaRequests();
                 for (int i = 0; i < modifiers.Length; i++)
                 {
                     IModifier modifier = modifiers[i];
@@ -192,12 +201,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                         continue;
                     modifier.Apply(Bridge.ModifierContext);
                 }
+
+                ProjectileVelocity intervalVelocity = em.GetComponentData<ProjectileVelocity>(entity);
+                Bridge.ModifierContext.ApplyTo(ref projectile, ref intervalVelocity);
+                em.SetComponentData(entity, projectile);
+                em.SetComponentData(entity, intervalVelocity);
+                FlushAreaOverlaps(entity);
             }
 
-            ProjectileVelocity velocity = em.GetComponentData<ProjectileVelocity>(entity);
-            Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
-            em.SetComponentData(entity, projectile);
-            em.SetComponentData(entity, velocity);
             SyncViewRadius(entity);
         }
 
@@ -233,10 +244,70 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             }
         }
 
+        void FlushAreaOverlaps(Entity entity)
+        {
+            IReadOnlyList<AreaOverlapRequest> requests = Bridge.ModifierContext.RequestedAreaOverlaps;
+            if (requests.Count == 0)
+                return;
+
+            Projectile projectile = EntityManager.GetComponentData<Projectile>(entity);
+            var instanceId = new ProjectileId(projectile.Id);
+
+            for (int r = 0; r < requests.Count; r++)
+            {
+                AreaOverlapRequest request = requests[r];
+                if (request.Radius <= 0f)
+                    continue;
+
+                overlapResults.Clear();
+                seenAreaTargets.Clear();
+                Bridge.HitQuery.Overlap(instanceId, request.Center, request.Radius, overlapResults);
+
+                for (int i = 0; i < overlapResults.Count; i++)
+                {
+                    HitInfo areaHit = overlapResults[i];
+                    if (areaHit.Kind != HitKind.Target)
+                        continue;
+                    if (ContainsTarget(seenAreaTargets, areaHit.TargetId))
+                        continue;
+
+                    seenAreaTargets.Add(areaHit.TargetId);
+                    areaHit.InstanceId = instanceId;
+                    areaHit.Source = HitSource.Area;
+                    areaHit.Damage = request.Damage;
+                    areaHit.CriticalChance = projectile.CriticalChance;
+                    areaHit.EffectRadius = projectile.EffectRadius;
+                    Bridge.Hit?.Invoke(areaHit);
+
+                    if (request.Status == null)
+                        continue;
+
+                    Bridge.StatusApplied?.Invoke(new StatusInfo
+                    {
+                        InstanceId = instanceId,
+                        TargetId = areaHit.TargetId,
+                        Effect = request.Status
+                    });
+                }
+            }
+        }
+
+        static bool ContainsTarget(List<TargetId> ids, TargetId id)
+        {
+            for (int i = 0; i < ids.Count; i++)
+            {
+                if (ids[i] == id)
+                    return true;
+            }
+
+            return false;
+        }
+
         void RunStage(IModifier[] modifiers, Entity entity, bool hasHit, in HitInfo hit, float dt, bool skipMulticast = false)
         {
             Bridge.ModifierContext.CancelDespawn = false;
             Bridge.ModifierContext.ClearRequestedStatus();
+            Bridge.ModifierContext.ClearAreaRequests();
             if (modifiers == null || modifiers.Length == 0)
                 return;
 

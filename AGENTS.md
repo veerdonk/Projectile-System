@@ -33,14 +33,14 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 12 — size, spread, and effect-radius scales**
+**Phase 13 — AreaEffect**
 
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- `ModifierContext.Bind` is now 19 positional parameters (instance `Spread` appended after `effectRadius`). Passing the `Projectile` row instead would still be an improvement, but as its own change, not folded into a phase.
-- The sandbox HUD is 24 fire slots. Keys in use: `1`–`9`, `0`, `Q`, `E`, `R`, `T`, `Y`, `U`, `I`, `O`, `P`, `F`, `G`, `H`, `J`, `K`. Phase 13 still needs a different selector if it adds Recipes.
-- Sandbox dummy HP is a `float` so it can subtract `Hit.Damage`. `Assets/Scenes/Sandbox.unity` still serializes `hp: 10` / `maxHp: 10` as integers; Unity reads them into the float fields without complaint.
-- `ProjectileWorld.TryGetManaCost` and `TryGetRadius` are public so the lab can show instance copies after `Mana(n)` / `Size(n)` without putting those queries on `IProjectileWorld`.
-- Instance `Spread` copies from the last `Multiply` on `OnInterval`, then `OnHit`, then `OnExpire`. Multiply patterns read that instance value. `Spread = 0` still stacks after `Spread(n)`.
+- `ModifierContext.Bind` is still 19 positional parameters. Area queue/suppress live on the context and reset in `Bind` / `RunStage`; do not add a 20th Bind argument.
+- The sandbox HUD is 28 fire slots. Keys in use: `1`–`9`, `0`, `Q`, `E`, `R`, `T`, `Y`, `U`, `I`, `O`, `P`, `F`, `G`, `H`, `J`, `K`, `L`, `Z`, `X`, `C`. Phase 14 should page or cycle if it adds more Recipes.
+- Sandbox dummy HP is a `float` so it can subtract `Hit.Damage`. Area Hits use the same subtraction; DummySplash is `(2, 1, 8)`, DummyMuzzle is `(2, 1, 0)`.
+- Direct `Hit` now fires **after** `OnHit`. Sampled Direct damage is still taken at contact, so OnHit `Damage(n)` does not rewrite this contact.
+- `OnInterval` `AreaEffect` flushes before integrate (same clock as Multiply). Edit Mode aura tests should tick in 0.25s steps so the first pulse is not at the muzzle.
 
 ## Do not
 

@@ -18,6 +18,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     {
         readonly List<SpawnRequest> pendingSpawns;
         readonly List<IStatusEffect> requestedStatuses = new List<IStatusEffect>();
+        readonly List<AreaOverlapRequest> requestedAreas = new List<AreaOverlapRequest>();
+        bool suppressDirectHit;
+        bool suppressDirectStatus;
         Unity.Mathematics.Random random;
 
         internal ModifierContext(
@@ -96,7 +99,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         /// <summary>
         /// Requests a status on the current Target hit. Each request is flushed as
-        /// <see cref="IProjectileWorld.StatusApplied"/> after OnHit, in list order.
+        /// <see cref="IProjectileWorld.StatusApplied"/> after OnHit, in list order,
+        /// unless <see cref="SuppressDirectStatus"/> was set.
         /// </summary>
         public void RequestStatus(IStatusEffect effect)
         {
@@ -105,11 +109,45 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             requestedStatuses.Add(effect);
         }
 
+        /// <summary>
+        /// Queues an overlap sphere at <paramref name="center"/> using the current
+        /// <see cref="EffectRadius"/>. Flushed after the stage as Area hits.
+        /// </summary>
+        public void RequestAreaOverlap(Vector3 center, float damage, IStatusEffect status)
+        {
+            requestedAreas.Add(new AreaOverlapRequest(center, EffectRadius, damage, status));
+        }
+
+        /// <summary>Skip the Direct contact <see cref="IProjectileWorld.Hit"/> after this OnHit list.</summary>
+        public void SuppressDirectHit()
+        {
+            suppressDirectHit = true;
+        }
+
+        /// <summary>Skip flushing Direct <see cref="IProjectileWorld.StatusApplied"/> after this OnHit list.</summary>
+        public void SuppressDirectStatus()
+        {
+            suppressDirectStatus = true;
+        }
+
         internal IReadOnlyList<IStatusEffect> RequestedStatuses => requestedStatuses;
+
+        internal IReadOnlyList<AreaOverlapRequest> RequestedAreaOverlaps => requestedAreas;
+
+        internal bool DirectHitSuppressed => suppressDirectHit;
+
+        internal bool DirectStatusSuppressed => suppressDirectStatus;
 
         internal void ClearRequestedStatus()
         {
             requestedStatuses.Clear();
+        }
+
+        internal void ClearAreaRequests()
+        {
+            requestedAreas.Clear();
+            suppressDirectHit = false;
+            suppressDirectStatus = false;
         }
 
         /// <summary>Multicast expansions the extras queued from this stage may still run. Set before <c>OnSpawn</c>.</summary>
@@ -196,6 +234,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Hit = hit;
             CancelDespawn = false;
             requestedStatuses.Clear();
+            requestedAreas.Clear();
+            suppressDirectHit = false;
+            suppressDirectStatus = false;
             DeltaTime = deltaTime;
             HomingTarget = homingTarget;
             HomingIgnoredTarget = homingIgnoredTarget;
@@ -220,5 +261,24 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             projectile.HomingIgnoredTargetId = HomingIgnoredTarget.Id;
             velocity.Value = new Unity.Mathematics.float3(Velocity.x, Velocity.y, Velocity.z);
         }
+    }
+
+    readonly struct AreaOverlapRequest
+    {
+        public AreaOverlapRequest(Vector3 center, float radius, float damage, IStatusEffect status)
+        {
+            Center = center;
+            Radius = radius;
+            Damage = damage;
+            Status = status;
+        }
+
+        public Vector3 Center { get; }
+
+        public float Radius { get; }
+
+        public float Damage { get; }
+
+        public IStatusEffect Status { get; }
     }
 }

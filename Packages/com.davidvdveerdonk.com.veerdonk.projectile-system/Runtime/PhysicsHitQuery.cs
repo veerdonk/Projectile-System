@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -64,6 +65,46 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             if (!ignoreColliderByInstance.TryGetValue(from, out Collider collider) || collider == null)
                 return;
             ignoreColliderByInstance[to] = collider;
+        }
+
+        public void Overlap(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
+        {
+            if (results == null)
+                throw new ArgumentNullException(nameof(results));
+
+            results.Clear();
+            if (radius <= 0f)
+                return;
+
+            int count = Physics.OverlapSphereNonAlloc(
+                center,
+                radius,
+                overlapBuffer,
+                ~0,
+                QueryTriggerInteraction.Ignore);
+
+            for (int i = 0; i < count; i++)
+            {
+                Collider collider = overlapBuffer[i];
+                if (collider == null || !collider.enabled)
+                    continue;
+
+                var damageable = collider.GetComponentInParent<IDamageable>();
+                if (damageable == null)
+                    continue;
+
+                Vector3 point = collider.ClosestPoint(center);
+                Vector3 delta = point - center;
+                Vector3 normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up;
+                results.Add(new HitInfo
+                {
+                    InstanceId = instanceId,
+                    Kind = HitKind.Target,
+                    TargetId = damageable.TargetId,
+                    Point = point,
+                    Normal = normal
+                });
+            }
         }
 
         bool TryPickOverlap(
