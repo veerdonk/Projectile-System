@@ -213,6 +213,32 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             return false;
         }
 
+        internal bool TryGetGravity(ProjectileId id, out float gravity)
+        {
+            ThrowIfDisposed();
+            EntityManager em = ecsWorld.EntityManager;
+            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
+            try
+            {
+                for (int i = 0; i < entities.Length; i++)
+                {
+                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
+                    if (new ProjectileId(projectile.Id) != id)
+                        continue;
+
+                    gravity = projectile.Gravity;
+                    return true;
+                }
+            }
+            finally
+            {
+                entities.Dispose();
+            }
+
+            gravity = 0f;
+            return false;
+        }
+
         internal bool TryGetSpread(ProjectileId id, out float spread)
         {
             ThrowIfDisposed();
@@ -422,6 +448,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 Id = idValue,
                 RecipeIndex = recipeIndex,
                 Speed = recipe.Speed,
+                Gravity = recipe.Gravity,
                 Radius = recipe.Radius,
                 Damage = recipe.Damage,
                 CriticalChance = recipe.CriticalChance,

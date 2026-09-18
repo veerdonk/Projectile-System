@@ -359,6 +359,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 ToVector3(position.Value),
                 ToVector3(velocity.Value),
                 projectile.Speed,
+                projectile.Gravity,
                 projectile.RemainingLifetime,
                 projectile.RemainingPierce,
                 projectile.RemainingBounce,
@@ -388,8 +389,15 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     {
         public float Dt;
 
-        void Execute(in ProjectilePosition position, in ProjectileVelocity velocity, ref ProjectileCandidate candidate)
+        void Execute(
+            in Projectile projectile,
+            in ProjectilePosition position,
+            ref ProjectileVelocity velocity,
+            ref ProjectileCandidate candidate)
         {
+            if (projectile.Gravity > 0f)
+                velocity.Value += new float3(0f, -1f, 0f) * projectile.Gravity * Dt;
+
             candidate.Value = position.Value + velocity.Value * Dt;
         }
     }
