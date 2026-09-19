@@ -366,7 +366,7 @@ A fire-time solver that returns a launch **direction** so a given speed and grav
 
 **Proof:** fire the aimed cannonball — it hits DummyTarget. Fire with speed too low — helper returns false and the lab does not spawn.
 
-**Stop.** After phases 14–16 are implemented, **schedule a new phase** (do not build it in the same session) for the sample-scene items that waited on gravity: turret **barrel pitch** and a **ballistic preset** that calls `BallisticAim.TrySolve` (phase 21 left these under Later). Hold-to-fire, WASD, and orbit camera stay Later unless that follow-up says otherwise.
+**Stop.** Sample-scene barrel pitch and a ballistic preset are **phase 22** (do not build them in the same session). Hold-to-fire, WASD, and orbit camera stay Later unless that follow-up says otherwise.
 
 ## Phase 17 — Projectile protection
 
@@ -470,9 +470,28 @@ Replace the keyboard lab with a Play Mode sample: turret, mouse aim, preset drop
 - Edit Mode tests where they fit: ground-aim direction is horizontal toward the point; `ToRecipe()` then changing Pierce count on the copy leaves the asset’s count unchanged. Play Mode proof is the scene
 - Rewrite [SANDBOX.md](SANDBOX.md) proofs to preset names. Replace the AGENTS.md “24 fire slots” note
 
-**Out of scope:** implementing phases 13–19 (add those presets when the types exist); barrel pitch / `BallisticAim` (schedule after 14–16 — see phase 16 stop); hold-to-auto-fire; WASD turret move; orbit camera; saving Play Mode tweaks back to `RecipeAsset`; add/remove modifiers in Play Mode; world-space 3D modifier icons; UPM `Samples/` folder split; putting turret/input/HP in the runtime package; Unity Physics; Entities Graphics
+**Out of scope:** implementing phases 13–19 (add those presets when the types exist); barrel pitch / `BallisticAim` (phase 22); hold-to-auto-fire; WASD turret move; orbit camera; saving Play Mode tweaks back to `RecipeAsset`; add/remove modifiers in Play Mode; world-space 3D modifier icons; UPM `Samples/` folder split; putting turret/input/HP in the runtime package; Unity Physics; Entities Graphics
 
 **Proof:** Play Mode, pick Pierce, aim at the dummy line, fire — first two live through. Tweak Pierce to 1 on the sheet, fire — dies on the second; the asset is still 2. Reset — dummy HP back, no leftover shots, Pierce on the sheet is 2 again. Aim does not fire when clicking the dropdown.
+
+**Stop.**
+
+## Phase 22 — Sample barrel pitch and ballistic preset
+
+Phase 21 left lofted aim under Later until gravity and `BallisticAim` existed. Add barrel pitch and one ballistic preset to the sample scene. Do not grow the keyboard lab HUD.
+
+**In scope**
+
+- Sample turret barrel pitches so `SpawnRequest.Direction` can leave the horizontal plane (still no PhysX collider on the gun)
+- Mouse aim still hits the ground plane, then the barrel pitches toward that point (yaw + pitch). Horizontal-only presets can keep using flattened forward
+- One ballistic `RecipeAsset` preset that calls `BallisticAim.TrySolve` toward the ground-aim point and copies the direction onto `SpawnRequest`. Toggle high arc when both solutions exist
+- Unreachable: helper returns false and the sample does not spawn (same as the phase 16 lab)
+- Recipe sheet / HUD: show whether the last fire used low arc, high arc, or was unreachable
+- Rewrite [SANDBOX.md](SANDBOX.md) proofs for the ballistic preset
+
+**Out of scope:** hold-to-fire; WASD turret move; orbit camera; saving Play Mode tweaks to `RecipeAsset`; add/remove modifiers in Play Mode; putting turret/input/HP in the runtime package; replacing tick integrate; Unity Physics; Entities Graphics
+
+**Proof:** Play Mode, pick the ballistic preset, aim at DummyTarget, fire — the shot hits. Toggle high arc — a lofted shot still hits when both solutions exist. Lower speed until `TrySolve` fails — no spawn.
 
 **Stop.**
 
@@ -482,6 +501,6 @@ Replace the keyboard lab with a Play Mode sample: turret, mouse aim, preset drop
 - Multiply patterns: line, arc, cross, triangle; a pattern editor that authors an `IMultiplyPattern`
 - Occupancy enter/exit; `OnTick` auras
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
-- Barrel pitch / ballistic sample (schedule after phase 16 is implemented); hold-to-fire; save Play Mode tweaks to `RecipeAsset`
+- Hold-to-fire; save Play Mode tweaks to `RecipeAsset`
 - Convert remaining sandbox C# Recipes; package `Samples/` vs `Assets/` split
 - Rename the UPM id if the double `com.davidvdveerdonk.com.veerdonk` prefix should go

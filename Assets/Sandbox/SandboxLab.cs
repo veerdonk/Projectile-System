@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 15 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
+    /// Phase 16 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -39,6 +39,9 @@ namespace Sandbox
         static readonly Vector3 HomingDirection = Quaternion.AngleAxis(25f, Vector3.up) * Vector3.forward;
         const float CannonballGravity = 80f;
         const float CannonballPitchDegrees = 35f;
+        const float AimedCannonballSpeed = 32f;
+        const int AimedCannonballSlot = 30;
+        const int HudPageCount = 2;
         static readonly Color Dummy1Color = new Color(0.82f, 0.22f, 0.18f);
         static readonly Color Dummy2Color = new Color(0.85f, 0.45f, 0.15f);
         static readonly Color Dummy3Color = new Color(0.55f, 0.12f, 0.12f);
@@ -83,11 +86,15 @@ namespace Sandbox
         Recipe intervalAuraRecipe;
         Recipe cannonballRecipe;
         Recipe gravityCannonballRecipe;
+        Recipe aimedCannonballRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
+        int hudPage;
         string lastRecipeId;
         Vector2 hudScroll;
+        bool ballisticAimFailed;
+        string ballisticAimMessage;
 
         int multiplyHitCount = 3;
         int pierceCount = 2;
@@ -106,6 +113,8 @@ namespace Sandbox
         float travelSizeScale = 2f;
         float travelSpreadScale = 2f;
         float travelGravityScale = 2f;
+        float aimedCannonballSpeed = AimedCannonballSpeed;
+        bool aimedCannonballHighArc;
         float intervalSeconds = 0.5f;
         float multiplySpread = 2f;
         int multiplyPatternIndex;
@@ -143,66 +152,12 @@ namespace Sandbox
             Keyboard keyboard = Keyboard.current;
             if (keyboard != null)
             {
-                if (keyboard.digit1Key.wasPressedThisFrame)
-                    selectedRecipe = 0;
-                if (keyboard.digit2Key.wasPressedThisFrame)
-                    selectedRecipe = 1;
-                if (keyboard.digit3Key.wasPressedThisFrame)
-                    selectedRecipe = 2;
-                if (keyboard.digit4Key.wasPressedThisFrame)
-                    selectedRecipe = 3;
-                if (keyboard.digit5Key.wasPressedThisFrame)
-                    selectedRecipe = 4;
-                if (keyboard.digit6Key.wasPressedThisFrame)
-                    selectedRecipe = 5;
-                if (keyboard.digit7Key.wasPressedThisFrame)
-                    selectedRecipe = 6;
-                if (keyboard.digit8Key.wasPressedThisFrame)
-                    selectedRecipe = 7;
-                if (keyboard.digit9Key.wasPressedThisFrame)
-                    selectedRecipe = 8;
-                if (keyboard.digit0Key.wasPressedThisFrame)
-                    selectedRecipe = 9;
-                if (keyboard.qKey.wasPressedThisFrame)
-                    selectedRecipe = 10;
-                if (keyboard.eKey.wasPressedThisFrame)
-                    selectedRecipe = 11;
-                if (keyboard.rKey.wasPressedThisFrame)
-                    selectedRecipe = 12;
-                if (keyboard.tKey.wasPressedThisFrame)
-                    selectedRecipe = 13;
-                if (keyboard.yKey.wasPressedThisFrame)
-                    selectedRecipe = 14;
-                if (keyboard.uKey.wasPressedThisFrame)
-                    selectedRecipe = 15;
-                if (keyboard.iKey.wasPressedThisFrame)
-                    selectedRecipe = 16;
-                if (keyboard.oKey.wasPressedThisFrame)
-                    selectedRecipe = 17;
-                if (keyboard.pKey.wasPressedThisFrame)
-                    selectedRecipe = 18;
-                if (keyboard.fKey.wasPressedThisFrame)
-                    selectedRecipe = 19;
-                if (keyboard.gKey.wasPressedThisFrame)
-                    selectedRecipe = 20;
-                if (keyboard.hKey.wasPressedThisFrame)
-                    selectedRecipe = 21;
-                if (keyboard.jKey.wasPressedThisFrame)
-                    selectedRecipe = 22;
-                if (keyboard.kKey.wasPressedThisFrame)
-                    selectedRecipe = 23;
-                if (keyboard.lKey.wasPressedThisFrame)
-                    selectedRecipe = 24;
-                if (keyboard.zKey.wasPressedThisFrame)
-                    selectedRecipe = 25;
-                if (keyboard.xKey.wasPressedThisFrame)
-                    selectedRecipe = 26;
-                if (keyboard.cKey.wasPressedThisFrame)
-                    selectedRecipe = 27;
-                if (keyboard.vKey.wasPressedThisFrame)
-                    selectedRecipe = 28;
-                if (keyboard.bKey.wasPressedThisFrame)
-                    selectedRecipe = 29;
+                if (keyboard.nKey.wasPressedThisFrame)
+                    hudPage = (hudPage + 1) % HudPageCount;
+                if (hudPage == 0)
+                    SelectRecipeFromPage0(keyboard);
+                else if (keyboard.digit1Key.wasPressedThisFrame)
+                    selectedRecipe = AimedCannonballSlot;
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
@@ -226,9 +181,127 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 15 (gravity scale)");
-            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, V, and B select. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 16 (ballistic aim)");
+            GUILayout.Label("Space fires the selected Recipe. N pages the fire list. Page 1: 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, V, B. Page 2: 1 aims at DummyTarget. - / + changes n for the next shot.");
+            DrawHudPageRow();
+            if (hudPage == 0)
+                DrawPage0FireButtons();
+            else
+                DrawPage1FireButtons();
 
+            GUILayout.Space(6f);
+            Recipe selected = SelectedRecipe();
+            if (selected != null)
+            {
+                GUILayout.Label(
+                    $"Selected Recipe {selected.Id}\n" +
+                    $"  damage {selected.Damage:0.##}  crit {selected.CriticalChance:0.##}  mana {selected.ManaCost:0.##}\n" +
+                    $"  radius {selected.Radius:0.##}  effect radius {selected.EffectRadius:0.##}  gravity {selected.Gravity:0.##}");
+                GUILayout.Label(hasInstanceMana
+                    ? $"Last instance mana {lastInstanceManaCost:0.##} (Recipe mana stays {selected.ManaCost:0.##})"
+                    : "Last instance mana: (none)");
+                GUILayout.Label(hasInstanceRadius
+                    ? $"Last instance radius {lastInstanceRadius:0.##} (Recipe radius stays {selected.Radius:0.##})"
+                    : "Last instance radius: (none)");
+            }
+
+            GUILayout.Space(6f);
+            if (ballisticAimFailed)
+                GUILayout.Label(ballisticAimMessage);
+            GUILayout.Label(hasRequest
+                ? $"Last spawn request #{requestCount}\n  pos {lastRequestPosition}\n  dir {lastRequestDirection}\n  recipe {lastRecipeId}"
+                : "Last spawn request: (none)");
+            GUILayout.Label($"Active instances: {(world != null ? world.ActiveCount : 0)}");
+            GUILayout.Label($"Pool available: {(world != null ? world.AvailableCount : 0)}");
+            for (int i = 0; i < dummies.Length; i++)
+            {
+                SandboxDummyTarget dummy = dummies[i];
+                if (dummy != null)
+                {
+                    string status = string.IsNullOrEmpty(dummy.LastStatusId) ? "-" : dummy.LastStatusId;
+                    GUILayout.Label($"{dummy.name} HP: {dummy.Hp:0.##}/{dummy.MaxHp:0.##}  status: {status}");
+                }
+            }
+
+            GUILayout.EndScrollView();
+            GUILayout.EndArea();
+        }
+
+        void SelectRecipeFromPage0(Keyboard keyboard)
+        {
+            if (keyboard.digit1Key.wasPressedThisFrame)
+                selectedRecipe = 0;
+            if (keyboard.digit2Key.wasPressedThisFrame)
+                selectedRecipe = 1;
+            if (keyboard.digit3Key.wasPressedThisFrame)
+                selectedRecipe = 2;
+            if (keyboard.digit4Key.wasPressedThisFrame)
+                selectedRecipe = 3;
+            if (keyboard.digit5Key.wasPressedThisFrame)
+                selectedRecipe = 4;
+            if (keyboard.digit6Key.wasPressedThisFrame)
+                selectedRecipe = 5;
+            if (keyboard.digit7Key.wasPressedThisFrame)
+                selectedRecipe = 6;
+            if (keyboard.digit8Key.wasPressedThisFrame)
+                selectedRecipe = 7;
+            if (keyboard.digit9Key.wasPressedThisFrame)
+                selectedRecipe = 8;
+            if (keyboard.digit0Key.wasPressedThisFrame)
+                selectedRecipe = 9;
+            if (keyboard.qKey.wasPressedThisFrame)
+                selectedRecipe = 10;
+            if (keyboard.eKey.wasPressedThisFrame)
+                selectedRecipe = 11;
+            if (keyboard.rKey.wasPressedThisFrame)
+                selectedRecipe = 12;
+            if (keyboard.tKey.wasPressedThisFrame)
+                selectedRecipe = 13;
+            if (keyboard.yKey.wasPressedThisFrame)
+                selectedRecipe = 14;
+            if (keyboard.uKey.wasPressedThisFrame)
+                selectedRecipe = 15;
+            if (keyboard.iKey.wasPressedThisFrame)
+                selectedRecipe = 16;
+            if (keyboard.oKey.wasPressedThisFrame)
+                selectedRecipe = 17;
+            if (keyboard.pKey.wasPressedThisFrame)
+                selectedRecipe = 18;
+            if (keyboard.fKey.wasPressedThisFrame)
+                selectedRecipe = 19;
+            if (keyboard.gKey.wasPressedThisFrame)
+                selectedRecipe = 20;
+            if (keyboard.hKey.wasPressedThisFrame)
+                selectedRecipe = 21;
+            if (keyboard.jKey.wasPressedThisFrame)
+                selectedRecipe = 22;
+            if (keyboard.kKey.wasPressedThisFrame)
+                selectedRecipe = 23;
+            if (keyboard.lKey.wasPressedThisFrame)
+                selectedRecipe = 24;
+            if (keyboard.zKey.wasPressedThisFrame)
+                selectedRecipe = 25;
+            if (keyboard.xKey.wasPressedThisFrame)
+                selectedRecipe = 26;
+            if (keyboard.cKey.wasPressedThisFrame)
+                selectedRecipe = 27;
+            if (keyboard.vKey.wasPressedThisFrame)
+                selectedRecipe = 28;
+            if (keyboard.bKey.wasPressedThisFrame)
+                selectedRecipe = 29;
+        }
+
+        void DrawHudPageRow()
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"Fire page {hudPage + 1}/{HudPageCount}", GUILayout.Height(28f));
+            if (GUILayout.Button("N next", GUILayout.Width(72), GUILayout.Height(28)))
+                hudPage = (hudPage + 1) % HudPageCount;
+            GUILayout.EndHorizontal();
+        }
+
+        void DrawPage0FireButtons()
+        {
             FireButton("Fire straight", 0, straightRecipe);
             FireButton("Fire lifetime (3s)", 1, lifetimeRecipe);
             FireButtonWithMagnitude("Multiply on hit", 2, onHitRecipe, ref multiplyHitCount, 0, 16);
@@ -262,41 +335,23 @@ namespace Sandbox
             ScaleRow($"Interval {intervalSeconds:0.##}s (keys 6, T, and C)", ref intervalSeconds, 0.1f, 3f, 0.1f);
             CycleMultiplyPatternRow();
             ScaleRow($"Multiply spread {multiplySpread:0.##}m", ref multiplySpread, 0f, 8f, 0.5f);
+        }
 
-            GUILayout.Space(6f);
-            Recipe selected = SelectedRecipe();
-            if (selected != null)
-            {
-                GUILayout.Label(
-                    $"Selected Recipe {selected.Id}\n" +
-                    $"  damage {selected.Damage:0.##}  crit {selected.CriticalChance:0.##}  mana {selected.ManaCost:0.##}\n" +
-                    $"  radius {selected.Radius:0.##}  effect radius {selected.EffectRadius:0.##}  gravity {selected.Gravity:0.##}");
-                GUILayout.Label(hasInstanceMana
-                    ? $"Last instance mana {lastInstanceManaCost:0.##} (Recipe mana stays {selected.ManaCost:0.##})"
-                    : "Last instance mana: (none)");
-                GUILayout.Label(hasInstanceRadius
-                    ? $"Last instance radius {lastInstanceRadius:0.##} (Recipe radius stays {selected.Radius:0.##})"
-                    : "Last instance radius: (none)");
-            }
-
-            GUILayout.Space(6f);
-            GUILayout.Label(hasRequest
-                ? $"Last spawn request #{requestCount}\n  pos {lastRequestPosition}\n  dir {lastRequestDirection}\n  recipe {lastRecipeId}"
-                : "Last spawn request: (none)");
-            GUILayout.Label($"Active instances: {(world != null ? world.ActiveCount : 0)}");
-            GUILayout.Label($"Pool available: {(world != null ? world.AvailableCount : 0)}");
-            for (int i = 0; i < dummies.Length; i++)
-            {
-                SandboxDummyTarget dummy = dummies[i];
-                if (dummy != null)
-                {
-                    string status = string.IsNullOrEmpty(dummy.LastStatusId) ? "-" : dummy.LastStatusId;
-                    GUILayout.Label($"{dummy.name} HP: {dummy.Hp:0.##}/{dummy.MaxHp:0.##}  status: {status}");
-                }
-            }
-
-            GUILayout.EndScrollView();
-            GUILayout.EndArea();
+        void DrawPage1FireButtons()
+        {
+            FireButtonWithScale(
+                aimedCannonballHighArc ? "Aimed cannonball high" : "Aimed cannonball",
+                AimedCannonballSlot,
+                aimedCannonballRecipe,
+                ref aimedCannonballSpeed,
+                8f,
+                48f,
+                4f);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(aimedCannonballHighArc ? "Arc: high" : "Arc: low", GUILayout.Height(28f));
+            if (GUILayout.Button("Toggle", GUILayout.Width(72), GUILayout.Height(28)))
+                aimedCannonballHighArc = !aimedCannonballHighArc;
+            GUILayout.EndHorizontal();
         }
 
         void FireButton(string title, int slot, Recipe recipe)
@@ -429,7 +484,17 @@ namespace Sandbox
             ApplyMagnitudes();
 
             lastRequestPosition = spawnPoint.Position;
-            lastRequestDirection = FireDirection(recipe);
+            if (!TryFireDirection(recipe, lastRequestPosition, out lastRequestDirection, out string aimError))
+            {
+                ballisticAimFailed = true;
+                ballisticAimMessage = aimError;
+                lastRecipeId = recipe.Id;
+                Debug.LogWarning($"SandboxLab: {aimError}", this);
+                return;
+            }
+
+            ballisticAimFailed = false;
+            ballisticAimMessage = null;
             lastRecipeId = recipe.Id;
             requestCount++;
             hasRequest = true;
@@ -531,9 +596,40 @@ namespace Sandbox
                     return cannonballRecipe;
                 case 29:
                     return gravityCannonballRecipe;
+                case AimedCannonballSlot:
+                    return aimedCannonballRecipe;
                 default:
                     return straightRecipe;
             }
+        }
+
+        bool TryFireDirection(Recipe recipe, Vector3 origin, out Vector3 direction, out string error)
+        {
+            error = null;
+            if (recipe == aimedCannonballRecipe)
+            {
+                Vector3 target = dummyTarget != null
+                    ? dummyTarget.transform.position
+                    : Dummy1Position;
+                if (!BallisticAim.TrySolve(
+                        origin,
+                        target,
+                        recipe.Speed,
+                        recipe.Gravity,
+                        out direction,
+                        aimedCannonballHighArc))
+                {
+                    error =
+                        $"BallisticAim unreachable (speed {recipe.Speed:0.##}, gravity {recipe.Gravity:0.##}, " +
+                        $"{(aimedCannonballHighArc ? "high" : "low")} arc) — no spawn";
+                    return false;
+                }
+
+                return true;
+            }
+
+            direction = FireDirection(recipe);
+            return true;
         }
 
         Vector3 FireDirection(Recipe recipe)
@@ -628,6 +724,8 @@ namespace Sandbox
             cannonballRecipe.Gravity = CannonballGravity;
             gravityCannonballRecipe = CreateRecipe("cannonball-gravity", speed: 20f, lifetime: 5f);
             gravityCannonballRecipe.Gravity = CannonballGravity;
+            aimedCannonballRecipe = CreateRecipe("cannonball-aimed", speed: AimedCannonballSpeed, lifetime: 5f);
+            aimedCannonballRecipe.Gravity = CannonballGravity;
             ApplyMagnitudes();
 
             var poolRoot = new GameObject("ProjectilePool");
@@ -662,6 +760,7 @@ namespace Sandbox
             world.Prewarm(intervalAuraRecipe, PrewarmCount);
             world.Prewarm(cannonballRecipe, PrewarmCount);
             world.Prewarm(gravityCannonballRecipe, PrewarmCount);
+            world.Prewarm(aimedCannonballRecipe, PrewarmCount);
 
             world.StatusApplied += OnStatusApplied;
             BindDummies();
@@ -725,6 +824,11 @@ namespace Sandbox
             }
             if (gravityCannonballRecipe != null)
                 gravityCannonballRecipe.OnTravel = new IModifier[] { new Gravity(travelGravityScale) };
+            if (aimedCannonballRecipe != null)
+            {
+                aimedCannonballRecipe.Speed = aimedCannonballSpeed;
+                aimedCannonballRecipe.Gravity = CannonballGravity;
+            }
         }
 
         static Recipe CreateRecipe(string id, float speed, float lifetime, float radius = 0.25f)
