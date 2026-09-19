@@ -33,13 +33,13 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 14 — Recipe gravity**
+**Phase 15 — Gravity scale**
 
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
 - `ModifierContext.Bind` is 20 positional parameters (`gravity` after `speed`). Area queue/suppress still live on the context and reset in `Bind` / `RunStage`; do not add Bind arguments for those.
-- The sandbox HUD is 29 fire slots. Keys in use: `1`–`9`, `0`, `Q`, `E`, `R`, `T`, `Y`, `U`, `I`, `O`, `P`, `F`, `G`, `H`, `J`, `K`, `L`, `Z`, `X`, `C`, `V` (cannonball). Phase 15 should page or cycle if it adds more Recipes.
-- Cannonball uses `Gravity = 80` and ~35° up at the same speed as the straight Recipe (20) so it lands short of DummyTarget. Straight Recipe `Gravity` stays 0.
-- Burst integrate is semi-implicit Euler: when `Gravity > 0` it writes velocity (`v += (0,-1,0) * g * dt`) then `candidate = pos + v * dt`. Bounce reflects that updated velocity. `Gravity <= 0` does not write velocity.
+- The sandbox HUD is 30 fire slots. Keys in use: `1`–`9`, `0`, `Q`, `E`, `R`, `T`, `Y`, `U`, `I`, `O`, `P`, `F`, `G`, `H`, `J`, `K`, `L`, `Z`, `X`, `C`, `V` (cannonball), `B` (Gravity(n) cannonball). Phase 16 should page or cycle if it adds more Recipes.
+- Cannonball uses `Gravity = 80` and ~35° up at the same speed as the straight Recipe (20) so it lands short of DummyTarget. Straight Recipe `Gravity` stays 0. The Gravity(2) cannonball is the same launch with `Gravity(n)` on `OnTravel` (default n = 2).
+- Burst integrate is semi-implicit Euler: when `Gravity > 0` it writes velocity (`v += (0,-1,0) * g * dt`) then `candidate = pos + v * dt`. Bounce reflects that updated velocity. `Gravity <= 0` does not write velocity. `Gravity(n)` only multiplies instance gravity; it must not add `g * dt` (OnInterval runs before integrate, so a scale this tick is the Burst value this tick).
 
 ## Do not
 

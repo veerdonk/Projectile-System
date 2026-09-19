@@ -150,6 +150,157 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void Gravity2_OnTravel_DropsAsTwiceRecipeGravity_AndLeavesRecipeUnchanged()
+        {
+            const float recipeGravity = 10f;
+            const float scaledGravity = 20f;
+            const float speed = 10f;
+            const float dt = 0.2f;
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "gravity-travel",
+                speed: speed,
+                lifetime: 10f,
+                gravity: recipeGravity,
+                onTravel: new IModifier[] { new Gravity(2f) });
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                ProjectileId id = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                Assert.IsTrue(world.TryGetGravity(id, out float gravity));
+                Assert.AreEqual(scaledGravity, gravity, 0.0001f);
+                Assert.AreEqual(recipeGravity, recipe.Gravity, 0.0001f);
+
+                float expectedY = 0f;
+                float expectedVy = 0f;
+                for (int i = 0; i < 4; i++)
+                {
+                    world.Tick(dt);
+                    expectedVy -= scaledGravity * dt;
+                    expectedY += expectedVy * dt;
+
+                    Assert.IsTrue(world.TryGetState(id, out Vector3 position, out Vector3 velocity, out _));
+                    Assert.AreEqual(expectedY, position.y, 0.0001f);
+                    Assert.AreEqual(speed * dt * (i + 1), position.z, 0.0001f);
+                    Assert.AreEqual(expectedVy, velocity.y, 0.0001f);
+                    Assert.AreEqual(speed, velocity.z, 0.0001f);
+                    Assert.IsTrue(world.TryGetGravity(id, out gravity));
+                    Assert.AreEqual(scaledGravity, gravity, 0.0001f);
+                    Assert.AreEqual(recipeGravity, recipe.Gravity, 0.0001f);
+                }
+            }
+        }
+
+        [Test]
+        public void Gravity05_OnInterval_HalvesDropEachPeriod()
+        {
+            const float recipeGravity = 10f;
+            const float dt = 0.5f;
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "gravity-interval",
+                speed: 10f,
+                lifetime: 10f,
+                gravity: recipeGravity,
+                onSpawn: new IModifier[] { new Interval(dt) },
+                onInterval: new IModifier[] { new Gravity(0.5f) });
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                ProjectileId id = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                Assert.IsTrue(world.TryGetGravity(id, out float gravity));
+                Assert.AreEqual(recipeGravity, gravity, 0.0001f);
+
+                world.Tick(dt);
+                Assert.IsTrue(world.TryGetGravity(id, out gravity));
+                Assert.AreEqual(5f, gravity, 0.0001f);
+                Assert.IsTrue(world.TryGetState(id, out Vector3 position, out Vector3 velocity, out _));
+                Assert.AreEqual(-5f * dt, velocity.y, 0.0001f);
+                Assert.AreEqual((-5f * dt) * dt, position.y, 0.0001f);
+
+                world.Tick(dt);
+                Assert.IsTrue(world.TryGetGravity(id, out gravity));
+                Assert.AreEqual(2.5f, gravity, 0.0001f);
+                Assert.IsTrue(world.TryGetState(id, out position, out velocity, out _));
+                float expectedVy = -5f * dt - 2.5f * dt;
+                Assert.AreEqual(expectedVy, velocity.y, 0.0001f);
+                Assert.AreEqual((-5f * dt) * dt + expectedVy * dt, position.y, 0.0001f);
+                Assert.AreEqual(recipeGravity, recipe.Gravity, 0.0001f);
+            }
+        }
+
+        [Test]
+        public void Gravity_NonPositiveScale_LeavesInstanceAndRecipeUnchanged()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "gravity-noop",
+                speed: 10f,
+                lifetime: 10f,
+                gravity: 10f,
+                onTravel: new IModifier[] { new Gravity(0f), new Gravity(-1f) });
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                ProjectileId id = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                Assert.IsTrue(world.TryGetGravity(id, out float gravity));
+                Assert.AreEqual(10f, gravity, 0.0001f);
+                Assert.AreEqual(10f, recipe.Gravity, 0.0001f);
+
+                world.Tick(0.2f);
+                Assert.IsTrue(world.TryGetGravity(id, out gravity));
+                Assert.AreEqual(10f, gravity, 0.0001f);
+                Assert.AreEqual(10f, recipe.Gravity, 0.0001f);
+            }
+        }
+
+        [Test]
+        public void Pierce1_ThenGravity2_OnHit_ScalesAfterTheHit()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "pierce-gravity",
+                speed: 20f,
+                lifetime: 5f,
+                gravity: 10f,
+                onHit: new IModifier[] { new Pierce(1), new Gravity(2f) });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                ProjectileId id = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                hits.Queue(HitKind.Target, new Vector3(0f, 0f, 2f), Vector3.back, new TargetId(1));
+                world.Tick(0.1f);
+
+                Assert.AreEqual(1, world.ActiveCount);
+                Assert.IsTrue(world.TryGetRemaining(id, out int pierce, out _));
+                Assert.AreEqual(0, pierce);
+                Assert.IsTrue(world.TryGetGravity(id, out float gravity));
+                Assert.AreEqual(20f, gravity, 0.0001f);
+                Assert.AreEqual(10f, recipe.Gravity, 0.0001f);
+            }
+        }
+
+        [Test]
         public void Bounce_ReflectsGravityUpdatedVelocity()
         {
             const float gravity = 10f;
