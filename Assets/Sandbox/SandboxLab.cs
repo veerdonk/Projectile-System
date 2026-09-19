@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 14 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
+    /// Phase 15 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -82,6 +82,7 @@ namespace Sandbox
         Recipe travelAreaRecipe;
         Recipe intervalAuraRecipe;
         Recipe cannonballRecipe;
+        Recipe gravityCannonballRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
@@ -104,6 +105,7 @@ namespace Sandbox
         float travelManaScale = 2f;
         float travelSizeScale = 2f;
         float travelSpreadScale = 2f;
+        float travelGravityScale = 2f;
         float intervalSeconds = 0.5f;
         float multiplySpread = 2f;
         int multiplyPatternIndex;
@@ -199,6 +201,8 @@ namespace Sandbox
                     selectedRecipe = 27;
                 if (keyboard.vKey.wasPressedThisFrame)
                     selectedRecipe = 28;
+                if (keyboard.bKey.wasPressedThisFrame)
+                    selectedRecipe = 29;
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
@@ -222,8 +226,8 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 14 (recipe gravity)");
-            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, and V select. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 15 (gravity scale)");
+            GUILayout.Label("Space fires the selected Recipe. 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, V, and B select. - / + changes n for the next shot.");
 
             FireButton("Fire straight", 0, straightRecipe);
             FireButton("Fire lifetime (3s)", 1, lifetimeRecipe);
@@ -254,6 +258,7 @@ namespace Sandbox
             FireButton("OnTravel AreaEffect", 26, travelAreaRecipe);
             FireButton("Interval aura", 27, intervalAuraRecipe);
             FireButton("Cannonball", 28, cannonballRecipe);
+            FireButtonWithScale("Cannonball Gravity", 29, gravityCannonballRecipe, ref travelGravityScale, 0.25f, 8f, 0.25f);
             ScaleRow($"Interval {intervalSeconds:0.##}s (keys 6, T, and C)", ref intervalSeconds, 0.1f, 3f, 0.1f);
             CycleMultiplyPatternRow();
             ScaleRow($"Multiply spread {multiplySpread:0.##}m", ref multiplySpread, 0f, 8f, 0.5f);
@@ -524,6 +529,8 @@ namespace Sandbox
                     return intervalAuraRecipe;
                 case 28:
                     return cannonballRecipe;
+                case 29:
+                    return gravityCannonballRecipe;
                 default:
                     return straightRecipe;
             }
@@ -539,7 +546,7 @@ namespace Sandbox
                 return BounceMultiplyDirection;
             if (recipe == strongHomingRecipe || recipe == weakHomingRecipe)
                 return HomingDirection;
-            if (recipe == cannonballRecipe)
+            if (recipe == cannonballRecipe || recipe == gravityCannonballRecipe)
                 return CannonballDirection(spawnPoint.Direction);
             return spawnPoint.Direction;
         }
@@ -619,6 +626,8 @@ namespace Sandbox
             intervalAuraRecipe.EffectRadius = 3f;
             cannonballRecipe = CreateRecipe("cannonball", speed: 20f, lifetime: 5f);
             cannonballRecipe.Gravity = CannonballGravity;
+            gravityCannonballRecipe = CreateRecipe("cannonball-gravity", speed: 20f, lifetime: 5f);
+            gravityCannonballRecipe.Gravity = CannonballGravity;
             ApplyMagnitudes();
 
             var poolRoot = new GameObject("ProjectilePool");
@@ -652,6 +661,7 @@ namespace Sandbox
             world.Prewarm(travelAreaRecipe, PrewarmCount);
             world.Prewarm(intervalAuraRecipe, PrewarmCount);
             world.Prewarm(cannonballRecipe, PrewarmCount);
+            world.Prewarm(gravityCannonballRecipe, PrewarmCount);
 
             world.StatusApplied += OnStatusApplied;
             BindDummies();
@@ -713,6 +723,8 @@ namespace Sandbox
                 intervalAuraRecipe.OnSpawn = new IModifier[] { new Interval(intervalSeconds) };
                 intervalAuraRecipe.OnInterval = new IModifier[] { new AreaEffect(3f) };
             }
+            if (gravityCannonballRecipe != null)
+                gravityCannonballRecipe.OnTravel = new IModifier[] { new Gravity(travelGravityScale) };
         }
 
         static Recipe CreateRecipe(string id, float speed, float lifetime, float radius = 0.25f)

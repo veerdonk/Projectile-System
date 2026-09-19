@@ -43,7 +43,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         /// <summary>
         /// Instance gravity in m/s², copied from <see cref="Recipe.Gravity"/> at spawn.
-        /// Burst applies it each tick; a later scale modifier writes this copy, not the Recipe.
+        /// Burst applies it each tick; the Gravity modifier scales this copy, not the Recipe.
         /// </summary>
         public float Gravity { get; set; }
 
