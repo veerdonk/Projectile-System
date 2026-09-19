@@ -465,6 +465,18 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** the user clicks
 - **Then:** no `Spawn` runs
 
+### Phase 23 — Package id is not doubled
+
+- **Given:** the embedded UPM package after the cleanup rename
+- **When:** Package Manager lists project packages
+- **Then:** the id is `com.veerdonk.projectile-system` (not `com.davidvdveerdonk.com.veerdonk.projectile-system`)
+
+### Phase 23 — Public façade is documented
+
+- **Given:** the runtime assembly
+- **When:** a consumer inspects `IProjectileWorld` and `Recipe`
+- **Then:** every public type and public member has XML documentation; `Documentation/index.md` is not the Unity template
+
 ## Product constraints
 
 - Sandbox uses URP

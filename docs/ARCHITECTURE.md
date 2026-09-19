@@ -230,6 +230,8 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
+Phase 23 (ADR-025) renames the package folder to `Packages/com.veerdonk.projectile-system/` and the namespace to `Veerdonk.ProjectileSystem`.
+
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 
 ## Unity implementation constraints

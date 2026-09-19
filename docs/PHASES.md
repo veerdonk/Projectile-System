@@ -495,6 +495,25 @@ Phase 21 left lofted aim under Later until gravity and `BallisticAim` existed. A
 
 **Stop.**
 
+## Phase 23 — Cleanup
+
+Housekeeping on the **shipped** package (through phase 16 in code; scheduled work 17–22 is untouched). Rename the UPM id, document the public API, delete template leftovers, fill test holes, Sonar quality pass. ADR-025. No new modifiers, no second façade.
+
+**In scope**
+
+- **UPM id:** `package.json` `name` and folder `Packages/com.veerdonk.projectile-system/`. Namespace `Veerdonk.ProjectileSystem`; asmdefs `Veerdonk.ProjectileSystem` / `.Editor` / `.Tests` (and InternalsVisibleTo). Update sandbox usings, `packages-lock.json`, [AGENTS.md](../AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md) folder map, [SANDBOX.md](SANDBOX.md), [REQUIREMENTS.md](REQUIREMENTS.md). Display name stays `com.veerdonk.projectile-system`
+- **User docs:** XML `<summary>` on every **public** package type and public member (`IProjectileWorld`, `Recipe`, `SpawnRequest`, `HitInfo`, modifiers, patterns, `BallisticAim`, `RecipeAsset` if it exists). Enable documentation generation on the runtime asmdef. Replace template `Documentation/index.md`, package `README.md`, `package.json` description (drop example.com author/changelog URLs or omit them). `CHANGELOG.md` matches 0.1.0. Do **not** narrate internal ECS (`Runtime/Ecs/`) for consumers; [ECS.md](ECS.md) stays the agent map. Inline comments on obvious code stay out ([AGENTS.md](../AGENTS.md))
+- **Leftovers:** delete Unity template `Samples/Example` (`*Example*` / `MyPublicSampleExampleClass`), template `Documentation/images/example.png` if unused, unused `Assets/Scenes/SampleScene.unity`. Strip empty template Third-Party boilerplate only if it is still placeholder. No dead `using`s in the package
+- **Tests:** Unity Code Coverage on Edit Mode package tests. Inventory shipped public types vs `Tests/Editor` (and Play Mode pool/physics). Add Edit Mode tests for holes — especially spec no-ops (`n <= 0` scales, `EffectRadius = 0` area, `Gravity = 0` straight) and `Prewarm` chain counts (ADR-008) if missing. Do not write tests for unbuilt phases 17–22. Do not chase 100% on Burst/ECS generated code
+- **Sonar:** SonarQube / SonarScanner or SonarLint C# rules on the package (not `com.coplaydev.unity-mcp`, not `Library/`). Fix Blocker, Critical, and Major in Runtime/Editor product code. Do not mass-`#pragma` them away. Do **not** add Sonar as a UPM dependency. A repo `sonar-project.properties` is allowed for CI. If no server is available, use SonarLint / the same C# rules locally and record what was fixed
+- Existing Edit Mode + Play Mode tests still pass
+
+**Out of scope:** implementing phases 17–22; new modifiers; publishing to a registry; OpenUPM; renaming the GitHub repo; Unity Physics; Entities Graphics
+
+**Proof:** Package Manager shows `com.veerdonk.projectile-system`. No `MyPublicSampleExampleClass`. `Documentation/index.md` describes Spawn / Tick / Recipe stage lists. New coverage tests are green. Sonar (or the local rule pass) has no remaining Blocker/Critical on package Runtime/Editor.
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
@@ -503,4 +522,3 @@ Phase 21 left lofted aim under Later until gravity and `BallisticAim` existed. A
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Hold-to-fire; save Play Mode tweaks to `RecipeAsset`
 - Convert remaining sandbox C# Recipes; package `Samples/` vs `Assets/` split
-- Rename the UPM id if the double `com.davidvdveerdonk.com.veerdonk` prefix should go

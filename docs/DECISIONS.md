@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-025 — Package id is `com.veerdonk.projectile-system`
+
+- **Date:** 2026-09-19
+- **Decision:** The UPM id and folder are `com.veerdonk.projectile-system` (one `com.` prefix). C# namespace and asmdefs follow: `Veerdonk.ProjectileSystem` (Editor / Tests suffixes unchanged). Display name stays `com.veerdonk.projectile-system`. This is a breaking rename at **0.1.0** before anyone depends on the double prefix. Docs, sandbox `using`s, and `packages-lock.json` update in the same change. Do not publish the old id.
+- **Why:** `com.davidvdveerdonk.com.veerdonk.projectile-system` is a template doubled with the author name. Unity ids are reverse-DNS; `com.veerdonk.projectile-system` matches the display name already on `package.json`. Namespace `Davidvdveerdonk.ComVeerdonkProjectileSystem` repeats the same mistake for every consumer `using`.
+- **Consequences:** `git mv` the package folder. InternalsVisibleTo and test asmdefs change with it. GitHub repo name can stay. No second façade, no new modifiers.
+
 ## ADR-024 — Sample scene is the Play Mode demo; turret stays in Assets
 
 - **Date:** 2026-09-17
