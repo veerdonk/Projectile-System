@@ -33,13 +33,14 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 15 — Gravity scale**
+**Phase 16 — Ballistic aim helper**
 
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- `ModifierContext.Bind` is 20 positional parameters (`gravity` after `speed`). Area queue/suppress still live on the context and reset in `Bind` / `RunStage`; do not add Bind arguments for those.
-- The sandbox HUD is 30 fire slots. Keys in use: `1`–`9`, `0`, `Q`, `E`, `R`, `T`, `Y`, `U`, `I`, `O`, `P`, `F`, `G`, `H`, `J`, `K`, `L`, `Z`, `X`, `C`, `V` (cannonball), `B` (Gravity(n) cannonball). Phase 16 should page or cycle if it adds more Recipes.
-- Cannonball uses `Gravity = 80` and ~35° up at the same speed as the straight Recipe (20) so it lands short of DummyTarget. Straight Recipe `Gravity` stays 0. The Gravity(2) cannonball is the same launch with `Gravity(n)` on `OnTravel` (default n = 2).
-- Burst integrate is semi-implicit Euler: when `Gravity > 0` it writes velocity (`v += (0,-1,0) * g * dt`) then `candidate = pos + v * dt`. Bounce reflects that updated velocity. `Gravity <= 0` does not write velocity. `Gravity(n)` only multiplies instance gravity; it must not add `g * dt` (OnInterval runs before integrate, so a scale this tick is the Burst value this tick).
+- `BallisticAim.TrySolve` is closed-form (world down). It does not know `dt`. Burst integrate is still semi-implicit Euler, so the discrete path drops a little extra (`~0.5 g t dt`) versus the analytic point. Edit Mode tests use `dt = 0.01` and 0.5 m closest-approach tolerance. Do not replace the tick integrate with `x(t)`.
+- Gravity 0 only succeeds when the target is on the horizontal ray (same y as origin). A high target with gravity 0 returns false. `speed <= 0` or origin == target also return false.
+- Sandbox HUD is two pages (`N` cycles). Page 1 is the original 30 slots (`1`–`9`, `0`, `Q`, `E`, `R`, `T`, `Y`, `U`, `I`, `O`, `P`, `F`, `G`, `H`, `J`, `K`, `L`, `Z`, `X`, `C`, `V` short cannonball, `B` Gravity(n) cannonball). Page 2 key `1` is the aimed cannonball (`Speed = 32`, `Gravity = 80`) so it can reach DummyTarget at 8 m; `- / +` changes that speed (20 is unreachable). High-arc toggle is on that page. Unreachable does not spawn.
+- Short cannonball (`V`) stays `Speed = 20`, `Gravity = 80`, ~35° up so it still lands short. Do not point it through `BallisticAim`.
+- Phase 22 is scheduled for sample-scene barrel pitch and a ballistic preset. Do not build it until asked.
 
 ## Do not
 

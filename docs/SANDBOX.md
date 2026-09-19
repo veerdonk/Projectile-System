@@ -15,7 +15,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - Spawn point with a visible gizmo
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
 - Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1); a second wall at −X for Bounce(2)+Multiply(2); a splash dummy near DummyTarget for phase 13 OnHit area; a muzzle dummy beside spawn for OnTravel burst; a Basic-protection dummy and a Strong shield for phase 17
-- Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed / Damage / Critical / Mana / Spread / EffectRadius / Size / Gravity scale), plus one **- / +** row for the shared interval length in seconds, plus Multiply **pattern** (Square / Circle / RandomCircle) and **Spread** meters. Cannonball is key **V**; Gravity(2) cannonball is key **B**. **Phase 21** replaces this key grid with a turret, preset dropdown, recipe sheet, and Reset
+- Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). **N** pages the fire list (page 1 is the original 30 slots; page 2 is the aimed cannonball). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed / Damage / Critical / Mana / Spread / EffectRadius / Size / Gravity scale), plus one **- / +** row for the shared interval length in seconds, plus Multiply **pattern** (Square / Circle / RandomCircle) and **Spread** meters. Cannonball is key **V**; Gravity(2) cannonball is key **B**. Aimed cannonball (page 2, key **1**) uses `BallisticAim.TrySolve` toward DummyTarget; **- / +** changes speed (too low does not spawn) and **Toggle** picks high arc. **Phase 21** replaces this key grid with a turret, preset dropdown, recipe sheet, and Reset
 - On-screen readout: last spawn request, active instances, pool available count, dummy HP, status ids on each dummy, selected Recipe damage / crit / mana / radius / effect radius / gravity, last instance mana and radius after fire. **Phase 21** keeps dummy HP/status plus a small active/pool line
 
 ## How to prove a phase
@@ -60,7 +60,7 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 14 | Straight Recipe | Still hits DummyTarget; no drop |
 | 14 | Cannonball, aimed up (key **V**) | Visible arc, falls short of the dummy at the same speed as the straight shot |
 | 15 | Cannonball + Gravity(2) on travel (key **B**) | Drops harder than the phase 14 cannonball (key **V**) |
-| 16 | Aimed cannonball | Helper aims at DummyTarget; the shot hits |
+| 16 | Aimed cannonball (page 2, key **1**) | Helper aims at DummyTarget; the shot hits. Toggle high arc for the lofted solution. Lower speed until unreachable — no spawn |
 | 17 | Bounce at Basic dummy | Reflects; that dummy’s HP unchanged |
 | 17 | Straight at Strong shield | Shot vanishes; no Hit, no splash |
 | 18 | Sphere Recipe | Looks like today; hits DummyTarget |
