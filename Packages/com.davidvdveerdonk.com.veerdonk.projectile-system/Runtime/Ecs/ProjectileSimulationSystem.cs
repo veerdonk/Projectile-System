@@ -130,6 +130,12 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Projectile projectile = em.GetComponentData<Projectile>(entity);
             Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
 
+            if (runOnHit && hit.Protection == ProtectionLevel.Strong)
+            {
+                ReturnToPool(entity, projectile);
+                return;
+            }
+
             if (runOnHit)
             {
                 RunStage(recipe.OnHit, entity, hasHit: true, hit, dt: 0f);
@@ -150,10 +156,13 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
             RunStage(recipe.OnExpire, entity, hasHit: runOnHit, hit, dt: 0f);
 
-            int id = em.GetComponentData<Projectile>(entity).Id;
-            int recipeIndex = em.GetComponentData<Projectile>(entity).RecipeIndex;
-            Bridge.Pool.Return(recipeIndex, entity);
-            Bridge.Expired?.Invoke(new ExpireInfo { InstanceId = new ProjectileId(id) });
+            ReturnToPool(entity, em.GetComponentData<Projectile>(entity));
+        }
+
+        void ReturnToPool(Entity entity, in Projectile projectile)
+        {
+            Bridge.Pool.Return(projectile.RecipeIndex, entity);
+            Bridge.Expired?.Invoke(new ExpireInfo { InstanceId = new ProjectileId(projectile.Id) });
         }
 
         void ContinueAfterHit(Entity entity, in HitInfo hit)
@@ -225,7 +234,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         void FlushStatusApplied(in HitInfo hit)
         {
-            if (hit.Kind != HitKind.Target)
+            if (hit.Kind != HitKind.Target || hit.Protection != ProtectionLevel.None)
                 return;
 
             IReadOnlyList<IStatusEffect> effects = Bridge.ModifierContext.RequestedStatuses;
@@ -266,7 +275,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 for (int i = 0; i < overlapResults.Count; i++)
                 {
                     HitInfo areaHit = overlapResults[i];
-                    if (areaHit.Kind != HitKind.Target)
+                    if (areaHit.Kind != HitKind.Target || areaHit.Protection == ProtectionLevel.Strong)
                         continue;
                     if (ContainsTarget(seenAreaTargets, areaHit.TargetId))
                         continue;

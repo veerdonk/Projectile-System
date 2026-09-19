@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 16 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
+    /// Phase 17 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -18,6 +18,8 @@ namespace Sandbox
         public const string DummyBounceName = "DummyBounce";
         public const string DummySplashName = "DummySplash";
         public const string DummyMuzzleName = "DummyMuzzle";
+        public const string DummyBasicName = "DummyBasic";
+        public const string StrongShieldName = "StrongShield";
         public const string WallName = "WorldWall";
         public const string Wall2Name = "WorldWall2";
         const int PrewarmCount = 8;
@@ -30,6 +32,9 @@ namespace Sandbox
         static readonly Vector3 DummyBouncePosition = new Vector3(4f, 1f, 12f);
         static readonly Vector3 DummySplashPosition = new Vector3(2f, 1f, 8f);
         static readonly Vector3 DummyMuzzlePosition = new Vector3(2f, 1f, 0f);
+        static readonly Vector3 DummyBasicPosition = new Vector3(-2.5f, 1f, 8f);
+        static readonly Vector3 StrongShieldPosition = new Vector3(-4f, 1f, 4f);
+        static readonly Vector3 StrongShieldScale = Vector3.one * 2f;
         static readonly Vector3 WallPosition = new Vector3(8f, 2f, 8f);
         static readonly Vector3 WallScale = new Vector3(0.5f, 4f, 16f);
         static readonly Vector3 Wall2Position = new Vector3(-6f, 2f, 8f);
@@ -41,6 +46,9 @@ namespace Sandbox
         const float CannonballPitchDegrees = 35f;
         const float AimedCannonballSpeed = 32f;
         const int AimedCannonballSlot = 30;
+        const int BounceAtBasicSlot = 31;
+        const int StraightAtBasicSlot = 32;
+        const int AreaAtStrongSlot = 33;
         const int HudPageCount = 2;
         static readonly Color Dummy1Color = new Color(0.82f, 0.22f, 0.18f);
         static readonly Color Dummy2Color = new Color(0.85f, 0.45f, 0.15f);
@@ -48,6 +56,8 @@ namespace Sandbox
         static readonly Color DummyBounceColor = new Color(0.55f, 0.2f, 0.7f);
         static readonly Color DummySplashColor = new Color(0.2f, 0.55f, 0.85f);
         static readonly Color DummyMuzzleColor = new Color(0.15f, 0.7f, 0.55f);
+        static readonly Color DummyBasicColor = new Color(0.35f, 0.6f, 0.75f);
+        static readonly Color StrongShieldColor = new Color(0.9f, 0.75f, 0.2f);
 
         [SerializeField] SandboxSpawnPoint spawnPoint;
         [SerializeField] SandboxDummyTarget dummyTarget;
@@ -156,8 +166,8 @@ namespace Sandbox
                     hudPage = (hudPage + 1) % HudPageCount;
                 if (hudPage == 0)
                     SelectRecipeFromPage0(keyboard);
-                else if (keyboard.digit1Key.wasPressedThisFrame)
-                    selectedRecipe = AimedCannonballSlot;
+                else
+                    SelectRecipeFromPage1(keyboard);
                 if (keyboard.spaceKey.wasPressedThisFrame)
                     Fire(SelectedRecipe());
             }
@@ -181,8 +191,8 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 16 (ballistic aim)");
-            GUILayout.Label("Space fires the selected Recipe. N pages the fire list. Page 1: 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, V, B. Page 2: 1 aims at DummyTarget. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 17 (projectile protection)");
+            GUILayout.Label("Space fires the selected Recipe. N pages the fire list. Page 1: 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, V, B. Page 2: 1 aims at DummyTarget, 2 Bounce at Basic, 3 Straight at Basic, 4 AreaEffect at Strong. - / + changes n for the next shot.");
             DrawHudPageRow();
             if (hudPage == 0)
                 DrawPage0FireButtons();
@@ -337,6 +347,18 @@ namespace Sandbox
             ScaleRow($"Multiply spread {multiplySpread:0.##}m", ref multiplySpread, 0f, 8f, 0.5f);
         }
 
+        void SelectRecipeFromPage1(Keyboard keyboard)
+        {
+            if (keyboard.digit1Key.wasPressedThisFrame)
+                selectedRecipe = AimedCannonballSlot;
+            if (keyboard.digit2Key.wasPressedThisFrame)
+                selectedRecipe = BounceAtBasicSlot;
+            if (keyboard.digit3Key.wasPressedThisFrame)
+                selectedRecipe = StraightAtBasicSlot;
+            if (keyboard.digit4Key.wasPressedThisFrame)
+                selectedRecipe = AreaAtStrongSlot;
+        }
+
         void DrawPage1FireButtons()
         {
             FireButtonWithScale(
@@ -352,6 +374,9 @@ namespace Sandbox
             if (GUILayout.Button("Toggle", GUILayout.Width(72), GUILayout.Height(28)))
                 aimedCannonballHighArc = !aimedCannonballHighArc;
             GUILayout.EndHorizontal();
+            FireButton("Bounce at Basic", BounceAtBasicSlot, bounceRecipe);
+            FireButton("Straight at Basic", StraightAtBasicSlot, straightRecipe);
+            FireButton("AreaEffect at Strong", AreaAtStrongSlot, onHitAreaRecipe);
         }
 
         void FireButton(string title, int slot, Recipe recipe)
@@ -598,6 +623,12 @@ namespace Sandbox
                     return gravityCannonballRecipe;
                 case AimedCannonballSlot:
                     return aimedCannonballRecipe;
+                case BounceAtBasicSlot:
+                    return bounceRecipe;
+                case StraightAtBasicSlot:
+                    return straightRecipe;
+                case AreaAtStrongSlot:
+                    return onHitAreaRecipe;
                 default:
                     return straightRecipe;
             }
@@ -628,8 +659,27 @@ namespace Sandbox
                 return true;
             }
 
+            if (selectedRecipe == BounceAtBasicSlot || selectedRecipe == StraightAtBasicSlot)
+            {
+                direction = DirectionToward(origin, DummyBasicPosition);
+                return true;
+            }
+
+            if (selectedRecipe == AreaAtStrongSlot)
+            {
+                direction = DirectionToward(origin, StrongShieldPosition);
+                return true;
+            }
+
             direction = FireDirection(recipe);
             return true;
+        }
+
+        static Vector3 DirectionToward(Vector3 origin, Vector3 target)
+        {
+            Vector3 delta = target - origin;
+            delta.y = 0f;
+            return delta.sqrMagnitude > 1e-12f ? delta.normalized : Vector3.forward;
         }
 
         Vector3 FireDirection(Recipe recipe)
@@ -951,6 +1001,8 @@ namespace Sandbox
             created |= EnsureDummy(root, DummyBounceName, DummyBouncePosition, 4, DummyBounceColor);
             created |= EnsureDummy(root, DummySplashName, DummySplashPosition, 5, DummySplashColor);
             created |= EnsureDummy(root, DummyMuzzleName, DummyMuzzlePosition, 6, DummyMuzzleColor);
+            created |= EnsureDummy(root, DummyBasicName, DummyBasicPosition, 7, DummyBasicColor, ProtectionLevel.Basic);
+            created |= EnsureShield(root, StrongShieldName, StrongShieldPosition, StrongShieldScale, StrongShieldColor);
             created |= EnsureWall(root, WallName, WallPosition, WallScale);
             created |= EnsureWall(root, Wall2Name, Wall2Position, Wall2Scale);
 
@@ -976,7 +1028,13 @@ namespace Sandbox
             return created;
         }
 
-        static bool EnsureDummy(Transform root, string name, Vector3 position, int targetId, Color color)
+        static bool EnsureDummy(
+            Transform root,
+            string name,
+            Vector3 position,
+            int targetId,
+            Color color,
+            ProtectionLevel protection = ProtectionLevel.None)
         {
             Transform existing = root.Find(name);
             bool created = false;
@@ -993,7 +1051,29 @@ namespace Sandbox
 
             existing.localPosition = position;
             var target = existing.GetComponent<SandboxDummyTarget>();
-            target?.Configure(targetId);
+            target?.Configure(targetId, 10f, protection);
+            Tint(existing.gameObject, color);
+            return created;
+        }
+
+        static bool EnsureShield(Transform root, string name, Vector3 position, Vector3 scale, Color color)
+        {
+            Transform existing = root.Find(name);
+            bool created = false;
+            if (existing == null)
+            {
+                created = true;
+                GameObject shield = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                shield.name = name;
+                shield.transform.SetParent(root, false);
+                shield.AddComponent<SandboxProjectileProtection>();
+                existing = shield.transform;
+            }
+
+            existing.localPosition = position;
+            existing.localScale = scale;
+            var protection = existing.GetComponent<SandboxProjectileProtection>();
+            protection?.Configure(ProtectionLevel.Strong);
             Tint(existing.gameObject, color);
             return created;
         }
@@ -1009,6 +1089,9 @@ namespace Sandbox
                 Tint(worldWall.gameObject, new Color(0.45f, 0.45f, 0.5f));
             if (worldWall2 != null)
                 Tint(worldWall2.gameObject, new Color(0.45f, 0.45f, 0.5f));
+            Transform shield = transform.Find(StrongShieldName);
+            if (shield != null)
+                Tint(shield.gameObject, StrongShieldColor);
         }
 
         public static void AimCameraAtLane()

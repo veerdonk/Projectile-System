@@ -93,6 +93,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 if (damageable == null)
                     continue;
 
+                ProtectionLevel protection = ReadProtection(collider);
+                if (protection == ProtectionLevel.Strong)
+                    continue;
+
                 Vector3 point = collider.ClosestPoint(center);
                 Vector3 delta = point - center;
                 Vector3 normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up;
@@ -100,6 +104,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 {
                     InstanceId = instanceId,
                     Kind = HitKind.Target,
+                    Protection = protection,
                     TargetId = damageable.TargetId,
                     Point = point,
                     Normal = normal
@@ -238,7 +243,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 info.Kind = HitKind.World;
             }
 
+            info.Protection = ReadProtection(collider);
             return info;
+        }
+
+        static ProtectionLevel ReadProtection(Collider collider)
+        {
+            var protection = collider.GetComponentInParent<IProjectileProtection>();
+            return protection != null ? protection.Level : ProtectionLevel.None;
         }
 
         static Vector3 SurfaceNormal(

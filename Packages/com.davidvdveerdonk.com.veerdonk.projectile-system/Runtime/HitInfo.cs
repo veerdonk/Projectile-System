@@ -17,6 +17,17 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         Area
     }
 
+    /// <summary>
+    /// Collider marker level from <see cref="IProjectileProtection"/>. None is an unmarked collider.
+    /// Basic still runs OnHit; Strong eats the instance.
+    /// </summary>
+    public enum ProtectionLevel
+    {
+        None,
+        Basic,
+        Strong
+    }
+
     /// <summary>Opaque sandbox/game id stored on a <see cref="HitKind.Target"/> hit.</summary>
     public readonly struct TargetId : IEquatable<TargetId>
     {
@@ -46,6 +57,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public ProjectileId InstanceId;
         public HitKind Kind;
         public HitSource Source;
+        public ProtectionLevel Protection;
         public Vector3 Point;
         public Vector3 Normal;
         public TargetId TargetId;
