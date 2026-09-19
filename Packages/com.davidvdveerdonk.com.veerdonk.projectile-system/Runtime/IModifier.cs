@@ -41,6 +41,12 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public float Speed { get; set; }
 
+        /// <summary>
+        /// Instance gravity in m/s², copied from <see cref="Recipe.Gravity"/> at spawn.
+        /// Burst applies it each tick; a later scale modifier writes this copy, not the Recipe.
+        /// </summary>
+        public float Gravity { get; set; }
+
         public float RemainingLifetime { get; set; }
 
         public int RemainingPierce { get; set; }
@@ -198,6 +204,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Vector3 position,
             Vector3 velocity,
             float speed,
+            float gravity,
             float remainingLifetime,
             int remainingPierce,
             int remainingBounce,
@@ -220,6 +227,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Position = position;
             Velocity = velocity;
             Speed = speed;
+            Gravity = gravity;
             RemainingLifetime = remainingLifetime;
             RemainingPierce = remainingPierce;
             RemainingBounce = remainingBounce;
@@ -245,6 +253,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
         {
             projectile.Speed = Speed;
+            projectile.Gravity = Gravity;
             projectile.Radius = Radius;
             projectile.RemainingLifetime = RemainingLifetime;
             projectile.RemainingPierce = RemainingPierce;

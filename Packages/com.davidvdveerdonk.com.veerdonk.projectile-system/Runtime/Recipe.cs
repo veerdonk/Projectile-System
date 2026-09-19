@@ -13,6 +13,13 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public float LifetimeSeconds { get; set; }
 
+        /// <summary>
+        /// Downward acceleration in m/s². Default 0 is a straight shot. Copied onto the instance at spawn.
+        /// Burst integrates it each tick using world down (0,-1,0), not <c>Physics.gravity</c>.
+        /// Values &lt;= 0 keep the straight <c>position + velocity * dt</c> path.
+        /// </summary>
+        public float Gravity { get; set; }
+
         /// <summary>Hit amount copied onto the instance and onto <see cref="HitInfo"/>. The package never applies HP.</summary>
         public float Damage { get; set; } = 1f;
 
