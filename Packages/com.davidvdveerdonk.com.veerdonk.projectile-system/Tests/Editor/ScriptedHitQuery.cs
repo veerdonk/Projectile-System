@@ -11,11 +11,17 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         bool filterInstance;
         ProjectileId queuedInstance;
 
-        public void Queue(HitKind kind, Vector3 point, Vector3 normal, TargetId targetId = default)
+        public void Queue(
+            HitKind kind,
+            Vector3 point,
+            Vector3 normal,
+            TargetId targetId = default,
+            ProtectionLevel protection = ProtectionLevel.None)
         {
             queued = new HitInfo
             {
                 Kind = kind,
+                Protection = protection,
                 Point = point,
                 Normal = normal,
                 TargetId = targetId
@@ -30,20 +36,25 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             HitKind kind,
             Vector3 point,
             Vector3 normal,
-            TargetId targetId = default)
+            TargetId targetId = default,
+            ProtectionLevel protection = ProtectionLevel.None)
         {
-            Queue(kind, point, normal, targetId);
+            Queue(kind, point, normal, targetId, protection);
             filterInstance = true;
             queuedInstance = instanceId;
         }
 
-        public void AddOverlapTarget(TargetId targetId, Vector3 position)
+        public void AddOverlapTarget(
+            TargetId targetId,
+            Vector3 position,
+            ProtectionLevel protection = ProtectionLevel.None)
         {
             overlapBodies.Add(new OverlapBody
             {
                 Kind = HitKind.Target,
                 TargetId = targetId,
-                Position = position
+                Position = position,
+                Protection = protection
             });
         }
 
@@ -88,7 +99,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             for (int i = 0; i < overlapBodies.Count; i++)
             {
                 OverlapBody body = overlapBodies[i];
-                if (body.Kind != HitKind.Target)
+                if (body.Kind != HitKind.Target || body.Protection == ProtectionLevel.Strong)
                     continue;
 
                 Vector3 delta = body.Position - center;
@@ -99,6 +110,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
                 {
                     InstanceId = instanceId,
                     Kind = HitKind.Target,
+                    Protection = body.Protection,
                     TargetId = body.TargetId,
                     Point = body.Position,
                     Normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up
@@ -115,6 +127,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             public HitKind Kind;
             public TargetId TargetId;
             public Vector3 Position;
+            public ProtectionLevel Protection;
         }
     }
 }

@@ -3,7 +3,8 @@ using System;
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
     /// <summary>
-    /// <see cref="HitKind.Target"/> hits consume remaining pierce. Despawn is cancelled while remaining is greater than 0.
+    /// <see cref="HitKind.Target"/> hits and <see cref="ProtectionLevel.Basic"/> hits consume remaining pierce.
+    /// Basic still consumes when <see cref="HitInfo.Kind"/> is World. Despawn is cancelled while remaining is greater than 0.
     /// </summary>
     public sealed class Pierce : IModifier
     {
@@ -18,7 +19,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
-            if (!context.HasHit || context.Hit.Kind != HitKind.Target)
+            if (!context.HasHit)
+                return;
+            if (context.Hit.Kind != HitKind.Target && context.Hit.Protection != ProtectionLevel.Basic)
                 return;
             if (context.RemainingPierce <= 0)
                 return;

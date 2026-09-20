@@ -5,11 +5,13 @@ using UnityEngine;
 namespace Sandbox
 {
     /// <summary>
-    /// Sandbox cube that implements <see cref="IDamageable"/> and <see cref="IStatusReceiver"/>.
-    /// HP subtracts <see cref="HitInfo.Damage"/> from <see cref="IProjectileWorld.Hit"/>; status comes from the lab
-    /// mapping <see cref="IProjectileWorld.StatusApplied"/>.
+    /// Sandbox cube that implements <see cref="IDamageable"/>, <see cref="IStatusReceiver"/>,
+    /// and optional <see cref="IProjectileProtection"/>.
+    /// HP subtracts <see cref="HitInfo.Damage"/> from <see cref="IProjectileWorld.Hit"/> when
+    /// <see cref="HitInfo.Protection"/> is None; status comes from the lab mapping
+    /// <see cref="IProjectileWorld.StatusApplied"/>.
     /// </summary>
-    public sealed class SandboxDummyTarget : MonoBehaviour, IDamageable, IStatusReceiver
+    public sealed class SandboxDummyTarget : MonoBehaviour, IDamageable, IStatusReceiver, IProjectileProtection
     {
         static readonly Color StatusFlashColor = new Color(0.15f, 0.9f, 0.28f);
         const float StatusFlashSeconds = 0.6f;
@@ -17,6 +19,7 @@ namespace Sandbox
         [SerializeField] float maxHp = 10f;
         [SerializeField] float hp = 10f;
         [SerializeField] int targetId = 1;
+        [SerializeField] ProtectionLevel protection = ProtectionLevel.None;
 
         IProjectileWorld subscribed;
         string lastStatusId = "";
@@ -30,11 +33,14 @@ namespace Sandbox
         public string LastStatusId => lastStatusId;
         public TargetId TargetId => new TargetId(targetId);
 
-        public void Configure(int id, float maxHpValue = 10f)
+        public ProtectionLevel Level => protection;
+
+        public void Configure(int id, float maxHpValue = 10f, ProtectionLevel protectionLevel = ProtectionLevel.None)
         {
             targetId = id;
             maxHp = maxHpValue;
             hp = maxHpValue;
+            protection = protectionLevel;
         }
 
         public void Bind(IProjectileWorld world)
@@ -73,6 +79,8 @@ namespace Sandbox
             if (hit.Kind != HitKind.Target)
                 return;
             if (hit.TargetId != TargetId)
+                return;
+            if (hit.Protection != ProtectionLevel.None)
                 return;
 
             hp = Mathf.Max(0f, hp - hit.Damage);
