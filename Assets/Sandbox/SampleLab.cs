@@ -91,7 +91,7 @@ namespace Sandbox
             }
 
             GUILayout.Space(6f);
-            SampleRecipeSheet.Draw(working);
+            SampleRecipeSheet.Draw(working, presets);
             GUILayout.EndArea();
         }
 

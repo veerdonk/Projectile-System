@@ -8,14 +8,14 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - Default Play Mode scene: `Assets/Scenes/Sandbox.unity` (phase 21 sample). `SampleScene.unity` is unused lighting leftover used only as the rebuild template
 - Package: `Packages/com.davidvdveerdonk.com.veerdonk.projectile-system`
 
-## Sample layout (phase 21)
+## Sample layout (phase 21 / 21.b)
 
 - Ground plane and a yard of dummies/walls, viewed from behind and above the turret (not the old side-on lane)
 - Turret: sphere body + cylinder barrel, no PhysX collider. Shots spawn at the barrel tip along flattened forward
 - Mouse aim: camera ray vs the ground plane (Y = 0); turret yaws only. Pointer over the on-screen sheet does not aim or fire
 - Fire: click in the world, on-screen **Fire**, or Space. One driver `Tick`s
 - Preset dropdown of `RecipeAsset`s. Play Mode edits a working `Recipe` from `ToRecipe()`; the asset on disk does not change. Switching preset or **Reset** copies again
-- Recipe sheet: base stats plus the six lists (magnitudes editable; no add/remove). Child Recipes are a name
+- Recipe sheet: base stats plus the six lists with **Add** / **Remove**. Magnitudes stay editable. Add menus are `[ModifierStage]`-filtered (Pierce is OnHit, not OnSpawn). Multiply child / Multicast extra pick a sample preset (`ToRecipe()`). Child Recipes are a name, not a nested editor. Working copy only — the `RecipeAsset` does not change
 - **Reset:** dummy HP/status, turret yaw, working copy, `Dispose` + new `ProjectileWorld` (clears live shots and the pool)
 - Colored dummy cubes and status flash. Tiny HUD: active count, pool available, DummyTarget HP/status
 - Yard still has a pierce line of dummies, a bounce wall, DummyBounce off-lane, splash dummy, muzzle dummy, Basic dummy, Strong shield, and a second wall

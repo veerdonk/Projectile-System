@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Davidvdveerdonk.ComVeerdonkProjectileSystem;
 using UnityEngine;
@@ -8,13 +9,17 @@ namespace Sandbox
     {
         static readonly Dictionary<string, string> Buffer = new Dictionary<string, string>();
         static Vector2 scroll;
+        static RecipeStage? addMenuStage;
+        static string childMenuKey;
 
         public static void ClearBuffers()
         {
             Buffer.Clear();
+            addMenuStage = null;
+            childMenuKey = null;
         }
 
-        public static void Draw(Recipe recipe)
+        public static void Draw(Recipe recipe, SampleLab.Preset[] presets)
         {
             if (recipe == null)
             {
@@ -34,30 +39,84 @@ namespace Sandbox
             recipe.Gravity = FloatField("grav", "Gravity", recipe.Gravity);
             recipe.PresentationId = TextField("pres", "Presentation id", recipe.PresentationId ?? "");
 
-            DrawList("OnSpawn", recipe.OnSpawn);
-            DrawList("OnTravel", recipe.OnTravel);
-            DrawList("OnTick", recipe.OnTick);
-            DrawList("OnInterval", recipe.OnInterval);
-            DrawList("OnHit", recipe.OnHit);
-            DrawList("OnExpire", recipe.OnExpire);
+            DrawList("OnSpawn", recipe, RecipeStage.OnSpawn, presets);
+            DrawList("OnTravel", recipe, RecipeStage.OnTravel, presets);
+            DrawList("OnTick", recipe, RecipeStage.OnTick, presets);
+            DrawList("OnInterval", recipe, RecipeStage.OnInterval, presets);
+            DrawList("OnHit", recipe, RecipeStage.OnHit, presets);
+            DrawList("OnExpire", recipe, RecipeStage.OnExpire, presets);
             GUILayout.EndScrollView();
         }
 
-        static void DrawList(string title, IModifier[] list)
+        static void DrawList(string title, Recipe recipe, RecipeStage stage, SampleLab.Preset[] presets)
         {
             GUILayout.Space(4f);
+            GUILayout.BeginHorizontal();
             GUILayout.Label(title);
-            if (list == null || list.Length == 0)
+            if (GUILayout.Button("Add", GUILayout.Width(48f), GUILayout.Height(22f)))
+            {
+                addMenuStage = addMenuStage == stage ? null : stage;
+                childMenuKey = null;
+            }
+
+            GUILayout.EndHorizontal();
+
+            if (addMenuStage == stage)
+                DrawAddMenu(recipe, stage, presets);
+
+            IModifier[] list = SampleModifierCatalog.GetList(recipe, stage);
+            if (list.Length == 0)
             {
                 GUILayout.Label("  —");
                 return;
             }
 
             for (int i = 0; i < list.Length; i++)
-                DrawModifier(title + i, list[i]);
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.BeginVertical();
+                DrawModifier(title + i, list[i], recipe, stage, i, presets);
+                GUILayout.EndVertical();
+                if (GUILayout.Button("Remove", GUILayout.Width(64f), GUILayout.Height(22f)))
+                {
+                    SampleModifierCatalog.RemoveAt(recipe, stage, i);
+                    GUILayout.EndHorizontal();
+                    return;
+                }
+
+                GUILayout.EndHorizontal();
+            }
         }
 
-        static void DrawModifier(string key, IModifier modifier)
+        static void DrawAddMenu(Recipe recipe, RecipeStage stage, SampleLab.Preset[] presets)
+        {
+            Type[] types = SampleModifierCatalog.ModifiersFor(stage);
+            if (types.Length == 0)
+            {
+                GUILayout.Label("  No modifiers for this stage");
+                return;
+            }
+
+            Recipe defaultChild = SampleModifierCatalog.DefaultChild(presets);
+            for (int i = 0; i < types.Length; i++)
+            {
+                Type type = types[i];
+                if (!GUILayout.Button(type.Name, GUILayout.Height(22f)))
+                    continue;
+
+                SampleModifierCatalog.Append(recipe, stage, SampleModifierCatalog.Create(type, defaultChild, recipe));
+                addMenuStage = null;
+                return;
+            }
+        }
+
+        static void DrawModifier(
+            string key,
+            IModifier modifier,
+            Recipe recipe,
+            RecipeStage stage,
+            int index,
+            SampleLab.Preset[] presets)
         {
             switch (modifier)
             {
@@ -101,11 +160,10 @@ namespace Sandbox
                     GUILayout.Label($"  ApplyStatus {EffectName(apply.Effect)}");
                     break;
                 case Multiply multiply:
-                    DrawMultiply(key, multiply);
+                    DrawMultiply(key, multiply, recipe, stage, index, presets);
                     break;
                 case Multicast multicast:
-                    multicast.Count = IntStepper(key, "Multicast", multicast.Count, 1, 16);
-                    GUILayout.Label($"    extra {RecipeName(multicast.ExtraRecipe, multicast.ExtraAsset)}");
+                    DrawMulticast(key, multicast, recipe, stage, index, presets);
                     break;
                 case AreaEffect area:
                     DrawArea(key, area);
@@ -146,7 +204,13 @@ namespace Sandbox
             return next;
         }
 
-        static void DrawMultiply(string key, Multiply multiply)
+        static void DrawMultiply(
+            string key,
+            Multiply multiply,
+            Recipe recipe,
+            RecipeStage stage,
+            int index,
+            SampleLab.Preset[] presets)
         {
             multiply.Count = IntStepper(key + "n", "Multiply", multiply.Count, 0, 16);
             multiply.Spread = FloatField(key + "s", "  Spread m", multiply.Spread);
@@ -155,7 +219,71 @@ namespace Sandbox
             if (GUILayout.Button(PatternName(multiply.Pattern), GUILayout.Height(22f)))
                 multiply.Pattern = NextPattern(multiply.Pattern);
             GUILayout.EndHorizontal();
-            GUILayout.Label($"    child {RecipeName(multiply.ChildRecipe, multiply.ChildAsset)}");
+            DrawChildPicker(
+                key + "c",
+                "  Child",
+                RecipeName(multiply.ChildRecipe, multiply.ChildAsset),
+                presets,
+                chosen => SampleModifierCatalog.ReplaceAt(
+                    recipe,
+                    stage,
+                    index,
+                    new Multiply(multiply.Count, chosen, multiply.Spread, multiply.Pattern)));
+        }
+
+        static void DrawMulticast(
+            string key,
+            Multicast multicast,
+            Recipe recipe,
+            RecipeStage stage,
+            int index,
+            SampleLab.Preset[] presets)
+        {
+            multicast.Count = IntStepper(key, "Multicast", multicast.Count, 1, 16);
+            DrawChildPicker(
+                key + "e",
+                "  Extra",
+                RecipeName(multicast.ExtraRecipe, multicast.ExtraAsset),
+                presets,
+                chosen => SampleModifierCatalog.ReplaceAt(
+                    recipe,
+                    stage,
+                    index,
+                    new Multicast(multicast.Count, chosen)));
+        }
+
+        static void DrawChildPicker(
+            string key,
+            string label,
+            string current,
+            SampleLab.Preset[] presets,
+            System.Action<Recipe> choose)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, GUILayout.Width(140f));
+            if (GUILayout.Button(current, GUILayout.Height(22f)))
+            {
+                childMenuKey = childMenuKey == key ? null : key;
+                addMenuStage = null;
+            }
+
+            GUILayout.EndHorizontal();
+            if (childMenuKey != key || presets == null)
+                return;
+
+            for (int i = 0; i < presets.Length; i++)
+            {
+                SampleLab.Preset preset = presets[i];
+                if (preset == null || preset.asset == null)
+                    continue;
+                string name = string.IsNullOrEmpty(preset.label) ? preset.asset.name : preset.label;
+                if (!GUILayout.Button(name, GUILayout.Height(22f)))
+                    continue;
+
+                choose(preset.asset.ToRecipe());
+                childMenuKey = null;
+                return;
+            }
         }
 
         static int IntStepper(string key, string label, int value, int min, int max)
