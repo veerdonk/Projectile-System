@@ -28,8 +28,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         int nextId = 1;
         bool disposed;
 
-        public ProjectileWorld(Transform poolParent = null, IProjectileViewFactory viewFactory = null)
-            : this(new PhysicsHitQuery(), createViews: true, poolParent, seed: 1u, viewFactory)
+        public ProjectileWorld(
+            Transform poolParent = null,
+            IProjectileViewFactory viewFactory = null,
+            IGroundFieldViewFactory groundFieldViewFactory = null)
+            : this(new PhysicsHitQuery(), createViews: true, poolParent, seed: 1u, viewFactory, groundFieldViewFactory)
         {
         }
 
@@ -38,12 +41,22 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         {
         }
 
+        internal ProjectileWorld(
+            IHitQuery hitQuery,
+            bool createViews,
+            IGroundFieldViewFactory groundFieldViewFactory,
+            uint seed = 1u)
+            : this(hitQuery, createViews, null, seed, null, groundFieldViewFactory)
+        {
+        }
+
         ProjectileWorld(
             IHitQuery hitQuery,
             bool createViews,
             Transform poolParent,
             uint seed = 1u,
-            IProjectileViewFactory viewFactory = null)
+            IProjectileViewFactory viewFactory = null,
+            IGroundFieldViewFactory groundFieldViewFactory = null)
         {
             this.hitQuery = hitQuery ?? throw new ArgumentNullException(nameof(hitQuery));
             modifierContext = new ModifierContext(pendingSpawns, homingCatalog, seed);
@@ -52,7 +65,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 createViews,
                 poolParent,
                 info => Hit?.Invoke(info),
-                info => StatusApplied?.Invoke(info));
+                info => StatusApplied?.Invoke(info),
+                groundFieldViewFactory);
             ecsWorld = new World("ProjectileSimulation");
             pool = new ProjectilePool(ecsWorld, poolParent, createViews, viewFactory);
 

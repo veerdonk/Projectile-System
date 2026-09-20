@@ -51,11 +51,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
     sealed class GroundFieldSet : IDisposable
     {
-        const float DiskHalfHeight = 0.025f;
-
         readonly IHitQuery hitQuery;
         readonly bool createViews;
         readonly Transform poolParent;
+        readonly IGroundFieldViewFactory viewFactory;
         readonly Action<HitInfo> hit;
         readonly Action<StatusInfo> statusApplied;
         readonly List<LiveField> fields = new List<LiveField>();
@@ -70,11 +69,13 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             bool createViews,
             Transform poolParent,
             Action<HitInfo> hit,
-            Action<StatusInfo> statusApplied)
+            Action<StatusInfo> statusApplied,
+            IGroundFieldViewFactory viewFactory = null)
         {
             this.hitQuery = hitQuery ?? throw new ArgumentNullException(nameof(hitQuery));
             this.createViews = createViews;
             this.poolParent = poolParent;
+            this.viewFactory = createViews ? viewFactory ?? new PrimitiveGroundFieldViewFactory() : null;
             this.hit = hit;
             this.statusApplied = statusApplied;
         }
@@ -206,27 +207,27 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         ProjectileView RentView(Vector3 center, float radius)
         {
-            ProjectileView view = viewPool.Count > 0 ? viewPool.Pop() : CreateView();
+            ProjectileView view = viewPool.Count > 0 ? viewPool.Pop() : CreateView(radius);
             Transform transform = view.transform;
             transform.position = center;
             transform.rotation = Quaternion.identity;
-            transform.localScale = new Vector3(radius * 2f, DiskHalfHeight, radius * 2f);
+            if (view.ScaleToRadius)
+                transform.localScale = new Vector3(
+                    radius * 2f,
+                    PrimitiveGroundFieldViewFactory.DiskHalfHeight,
+                    radius * 2f);
             view.gameObject.SetActive(true);
             return view;
         }
 
-        ProjectileView CreateView()
+        ProjectileView CreateView(float radius)
         {
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            go.name = "GroundField";
-            if (poolParent != null)
-                go.transform.SetParent(poolParent, false);
-
-            var view = go.GetComponent<ProjectileView>();
+            ProjectileView view = viewFactory.Create(radius, poolParent);
             if (view == null)
-                view = go.AddComponent<ProjectileView>();
-            view.ScaleToRadius = false;
-            StripColliders(go);
+                throw new InvalidOperationException("IGroundFieldViewFactory.Create returned null.");
+
+            view.gameObject.name = "GroundField";
+            StripColliders(view.gameObject);
             view.Release();
             allViews.Add(view);
             return view;

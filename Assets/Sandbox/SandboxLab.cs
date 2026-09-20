@@ -75,6 +75,7 @@ namespace Sandbox
         [SerializeField] Transform worldWall2;
         [SerializeField] Transform requestMarker;
         [SerializeField] GameObject cubeViewPrefab;
+        [SerializeField] GameObject groundFieldViewPrefab;
 
         SandboxDummyTarget[] dummies = System.Array.Empty<SandboxDummyTarget>();
         ProjectileWorld world;
@@ -824,7 +825,7 @@ namespace Sandbox
 
             var poolRoot = new GameObject("ProjectilePool");
             poolRoot.transform.SetParent(transform, false);
-            world = new ProjectileWorld(poolRoot.transform, CreateViewFactory());
+            world = new ProjectileWorld(poolRoot.transform, CreateViewFactory(), CreateGroundFieldViewFactory());
             world.Prewarm(straightRecipe, PrewarmCount);
             world.Prewarm(lifetimeRecipe, PrewarmCount);
             world.Prewarm(onHitRecipe, PrewarmCount);
@@ -981,6 +982,14 @@ namespace Sandbox
             {
                 ["cube"] = cubePrefab
             });
+        }
+
+        IGroundFieldViewFactory CreateGroundFieldViewFactory()
+        {
+            if (groundFieldViewPrefab == null)
+                return null;
+
+            return new PrefabGroundFieldViewFactory(groundFieldViewPrefab);
         }
 
         GameObject CreateRuntimeViewPrefab(PrimitiveType primitive, string objectName)

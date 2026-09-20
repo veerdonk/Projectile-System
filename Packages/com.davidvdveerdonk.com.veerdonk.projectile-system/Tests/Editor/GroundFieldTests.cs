@@ -379,6 +379,48 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             }
         }
 
+        [Test]
+        public void CreateViewsFalse_DoesNotCallGroundFieldFactory()
+        {
+            var factory = new CountingGroundFieldViewFactory();
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "ground-noview",
+                speed: 20f,
+                lifetime: 5f,
+                onTravel: new IModifier[] { new GroundField(2f, 2f, 3f, intervalSeconds: 0.5f) });
+            var hits = new ScriptedHitQuery();
+            var world = new ProjectileWorld(hits, createViews: false, factory);
+            using (world)
+            {
+                world.Prewarm(recipe, 1);
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                Assert.AreEqual(0, factory.CreateCount);
+            }
+        }
+
+        [Test]
+        public void NullPrefab_FallsBackToPrimitiveDisk()
+        {
+            var factory = new PrefabGroundFieldViewFactory(null);
+            ProjectileView view = factory.Create(2f, null);
+            try
+            {
+                Assert.IsTrue(view.ScaleToRadius);
+                Assert.AreEqual(4f, view.transform.localScale.x, 1e-4f);
+                Assert.AreEqual(4f, view.transform.localScale.z, 1e-4f);
+            }
+            finally
+            {
+                if (view != null)
+                    Object.DestroyImmediate(view.gameObject);
+            }
+        }
+
         static int CountArea(List<HitInfo> seen)
         {
             int count = 0;
@@ -389,6 +431,17 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             }
 
             return count;
+        }
+
+        sealed class CountingGroundFieldViewFactory : IGroundFieldViewFactory
+        {
+            public int CreateCount;
+
+            public ProjectileView Create(float radius, Transform poolParent)
+            {
+                CreateCount++;
+                return null;
+            }
         }
     }
 }
