@@ -38,7 +38,7 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
 - `GroundField` plants a disk owned by `ProjectileWorld`, not an ECS instance. Pulses use `IHitQuery.OverlapDisk` (XZ distance). `intervalSeconds <= 0` never pulses; `radius` or `lifetimeSeconds` `<= 0` plants nothing. Field despawn does not raise `Expired`.
 - v1 snaps plant Y to `0` (world ground plane) so the view is on the floor, not at dummy chest height. Terrain snap is Later in `docs/PHASES.md`.
-- Views come from `IGroundFieldViewFactory` (default thin cylinder). Pass `PrefabGroundFieldViewFactory` (or your own) as the third `ProjectileWorld` argument. Prefabs keep authored scale. `createViews: false` never calls the factory. No `PresentationId` on the modifier.
+- Views come from `IGroundFieldViewFactory`. `GroundField.PresentationId` selects the mesh the way `Recipe.PresentationId` does. `PrefabGroundFieldViewFactory` maps id → prefab; unknown ids use the primitive cylinder. Views are pooled per id. Sandbox maps `"disk"` from the optional Ground Field View Prefab slot.
 - Page 2 key `7` OnHit GroundField (radius 2.25 so DummyTarget + DummySplash tick, DummyBasic stays out). Key `8` OnExpire lifetime-only (dies short of the dummy). Key `9` OnHit + `DummyStatusEffect`.
 - Phase 20 is the Recipe editor — do not start it until asked.
 

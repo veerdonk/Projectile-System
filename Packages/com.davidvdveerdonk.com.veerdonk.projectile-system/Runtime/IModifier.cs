@@ -135,10 +135,18 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             float lifetimeSeconds,
             float damage,
             IStatusEffect status,
-            float intervalSeconds)
+            float intervalSeconds,
+            string presentationId = null)
         {
             requestedGroundFields.Add(
-                new GroundFieldPlantRequest(center, radius, lifetimeSeconds, damage, status, intervalSeconds));
+                new GroundFieldPlantRequest(
+                    center,
+                    radius,
+                    lifetimeSeconds,
+                    damage,
+                    status,
+                    intervalSeconds,
+                    presentationId));
         }
 
         /// <summary>Skip the Direct contact <see cref="IProjectileWorld.Hit"/> after this OnHit list.</summary>
@@ -324,7 +332,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             float lifetimeSeconds,
             float damage,
             IStatusEffect status,
-            float intervalSeconds)
+            float intervalSeconds,
+            string presentationId)
         {
             Center = center;
             Radius = radius;
@@ -332,6 +341,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Damage = damage;
             Status = status;
             IntervalSeconds = intervalSeconds;
+            PresentationId = presentationId;
         }
 
         public Vector3 Center { get; }
@@ -345,5 +355,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public IStatusEffect Status { get; }
 
         public float IntervalSeconds { get; }
+
+        public string PresentationId { get; }
     }
 }

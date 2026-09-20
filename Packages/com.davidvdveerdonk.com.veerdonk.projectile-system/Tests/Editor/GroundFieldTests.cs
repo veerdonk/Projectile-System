@@ -404,10 +404,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
-        public void NullPrefab_FallsBackToPrimitiveDisk()
+        public void UnknownPresentationId_FallsBackToPrimitiveDisk()
         {
-            var factory = new PrefabGroundFieldViewFactory(null);
-            ProjectileView view = factory.Create(2f, null);
+            var factory = new PrefabGroundFieldViewFactory(new Dictionary<string, GameObject>());
+            ProjectileView view = factory.Create(2f, "missing", null);
             try
             {
                 Assert.IsTrue(view.ScaleToRadius);
@@ -418,6 +418,30 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             {
                 if (view != null)
                     Object.DestroyImmediate(view.gameObject);
+            }
+        }
+
+        [Test]
+        public void KnownPresentationId_KeepsAuthoredPrefabScale()
+        {
+            GameObject prefab = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            prefab.transform.localScale = new Vector3(3f, 0.05f, 3f);
+            prefab.SetActive(false);
+            var factory = new PrefabGroundFieldViewFactory(new Dictionary<string, GameObject>
+            {
+                ["puddle"] = prefab
+            });
+            ProjectileView view = factory.Create(2f, "puddle", null);
+            try
+            {
+                Assert.IsFalse(view.ScaleToRadius);
+                Assert.AreEqual(new Vector3(3f, 0.05f, 3f), view.transform.localScale);
+            }
+            finally
+            {
+                if (view != null)
+                    Object.DestroyImmediate(view.gameObject);
+                Object.DestroyImmediate(prefab);
             }
         }
 
@@ -437,7 +461,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         {
             public int CreateCount;
 
-            public ProjectileView Create(float radius, Transform poolParent)
+            public ProjectileView Create(float radius, string presentationId, Transform poolParent)
             {
                 CreateCount++;
                 return null;

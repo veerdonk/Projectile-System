@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -20,7 +21,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Tests
                 prefab.transform.localScale = new Vector3(3f, 0.05f, 3f);
                 prefab.SetActive(false);
 
-                var factory = new PrefabGroundFieldViewFactory(prefab);
+                var factory = new PrefabGroundFieldViewFactory(new Dictionary<string, GameObject>
+                {
+                    ["puddle"] = prefab
+                });
                 var world = new ProjectileWorld(poolRoot.transform, viewFactory: null, factory);
                 try
                 {
@@ -31,7 +35,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Tests
                         Radius = 0.25f,
                         LifetimeSeconds = 5f,
                         PresentationId = "sphere",
-                        OnTravel = new IModifier[] { new GroundField(2f, 0.25f, 3f, intervalSeconds: 0.5f) }
+                        OnTravel = new IModifier[]
+                        {
+                            new GroundField(2f, 0.25f, 3f, intervalSeconds: 0.5f, presentationId: "puddle")
+                        }
                     };
                     world.Prewarm(recipe, 1);
 

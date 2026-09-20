@@ -186,7 +186,7 @@ interface IProjectileViewFactory
 
 interface IGroundFieldViewFactory
 {
-    ProjectileView Create(float radius, Transform poolParent);
+    ProjectileView Create(float radius, string presentationId, Transform poolParent);
 }
 
 [Flags]

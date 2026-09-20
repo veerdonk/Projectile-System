@@ -18,13 +18,15 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             float lifetimeSeconds,
             float damage,
             IStatusEffect status = null,
-            float intervalSeconds = 0f)
+            float intervalSeconds = 0f,
+            string presentationId = null)
         {
             Radius = radius;
             LifetimeSeconds = lifetimeSeconds;
             Damage = damage;
             Status = status;
             IntervalSeconds = intervalSeconds;
+            PresentationId = presentationId;
         }
 
         public float Radius { get; }
@@ -37,6 +39,12 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public float IntervalSeconds { get; }
 
+        /// <summary>
+        /// Selects the GameObject view via <see cref="IGroundFieldViewFactory"/>.
+        /// Unknown or empty ids use the primitive disk.
+        /// </summary>
+        public string PresentationId { get; }
+
         public void Apply(ModifierContext context)
         {
             if (context == null)
@@ -45,7 +53,14 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 return;
 
             Vector3 center = context.HasHit ? context.Hit.Point : context.Position;
-            context.RequestGroundField(center, Radius, LifetimeSeconds, Damage, Status, IntervalSeconds);
+            context.RequestGroundField(
+                center,
+                Radius,
+                LifetimeSeconds,
+                Damage,
+                Status,
+                IntervalSeconds,
+                PresentationId);
         }
     }
 
@@ -58,7 +73,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         readonly Action<HitInfo> hit;
         readonly Action<StatusInfo> statusApplied;
         readonly List<LiveField> fields = new List<LiveField>();
-        readonly Stack<ProjectileView> viewPool = new Stack<ProjectileView>();
+        readonly Dictionary<string, Stack<ProjectileView>> viewPools = new Dictionary<string, Stack<ProjectileView>>();
         readonly List<ProjectileView> allViews = new List<ProjectileView>();
         readonly List<HitInfo> overlapResults = new List<HitInfo>();
         readonly List<TargetId> seenTargets = new List<TargetId>();
@@ -95,10 +110,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 IntervalSeconds = request.IntervalSeconds,
                 Damage = request.Damage,
                 Status = request.Status,
+                PresentationId = request.PresentationId,
                 PlantedThisTick = true
             };
             if (createViews)
-                field.View = RentView(center, request.Radius);
+                field.View = RentView(center, request.Radius, request.PresentationId);
 
             fields.Add(field);
             if (request.IntervalSeconds > 0f)
@@ -167,7 +183,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             }
 
             allViews.Clear();
-            viewPool.Clear();
+            viewPools.Clear();
             fields.Clear();
         }
 
@@ -205,9 +221,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             }
         }
 
-        ProjectileView RentView(Vector3 center, float radius)
+        ProjectileView RentView(Vector3 center, float radius, string presentationId)
         {
-            ProjectileView view = viewPool.Count > 0 ? viewPool.Pop() : CreateView(radius);
+            Stack<ProjectileView> stack = ViewStack(presentationId);
+            ProjectileView view = stack.Count > 0 ? stack.Pop() : CreateView(radius, presentationId);
             Transform transform = view.transform;
             transform.position = center;
             transform.rotation = Quaternion.identity;
@@ -220,9 +237,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             return view;
         }
 
-        ProjectileView CreateView(float radius)
+        ProjectileView CreateView(float radius, string presentationId)
         {
-            ProjectileView view = viewFactory.Create(radius, poolParent);
+            ProjectileView view = viewFactory.Create(radius, presentationId, poolParent);
             if (view == null)
                 throw new InvalidOperationException("IGroundFieldViewFactory.Create returned null.");
 
@@ -239,7 +256,19 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 return;
 
             field.View.Release();
-            viewPool.Push(field.View);
+            ViewStack(field.PresentationId).Push(field.View);
+        }
+
+        Stack<ProjectileView> ViewStack(string presentationId)
+        {
+            string key = presentationId ?? string.Empty;
+            if (!viewPools.TryGetValue(key, out Stack<ProjectileView> stack))
+            {
+                stack = new Stack<ProjectileView>();
+                viewPools[key] = stack;
+            }
+
+            return stack;
         }
 
         static void StripColliders(GameObject go)
@@ -295,6 +324,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             public float IntervalSeconds;
             public float Damage;
             public IStatusEffect Status;
+            public string PresentationId;
             public ProjectileView View;
             public bool PlantedThisTick;
         }

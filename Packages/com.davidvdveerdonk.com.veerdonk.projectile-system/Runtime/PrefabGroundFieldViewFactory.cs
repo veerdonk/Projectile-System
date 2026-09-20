@@ -1,30 +1,35 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
     /// <summary>
-    /// Instantiates a prefab for every planted field. Does not overwrite
-    /// <c>localScale</c> — author the prefab at world scale. A null prefab uses
+    /// Instantiates a prefab for <see cref="GroundField.PresentationId"/>. Does not overwrite
+    /// <c>localScale</c> — author the prefab at world scale. Unknown ids use
     /// <see cref="PrimitiveGroundFieldViewFactory"/>.
     /// </summary>
     public sealed class PrefabGroundFieldViewFactory : IGroundFieldViewFactory
     {
-        readonly GameObject prefab;
+        readonly IReadOnlyDictionary<string, GameObject> prefabsById;
         readonly IGroundFieldViewFactory fallback;
 
         public PrefabGroundFieldViewFactory(
-            GameObject prefab,
+            IReadOnlyDictionary<string, GameObject> prefabsById,
             IGroundFieldViewFactory fallback = null)
         {
-            this.prefab = prefab;
+            this.prefabsById = prefabsById ?? throw new ArgumentNullException(nameof(prefabsById));
             this.fallback = fallback ?? new PrimitiveGroundFieldViewFactory();
         }
 
-        public ProjectileView Create(float radius, Transform poolParent)
+        public ProjectileView Create(float radius, string presentationId, Transform poolParent)
         {
-            if (prefab == null)
-                return fallback.Create(radius, poolParent);
+            if (string.IsNullOrEmpty(presentationId) ||
+                !prefabsById.TryGetValue(presentationId, out GameObject prefab) ||
+                prefab == null)
+            {
+                return fallback.Create(radius, presentationId, poolParent);
+            }
 
             GameObject instance = UnityEngine.Object.Instantiate(prefab, poolParent);
             var view = instance.GetComponent<ProjectileView>();

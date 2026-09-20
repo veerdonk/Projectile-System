@@ -95,7 +95,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/AreaEffect.cs` | Overlap Targets in instance `EffectRadius`. Own damage/status. OnHit at the contact point, OnTravel at spawn, OnInterval aura on the flying instance. Queues on `ModifierContext`; does not call Physics |
 | `Runtime/GroundField.cs` | Plants a lingering horizontal disk on OnHit / OnExpire / OnTravel. Own radius, lifetime, damage, optional status, pulse period. Owned by `ProjectileWorld`, ticked from the same `Tick`. Not a Recipe |
 | `Runtime/IGroundFieldViewFactory.cs` | `Create(radius, poolParent)` plus default `PrimitiveGroundFieldViewFactory` (thin cylinder scaled to `2 * radius` on XZ) |
-| `Runtime/PrefabGroundFieldViewFactory.cs` | One prefab for every field; does not rescale; null prefab falls back to the primitive |
+| `Runtime/PrefabGroundFieldViewFactory.cs` | Map `GroundField.PresentationId` → prefab; does not rescale; unknown ids fall back to the primitive |
 | `Runtime/IStatusEffect.cs` | Effect contract plus v1 `DummyStatusEffect` (`Id` `"dummy"`). Package does not tick DoT |
 | `Runtime/IStatusReceiver.cs` | Game/sandbox apply contract. Package never calls it; sandbox maps `StatusApplied` → `Apply` |
 | `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget` |

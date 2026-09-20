@@ -8,7 +8,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// </summary>
     public interface IGroundFieldViewFactory
     {
-        ProjectileView Create(float radius, Transform poolParent);
+        ProjectileView Create(float radius, string presentationId, Transform poolParent);
     }
 
     /// <summary>
@@ -18,7 +18,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     {
         public const float DiskHalfHeight = 0.025f;
 
-        public ProjectileView Create(float radius, Transform poolParent)
+        public ProjectileView Create(float radius, string presentationId, Transform poolParent)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             if (poolParent != null)

@@ -932,14 +932,24 @@ namespace Sandbox
             {
                 onHitGroundFieldRecipe.OnHit = new IModifier[]
                 {
-                    new GroundField(GroundFieldRadius, GroundFieldLifetime, GroundFieldDamage, intervalSeconds: GroundFieldInterval)
+                    new GroundField(
+                        GroundFieldRadius,
+                        GroundFieldLifetime,
+                        GroundFieldDamage,
+                        intervalSeconds: GroundFieldInterval,
+                        presentationId: "disk")
                 };
             }
             if (expireGroundFieldRecipe != null)
             {
                 expireGroundFieldRecipe.OnExpire = new IModifier[]
                 {
-                    new GroundField(GroundFieldRadius, GroundFieldLifetime, GroundFieldDamage, intervalSeconds: GroundFieldInterval)
+                    new GroundField(
+                        GroundFieldRadius,
+                        GroundFieldLifetime,
+                        GroundFieldDamage,
+                        intervalSeconds: GroundFieldInterval,
+                        presentationId: "disk")
                 };
             }
             if (statusGroundFieldRecipe != null)
@@ -951,7 +961,8 @@ namespace Sandbox
                         GroundFieldLifetime,
                         GroundFieldDamage,
                         new DummyStatusEffect(),
-                        GroundFieldInterval)
+                        GroundFieldInterval,
+                        presentationId: "disk")
                 };
             }
         }
@@ -989,7 +1000,10 @@ namespace Sandbox
             if (groundFieldViewPrefab == null)
                 return null;
 
-            return new PrefabGroundFieldViewFactory(groundFieldViewPrefab);
+            return new PrefabGroundFieldViewFactory(new Dictionary<string, GameObject>
+            {
+                ["disk"] = groundFieldViewPrefab
+            });
         }
 
         GameObject CreateRuntimeViewPrefab(PrimitiveType primitive, string objectName)
