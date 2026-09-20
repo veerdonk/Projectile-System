@@ -415,7 +415,7 @@ The pool stops hard-coding `CreatePrimitive(Sphere)`. It asks an `IProjectileVie
 **In scope**
 
 - `GroundField(radius, lifetimeSeconds, damage, status = null, intervalSeconds)` on `OnHit`, `OnExpire`, and `OnTravel`. Not `OnSpawn`, `OnTick`, or `OnInterval` (interval would drop a trail of fields)
-- **OnHit:** plant at `Hit.Point`. **OnExpire:** plant at the instance position. **OnTravel:** plant at spawn, once, before the first move. The modifier queues the plant on `ModifierContext`; it does not call Physics or spawn a Recipe
+- **OnHit:** plant at `Hit.Point`. **OnExpire:** plant at the instance position. **OnTravel:** plant at spawn, once, before the first move. v1 snaps plant Y to the world ground plane (`0`) so the disk sits on the floor. The modifier queues the plant on `ModifierContext`; it does not call Physics or spawn a Recipe
 - The field is owned by `ProjectileWorld` and ticked from the same `Tick`. It is **not** a projectile instance: no SphereCast, no `Recipe.Speed` / `Radius` / `LifetimeSeconds`, no stage lists. `radius <= 0` or `lifetimeSeconds <= 0` is a no-op (no plant)
 - **Flat overlap:** a Target is inside when its XZ distance to the field center ≤ `radius`. Y does not count (a dummy above the disk but outside the circle is a miss). `IHitQuery.OverlapDisk(center, radius)` — Edit Mode `ScriptedHitQuery`, Play Mode `PhysicsHitQuery` (world-up cylinder of default height 2 so standing colliders are found; still filter to the XZ disk). Only `IDamageable` Targets; ignore World and other projectiles. Skip Strong; Basic may appear with `Protection = Basic`
 - **Pulse:** overlap immediately on plant, then every `intervalSeconds` while the field lives. `intervalSeconds <= 0` never pulses (the disk can still exist until lifetime ends). Each Target in the disk raises `Hit` with `HitSource.Area` and the **modifier** damage, then `StatusApplied` if `status` is set. Package still does not apply HP or tick DoT. Hits use the planting instance’s `ProjectileId` (the parent may already be pooled). Do not mint a second id space
@@ -519,6 +519,7 @@ Housekeeping after **phases 1–22 are in code**. Rename the UPM id, document th
 - Unity Physics and/or Entities Graphics adapters
 - Multiply patterns: line, arc, cross, triangle; a pattern editor that authors an `IMultiplyPattern`
 - Occupancy enter/exit; `OnTick` auras
+- GroundField plant pose: v1 snaps Y to the world ground plane (`0`). Revisit spawn process and positioning (terrain / ground raycast, sloped floors, a chosen ground height) without changing the disk overlap or pulse contract
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Hold-to-fire; save Play Mode tweaks to `RecipeAsset`
 - Convert remaining sandbox C# Recipes; package `Samples/` vs `Assets/` split

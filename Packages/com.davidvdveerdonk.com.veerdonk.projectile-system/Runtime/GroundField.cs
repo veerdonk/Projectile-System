@@ -7,7 +7,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// <summary>
     /// Plants a lingering horizontal disk. Size, lifetime, damage, optional status, and pulse
     /// period live on this modifier. OnHit uses the contact point; OnExpire / OnTravel use the
-    /// instance position. The modifier queues a plant; it does not call Physics or spawn a Recipe.
+    /// instance position. The disk sits on the world ground plane (Y = 0).
+    /// The modifier queues a plant; it does not call Physics or spawn a Recipe.
     /// Radius or lifetime &lt;= 0 is a no-op. Interval &lt;= 0 never pulses.
     /// </summary>
     public sealed class GroundField : IModifier
@@ -83,10 +84,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             if (request.Radius <= 0f || request.LifetimeSeconds <= 0f)
                 return;
 
+            Vector3 center = ToGround(request.Center);
             var field = new LiveField
             {
                 SourceId = sourceId,
-                Center = request.Center,
+                Center = center,
                 Radius = request.Radius,
                 RemainingLifetime = request.LifetimeSeconds,
                 IntervalSeconds = request.IntervalSeconds,
@@ -95,7 +97,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 PlantedThisTick = true
             };
             if (createViews)
-                field.View = RentView(request.Center, request.Radius);
+                field.View = RentView(center, request.Radius);
 
             fields.Add(field);
             if (request.IntervalSeconds > 0f)
@@ -253,6 +255,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 else
                     UnityEngine.Object.DestroyImmediate(collider);
             }
+        }
+
+        static Vector3 ToGround(Vector3 point)
+        {
+            return new Vector3(point.x, 0f, point.z);
         }
 
         static int IntervalCrossings(float previousElapsed, float elapsed, float interval)
