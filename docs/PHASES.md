@@ -463,16 +463,39 @@ Replace the keyboard lab with a Play Mode sample: turret, mouse aim, preset drop
 - **Mouse aim:** camera ray vs the ground plane; turret yaws so the barrel’s flattened forward points at the hit. Horizontal shots only (no pitch). Pointer over UI does not aim-fire
 - **Fire:** click in the world or an on-screen Fire control (Space may stay). `SpawnRequest.Direction` is barrel forward. One driver `Tick`s
 - **Presets:** dropdown of `RecipeAsset`s. Curated, named for what they show, **only modifiers that exist in code**. Suggested set: Straight, Pierce, Bounce, Multiply on hit (Square), Interval multiply, Multicast, Homing, Pierce+Homing, Bounce+Multiply, Speed on travel, ApplyStatus, Size. One layout still has a pierce line of dummies, a bounce wall, DummyBounce off-lane, and the existing splash dummy. Homing candidates stay published from dummy poses
-- **Recipe sheet:** base stats (speed, radius, lifetime, damage, crit, mana, effect radius, presentation id) as labeled fields; then the six lists as rows (`Pierce(2)`, `Speed(0.5)`, Multiply spread/pattern, …). This is the visual of “what is on this Recipe.” Magnitudes and those properties are editable. **Do not** add/remove modifiers or stages here (that is phase 20). Child/sibling Recipes show as a name, not a nested editor
+- **Recipe sheet:** base stats (speed, radius, lifetime, damage, crit, mana, effect radius, presentation id) as labeled fields; then the six lists as rows (`Pierce(2)`, `Speed(0.5)`, Multiply spread/pattern, …). This is the visual of “what is on this Recipe.” Magnitudes and those properties are editable. **Do not** add/remove modifiers here (phase 20 is the asset inspector; **phase 21.b** adds Add/Remove on this same sheet). Child/sibling Recipes show as a name, not a nested editor
 - **Working copy:** dropdown/`ToRecipe()` fills a runtime `Recipe`. Edits mutate that copy. The `RecipeAsset` on disk does not change. Switching preset discards tweaks and copies again
 - **Reset:** button restores dummy HP and status, turret yaw, and the working copy from the current preset; `Dispose` the `ProjectileWorld` and create a new one (clears live shots and pool); re-prewarm; re-subscribe `Hit` / `StatusApplied`. Do not exit Play Mode
 - Colored dummy cubes and status flash stay. Tiny HUD: active count, pool available, selected dummy HP/status. No wall of last-spawn dumps
 - Edit Mode tests where they fit: ground-aim direction is horizontal toward the point; `ToRecipe()` then changing Pierce count on the copy leaves the asset’s count unchanged. Play Mode proof is the scene
 - Rewrite [SANDBOX.md](SANDBOX.md) proofs to preset names. Replace the AGENTS.md “24 fire slots” note
 
-**Out of scope:** implementing phases 13–19 (add those presets when the types exist); barrel pitch / `BallisticAim` (phase 22); hold-to-auto-fire; WASD turret move; orbit camera; saving Play Mode tweaks back to `RecipeAsset`; add/remove modifiers in Play Mode; world-space 3D modifier icons; UPM `Samples/` folder split; putting turret/input/HP in the runtime package; Unity Physics; Entities Graphics
+**Out of scope:** implementing phases 13–19 (add those presets when the types exist); barrel pitch / `BallisticAim` (phase 22); hold-to-auto-fire; WASD turret move; orbit camera; saving Play Mode tweaks back to `RecipeAsset`; add/remove modifiers in Play Mode (**phase 21.b**); world-space 3D modifier icons; UPM `Samples/` folder split; putting turret/input/HP in the runtime package; Unity Physics; Entities Graphics
 
 **Proof:** Play Mode, pick Pierce, aim at the dummy line, fire — first two live through. Tweak Pierce to 1 on the sheet, fire — dies on the second; the asset is still 2. Reset — dummy HP back, no leftover shots, Pierce on the sheet is 2 again. Aim does not fire when clicking the dropdown.
+
+**Stop.** Play Mode Add/Remove is **phase 21.b** — do not build it in the same session.
+
+## Phase 21.b — Play Mode modifier compose
+
+Let the user add and remove modifiers on the sample sheet while playing, so one shot can carry several lists (Pierce+Homing, Bounce+Multiply, AreaEffect on Straight, …). Still the working `Recipe` copy. Still no write-back. ADR-027. Depends on phase 21’s turret/sheet.
+
+**In scope**
+
+- Each of the six lists on `SampleRecipeSheet` gets **Add** and per-row **Remove**. Add appends. List order is still apply order
+- Add menu per list: `IModifier` types whose `[ModifierStage]` includes that stage — same filter as `RecipeAssetEditor.ModifiersFor`. OnHit offers Pierce; OnSpawn does not. OnTick offers Homing; OnHit does not
+- Catalog lives in **sandbox** (runtime reflection over loaded assemblies). Do not call `RecipeAssetEditor` from Play Mode. Do not add a package `ModifierCatalog` unless a later ADR says so. Game assemblies with the attribute still show up
+- New instances use a serializer/parameterless ctor plus small defaults: Pierce(1), Bounce(1), scale modifiers (1), Interval 0.5s, Homing 100°/s, Multiply(2) Square Spread 2 m, Multicast(2), AreaEffect and GroundField with fireable radius/damage/lifetime/interval. `ApplyStatus` uses `DummyStatusEffect`
+- Multiply child / Multicast extra: pick from the sample’s `RecipeAsset` presets (`ToRecipe()`), not a nested editor. Default child/extra is the **Straight** preset (or the first preset if Straight is missing)
+- AreaEffect / GroundField / Interval / Homing magnitudes are editable on the sheet once present (not labels-only)
+- Working copy and asset rules from phase 21 stand: edits mutate the copy; switching preset or **Reset** discards adds; after Play Mode the `RecipeAsset` is unchanged
+- Clicks on Add/Remove/menus do not fire. Do not revive the keyboard-slot HUD
+- Edit Mode tests in sandbox/Editor if they fit: OnHit catalog contains Pierce and not Homing; appending Pierce to an empty OnHit list then firing is a Play Mode proof. Package tests stay on `Recipe` / `ToRecipe`, not the HUD
+- Rewrite [SANDBOX.md](SANDBOX.md) proofs for compose. Start from `phase-21-sample-scene` once that sample is the Play Mode scene — do not reimplement the turret
+
+**Out of scope:** saving Play Mode tweaks to `RecipeAsset`; nested child Recipe editor; drag-reorder; rebuilding `RecipeAssetEditor` as a Play Mode window; new package types or a second façade; barrel pitch / `BallisticAim` (phase 22); hold-to-fire; WASD; orbit camera; putting turret/input/HP in the runtime package; Unity Physics; Entities Graphics
+
+**Proof:** Play Mode, **Straight**, Add Pierce on OnHit and Homing on OnTick, fire at the dummy line — first dummy is pierced and the shot can steer to another dummy. OnSpawn’s Add menu does not list Pierce. Exit Play Mode — Straight asset still has empty OnHit/OnTick. Reset while composed — sheet matches Straight again.
 
 **Stop.**
 
@@ -489,7 +512,7 @@ Phase 21 left lofted aim under Later until gravity and `BallisticAim` existed. A
 - Recipe sheet / HUD: show whether the last fire used low arc, high arc, or was unreachable
 - Rewrite [SANDBOX.md](SANDBOX.md) proofs for the ballistic preset
 
-**Out of scope:** hold-to-fire; WASD turret move; orbit camera; saving Play Mode tweaks to `RecipeAsset`; add/remove modifiers in Play Mode; putting turret/input/HP in the runtime package; replacing tick integrate; Unity Physics; Entities Graphics
+**Out of scope:** hold-to-fire; WASD turret move; orbit camera; saving Play Mode tweaks to `RecipeAsset`; add/remove modifiers in Play Mode (phase 21.b); putting turret/input/HP in the runtime package; replacing tick integrate; Unity Physics; Entities Graphics
 
 **Proof:** Play Mode, pick the ballistic preset, aim at DummyTarget, fire — the shot hits. Toggle high arc — a lofted shot still hits when both solutions exist. Lower speed until `TrySolve` fails — no spawn.
 

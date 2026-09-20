@@ -95,7 +95,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 **Game / sandbox (`Assets/`)**
 
 - Cameras, lighting, URP
-- Input handling, turret, sample HUD (preset dropdown, recipe sheet, fire, reset)
+- Input handling, turret, sample HUD (preset dropdown, recipe sheet with Add/Remove from phase 21.b, fire, reset)
 - Dummy targets (HP, `IDamageable`, `IStatusReceiver`, optional `IProjectileProtection`)
 - Player or enemy objects if you add them later
 
@@ -464,6 +464,24 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** the pointer is over the preset dropdown or recipe sheet
 - **When:** the user clicks
 - **Then:** no `Spawn` runs
+
+### Phase 21.b — Play Mode can compose modifiers
+
+- **Given:** Play Mode on the sample, Straight preset selected
+- **When:** the user Adds Pierce on OnHit and Homing on OnTick, then fires at the dummy line
+- **Then:** the first dummy is pierced and the shot can home; after Play Mode the Straight asset still has empty OnHit/OnTick
+
+### Phase 21.b — Add menu is stage-filtered
+
+- **Given:** the sample sheet Add menu for OnSpawn and OnHit
+- **When:** the user opens both
+- **Then:** OnHit offers Pierce; OnSpawn does not; OnTick offers Homing
+
+### Phase 21.b — Reset discards composed modifiers
+
+- **Given:** Straight with Pierce added on OnHit in Play Mode
+- **When:** the user presses Reset
+- **Then:** the sheet matches Straight again (no Pierce); dummy HP is restored
 
 ### Phase 23 — Package id is not doubled
 
