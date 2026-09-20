@@ -27,19 +27,19 @@ MonoBehaviour:
   onSpawn: []
   onTravel: []
   onTick:
-  - rid: 3954138888027504781
+  - rid: 3954138888027504815
   onInterval: []
   onHit:
-  - rid: 3954138888027504782
+  - rid: 3954138888027504816
   onExpire: []
   references:
     version: 2
     RefIds:
-    - rid: 3954138888027504781
+    - rid: 3954138888027504815
       type: {class: Homing, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         turnRateDegreesPerSecond: 300
-    - rid: 3954138888027504782
+    - rid: 3954138888027504816
       type: {class: Pierce, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         count: 1

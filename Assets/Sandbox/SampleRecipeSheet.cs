@@ -31,6 +31,7 @@ namespace Sandbox
             recipe.CriticalChance = FloatField("crit", "Crit", recipe.CriticalChance);
             recipe.ManaCost = FloatField("mana", "Mana", recipe.ManaCost);
             recipe.EffectRadius = FloatField("fxr", "Effect radius", recipe.EffectRadius);
+            recipe.Gravity = FloatField("grav", "Gravity", recipe.Gravity);
             recipe.PresentationId = TextField("pres", "Presentation id", recipe.PresentationId ?? "");
 
             DrawList("OnSpawn", recipe.OnSpawn);
@@ -107,16 +108,42 @@ namespace Sandbox
                     GUILayout.Label($"    extra {RecipeName(multicast.ExtraRecipe, multicast.ExtraAsset)}");
                     break;
                 case AreaEffect area:
-                    GUILayout.Label($"  AreaEffect dmg {area.Damage:0.##} status {EffectName(area.Status)}");
+                    DrawArea(key, area);
                     break;
                 case GroundField field:
-                    GUILayout.Label(
-                        $"  GroundField r {field.Radius:0.##} life {field.LifetimeSeconds:0.##} dmg {field.Damage:0.##}");
+                    DrawGroundField(key, field);
                     break;
                 default:
                     GUILayout.Label(modifier == null ? "  (null)" : $"  {modifier.GetType().Name}");
                     break;
             }
+        }
+
+        static void DrawArea(string key, AreaEffect area)
+        {
+            area.Damage = FloatField(key + "d", "AreaEffect dmg", area.Damage);
+            area.IncludeDirectHit = Toggle("  Direct hit", area.IncludeDirectHit);
+            area.IncludeDirectStatus = Toggle("  Direct status", area.IncludeDirectStatus);
+            GUILayout.Label($"    status {EffectName(area.Status)}");
+        }
+
+        static void DrawGroundField(string key, GroundField field)
+        {
+            field.Radius = FloatField(key + "r", "GroundField r", field.Radius);
+            field.LifetimeSeconds = FloatField(key + "l", "  Lifetime", field.LifetimeSeconds);
+            field.Damage = FloatField(key + "d", "  Damage", field.Damage);
+            field.IntervalSeconds = FloatField(key + "i", "  Interval", field.IntervalSeconds);
+            field.PresentationId = TextField(key + "p", "  Presentation id", field.PresentationId ?? "");
+            GUILayout.Label($"    status {EffectName(field.Status)}");
+        }
+
+        static bool Toggle(string label, bool value)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, GUILayout.Width(140f));
+            bool next = GUILayout.Toggle(value, "");
+            GUILayout.EndHorizontal();
+            return next;
         }
 
         static void DrawMultiply(string key, Multiply multiply)

@@ -102,6 +102,64 @@ namespace Sandbox.Editor
                     ConfigureBase(asset, "size-travel", 20f, 5f);
                     ClearStages(asset);
                     asset.OnTravel = new IModifier[] { new Size(2f) };
+                })),
+                Preset("OnHit AreaEffect", Upsert("AreaOnHit", asset =>
+                {
+                    ConfigureBase(asset, "area-onhit", 20f, 5f, effectRadius: 3f);
+                    ClearStages(asset);
+                    asset.OnHit = new IModifier[] { new AreaEffect(3f) };
+                })),
+                Preset("Area-only OnHit", Upsert("AreaOnly", asset =>
+                {
+                    ConfigureBase(asset, "area-only", 20f, 5f, effectRadius: 3f);
+                    asset.Damage = 5f;
+                    ClearStages(asset);
+                    asset.OnHit = new IModifier[] { new AreaEffect(3f, includeDirectHit: false) };
+                })),
+                Preset("OnTravel AreaEffect", Upsert("AreaTravel", asset =>
+                {
+                    ConfigureBase(asset, "area-travel", 20f, 5f, effectRadius: 3f);
+                    ClearStages(asset);
+                    asset.OnTravel = new IModifier[] { new AreaEffect(3f) };
+                })),
+                Preset("Interval aura", Upsert("AreaAura", asset =>
+                {
+                    ConfigureBase(asset, "area-aura", 20f, 5f, effectRadius: 3f);
+                    ClearStages(asset);
+                    asset.OnSpawn = new IModifier[] { new Interval(0.5f) };
+                    asset.OnInterval = new IModifier[] { new AreaEffect(3f) };
+                })),
+                Preset("Cannonball", Upsert("Cannonball", asset =>
+                {
+                    ConfigureBase(asset, "cannonball", 20f, 5f, gravity: 80f);
+                    ClearStages(asset);
+                })),
+                Preset("Cannonball Gravity(2)", Upsert("CannonballGravity", asset =>
+                {
+                    ConfigureBase(asset, "cannonball-gravity", 20f, 5f, gravity: 80f);
+                    ClearStages(asset);
+                    asset.OnTravel = new IModifier[] { new Gravity(2f) };
+                })),
+                Preset("OnHit GroundField", Upsert("GroundOnHit", asset =>
+                {
+                    ConfigureBase(asset, "ground-onhit", 20f, 5f);
+                    ClearStages(asset);
+                    asset.OnHit = new IModifier[] { new GroundField(2.25f, 2f, 3f, intervalSeconds: 0.5f) };
+                })),
+                Preset("OnExpire GroundField", Upsert("GroundExpire", asset =>
+                {
+                    ConfigureBase(asset, "ground-expire", 4f, 1f);
+                    ClearStages(asset);
+                    asset.OnExpire = new IModifier[] { new GroundField(2.25f, 2f, 3f, intervalSeconds: 0.5f) };
+                })),
+                Preset("GroundField status", Upsert("GroundStatus", asset =>
+                {
+                    ConfigureBase(asset, "ground-status", 20f, 5f);
+                    ClearStages(asset);
+                    asset.OnHit = new IModifier[]
+                    {
+                        new GroundField(2.25f, 2f, 3f, new DummyStatusEffect(), 0.5f)
+                    };
                 }))
             };
 
@@ -136,17 +194,24 @@ namespace Sandbox.Editor
             return asset;
         }
 
-        static void ConfigureBase(RecipeAsset asset, string id, float speed, float lifetime, float radius = 0.25f)
+        static void ConfigureBase(
+            RecipeAsset asset,
+            string id,
+            float speed,
+            float lifetime,
+            float radius = 0.25f,
+            float gravity = 0f,
+            float effectRadius = 0f)
         {
             asset.Id = id;
             asset.Speed = speed;
             asset.Radius = radius;
             asset.LifetimeSeconds = lifetime;
-            asset.Gravity = 0f;
+            asset.Gravity = gravity;
             asset.Damage = 1f;
             asset.CriticalChance = 0f;
             asset.ManaCost = 0f;
-            asset.EffectRadius = 0f;
+            asset.EffectRadius = effectRadius;
             asset.PresentationId = "";
             asset.MulticastGenerations = 0;
             asset.MultiplyGenerations = 0;

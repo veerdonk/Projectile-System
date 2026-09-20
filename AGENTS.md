@@ -39,6 +39,7 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 - Play Mode demo is `Assets/Scenes/Sandbox.unity`. **Projectile Lab > Rebuild** writes the turret yard, curated `RecipeAsset`s under `Assets/Sandbox/Recipes/`, and wires `SampleLab`. Keyboard-slot `SandboxLab` is gone.
 - Presets are working copies from `ToRecipe()`. Sheet edits do not dirty assets. Reset disposes `ProjectileWorld`.
 - Size on travel that would overlap the ground (muzzle y 0.7, default radius 0.25 → scale > ~2.8) is lifted at fire time so the first overlap does not World-despawn. `SampleYard.SpawnPosition`.
+- Sample dropdown includes AreaEffect, Cannonball / Gravity(2), and GroundField presets. Recipe sheet edits gravity and those modifier magnitudes. Ballistic barrel pitch is still phase 22.
 - Phase 22 is barrel pitch + ballistic preset — do not start it until asked.
 
 ## Do not

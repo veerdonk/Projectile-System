@@ -29,16 +29,16 @@ MonoBehaviour:
   onTick: []
   onInterval: []
   onHit:
-  - rid: 3954138888027504784
+  - rid: 3954138888027504817
   onExpire: []
   references:
     version: 2
     RefIds:
-    - rid: 3954138888027504784
+    - rid: 3954138888027504817
       type: {class: ApplyStatus, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         effect:
-          rid: 3954138888027504785
-    - rid: 3954138888027504785
+          rid: 3954138888027504818
+    - rid: 3954138888027504818
       type: {class: DummyStatusEffect, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data: 

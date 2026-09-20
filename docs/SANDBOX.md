@@ -42,13 +42,22 @@ Always: enter Play Mode from `Assets/Scenes/Sandbox.unity`, fire once, confirm t
 | 7 | **Speed on travel** | Leaves the muzzle twice as fast as Straight |
 | 8 | **ApplyStatus** | DummyTarget HUD shows `dummy` and the cube flashes green |
 | 12 | **Size** | Sphere looks and hits larger |
+| 13 | **OnHit AreaEffect** | DummyTarget and DummySplash both lose area damage (DummyTarget also loses Recipe damage) |
+| 13 | **Area-only OnHit** | Contact dummy loses area damage, not Recipe damage |
+| 13 | **OnTravel AreaEffect** | DummyMuzzle is hit before the shot moves |
+| 13 | **Interval aura** | Dummy beside the lane ticks each interval while the shot is in range |
+| 14 | **Cannonball** | Visible drop from the muzzle; lands short of DummyTarget at Straight speed |
+| 15 | **Cannonball Gravity(2)** | Drops harder than Cannonball |
+| 19 | **OnHit GroundField** | Flat disk at DummyTarget; DummyTarget and splash dummy tick field damage each interval |
+| 19 | **OnExpire GroundField** | Lifetime-only shot; disk appears where it died, not at DummyTarget |
+| 19 | **GroundField status** | Dummy standing in the disk shows `dummy` each pulse |
 | 20 | Create > Projectile > Recipe | Inspector shows six lists; OnHit Add offers Pierce; OnSpawn Add does not |
 | 21 | **Pierce**, tweak count to 1 on the sheet | Dies on the second dummy; asset still 2 after Play Mode |
 | 21 | **Reset** | HP/status restored, in-flight shots gone, Pierce on the sheet is 2 again |
 | 21 | Click the dropdown | Aim does not fire |
 | 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone |
 
-AreaEffect, GroundField, gravity, and ballistic aim are in the package. They are **not** sample presets yet (ballistic barrel pitch is phase 22).
+AreaEffect, GroundField, and Recipe gravity are sample presets. Barrel pitch / `BallisticAim` stay phase 22.
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode.
 

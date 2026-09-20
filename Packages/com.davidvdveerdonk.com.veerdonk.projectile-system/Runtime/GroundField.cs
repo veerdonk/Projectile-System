@@ -42,21 +42,41 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             this.presentationId = presentationId;
         }
 
-        public float Radius => radius;
+        public float Radius
+        {
+            get => radius;
+            set => radius = value;
+        }
 
-        public float LifetimeSeconds => lifetimeSeconds;
+        public float LifetimeSeconds
+        {
+            get => lifetimeSeconds;
+            set => lifetimeSeconds = value;
+        }
 
-        public float Damage => damage;
+        public float Damage
+        {
+            get => damage;
+            set => damage = value;
+        }
 
         public IStatusEffect Status => status;
 
-        public float IntervalSeconds => intervalSeconds;
+        public float IntervalSeconds
+        {
+            get => intervalSeconds;
+            set => intervalSeconds = value;
+        }
 
         /// <summary>
         /// Selects the GameObject view via <see cref="IGroundFieldViewFactory"/>.
         /// Unknown or empty ids use the primitive disk.
         /// </summary>
-        public string PresentationId => presentationId;
+        public string PresentationId
+        {
+            get => presentationId;
+            set => presentationId = value;
+        }
 
         public void Apply(ModifierContext context)
         {
