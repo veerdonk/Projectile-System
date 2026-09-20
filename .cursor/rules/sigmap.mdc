@@ -1,11 +1,13 @@
 ---
-description: Use SigMap MCP for C# signatures; Unity MCP for the Editor
+description: Local Cursor only — SigMap for C# signatures; cloud agents skip it
 alwaysApply: true
 ---
 
 # SigMap
 
-Namespace `sigmap`. Signature index for the projectile package, sandbox C#, and `docs/` — not a second architecture, and it does not skip pairing stop lines.
+**Local Cursor sessions only.** Cloud / background agents must not use SigMap, must not add it to Cloud Agents MCP, and must not run `npx sigmap`. Use Grep / Read / Glob.
+
+In a local session, namespace `sigmap` is the signature index for the projectile package, sandbox C#, and `docs/` — not a second architecture, and it does not skip pairing stop lines.
 
 Prefer SigMap over dumping whole files when looking up types, call sites, or blast radius:
 
@@ -14,4 +16,4 @@ Prefer SigMap over dumping whole files when looking up types, call sites, or bla
 3. `get_lines` or `explain_file` for the anchored range
 4. After edits: `sigmap_notify_file_created` (or `npx sigmap`) so the index stays live; `verify_suggestion` before trusting a new call
 
-If the `sigmap` namespace is missing or `namespaceStatus` is error: `npx -y sigmap --mcp` is the server in `.cursor/mcp.json`. Generate the index with `npx sigmap` from the repo root. Spec still starts at `docs/PHASES.md`. Unity Editor work stays on `user-unityMCP` ([docs/MCP.md](docs/MCP.md)).
+If this is a local session and `sigmap` is missing: enable the project server in Customize → MCPs (`.cursor/mcp.json` is `npx -y sigmap --mcp`). Spec still starts at `docs/PHASES.md`. Unity Editor work stays on `user-unityMCP` ([docs/MCP.md](docs/MCP.md)).

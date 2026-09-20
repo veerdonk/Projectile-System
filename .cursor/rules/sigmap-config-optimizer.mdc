@@ -5,6 +5,8 @@ alwaysApply: false
 
 # SigMap config optimizer
 
+Local Cursor only. Cloud / background agents skip this playbook.
+
 Playbook for configuring SigMap on a new or misconfigured repo.
 
 1. **Detect.** `sigmap tune` prints a recommended config diff — srcDirs pin, monorepo mode, adapters, excludes, budget — with one evidence-naming reason per change. Read-only.

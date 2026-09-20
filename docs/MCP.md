@@ -2,12 +2,14 @@
 
 Two MCP servers, different jobs. Pairing rules in [AGENTS.md](../AGENTS.md) still apply — MCP does not skip phase stop lines or authorize new public types.
 
-| Server | Namespace | For |
-| --- | --- | --- |
-| [SigMap](https://sigmap.io/guide/mcp.html) | `sigmap` | Package / sandbox C# signatures, ranked files, blast radius, line ranges |
-| [MCP for Unity](https://github.com/CoplayDev/unity-mcp) (`com.coplaydev.unity-mcp`) | `user-unityMCP` | Open Editor: scenes, GameObjects, Play Mode, console, tests, asset import |
+| Server | Who | Namespace | For |
+| --- | --- | --- | --- |
+| [SigMap](https://sigmap.io/guide/mcp.html) | **Local Cursor only** | `sigmap` | Package / sandbox C# signatures, ranked files, blast radius, line ranges |
+| [MCP for Unity](https://github.com/CoplayDev/unity-mcp) (`com.coplaydev.unity-mcp`) | Local Editor sessions | `user-unityMCP` | Open Editor: scenes, GameObjects, Play Mode, console, tests, asset import |
 
-## SigMap
+**Cloud / background agents do not use SigMap.** Do not add it under [cursor.com/agents](https://cursor.com/agents) MCP, do not debug a missing `sigmap` namespace, and do not run `npx sigmap` as a substitute. Use Grep / Read / Glob. Unity Editor MCP is also local-only (no Editor on the cloud VM).
+
+## SigMap (local Cursor)
 
 Project config: `.cursor/mcp.json` (`npx -y sigmap --mcp`), `gen-context.config.json`, `.contextignore`. Index the projectile package, `Assets/` C#, and `docs/` — not `Library/`, not `com.coplaydev.unity-mcp`.
 
@@ -15,9 +17,9 @@ Project config: `.cursor/mcp.json` (`npx -y sigmap --mcp`), `gen-context.config.
 npx sigmap
 ```
 
-That writes `.github/copilot-instructions.md` (hot/cold signature map). Agents should `query_context` / `get_callee_signatures` / `get_lines` instead of opening whole files. After C# edits, `npx sigmap` or the live-index notify tools. `get_method_impact` is JS/TS/Python/Java/Go/Rust only — for C# use `get_impact` on the file. Do not run `sigmap --setup` here: it starts a watcher and its default adapters would overwrite [AGENTS.md](../AGENTS.md).
+That writes `.github/copilot-instructions.md` (hot/cold signature map). Local agents should `query_context` / `get_callee_signatures` / `get_lines` instead of opening whole files. After C# edits, `npx sigmap` or the live-index notify tools. `get_method_impact` is JS/TS/Python/Java/Go/Rust only — for C# use `get_impact` on the file. Do not run `sigmap --setup` here: it starts a watcher and its default adapters would overwrite [AGENTS.md](../AGENTS.md).
 
-If `sigmap` is missing from the tool catalog, the Cursor session has not attached the project MCP server. Reload MCP / reconnect. Cloud agents only see SigMap if it is enabled for that environment — a desktop-only install is not inherited.
+If `sigmap` is missing in a **local** session: Customize → MCPs, enable the project server, reload. A missing namespace in a cloud run is expected — skip SigMap.
 
 ## Unity MCP — start and recover
 

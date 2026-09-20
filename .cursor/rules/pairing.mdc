@@ -14,4 +14,4 @@ alwaysApply: true
 - Runtime package: spawn, simulate, pool, hits, events. Sandbox: camera, input, dummy HP.
 - New architecture → ADR in `docs/DECISIONS.md` before code.
 - After the human refines a phase, the next phase starts from that code.
-- Editor/scene work: Unity MCP per `docs/MCP.md`.
+- Editor/scene work: Unity MCP per `docs/MCP.md` (local Editor). SigMap is local Cursor only; cloud agents do not use it.

@@ -5,6 +5,8 @@ alwaysApply: false
 
 # SigMap usage maximizer
 
+Local Cursor only. Cloud / background agents skip this playbook.
+
 Follow this loop before any file exploration in a repo with SigMap installed.
 
 1. **Ask before reading.** `sigmap ask "<task>"` (or the `query_context` MCP tool) ranks the relevant files as ~hundreds of tokens of signatures instead of thousands of raw-file tokens. Never open files to "look around".

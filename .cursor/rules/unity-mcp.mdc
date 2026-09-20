@@ -6,8 +6,7 @@ alwaysApply: true
 # Unity MCP
 
 - Follow `docs/MCP.md`. Namespace `user-unityMCP`. Do not hand-write `.unity` YAML when MCP is available.
-- C# signatures and blast radius: SigMap (`sigmap`), not Unity MCP. Editor/scene/Play Mode: this server.
-- If tools are missing or `namespaceStatus` is error: start the HTTP server (command in `docs/MCP.md`), ensure **Window > MCP for Unity** bridge is running, then `mcp_auth`.
+- Local C# signatures: SigMap (`sigmap`). Cloud / background agents skip SigMap. Editor/scene/Play Mode: this server (local Editor only).
 - If tools are missing or `namespaceStatus` is error: start the HTTP server (command in `docs/MCP.md`), ensure **Window > MCP for Unity** bridge is running, then `mcp_auth`.
 - Read `mcpforunity://` resources; mutate with tools. Get a tool schema before calling it.
 - `find_gameobjects` to search, `manage_gameobject` for CRUD, `manage_components` for components, `manage_editor` for Play Mode, `read_console` after script compile.

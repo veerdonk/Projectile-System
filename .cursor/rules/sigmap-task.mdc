@@ -5,6 +5,8 @@ alwaysApply: false
 
 # SigMap task loop
 
+Local Cursor only. Cloud / background agents skip this playbook.
+
 Work through these steps **in order**. Do not open any file before step 2.
 Every command runs from the integrated terminal — do not ask the user to run them for you.
 
