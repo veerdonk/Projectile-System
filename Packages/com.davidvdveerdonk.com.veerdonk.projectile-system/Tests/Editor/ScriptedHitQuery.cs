@@ -118,6 +118,37 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             }
         }
 
+        public void OverlapDisk(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
+        {
+            results.Clear();
+            if (radius <= 0f)
+                return;
+
+            float radiusSq = radius * radius;
+            for (int i = 0; i < overlapBodies.Count; i++)
+            {
+                OverlapBody body = overlapBodies[i];
+                if (body.Kind != HitKind.Target || body.Protection == ProtectionLevel.Strong)
+                    continue;
+
+                float dx = body.Position.x - center.x;
+                float dz = body.Position.z - center.z;
+                if (dx * dx + dz * dz > radiusSq)
+                    continue;
+
+                Vector3 delta = body.Position - center;
+                results.Add(new HitInfo
+                {
+                    InstanceId = instanceId,
+                    Kind = HitKind.Target,
+                    Protection = body.Protection,
+                    TargetId = body.TargetId,
+                    Point = body.Position,
+                    Normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up
+                });
+            }
+        }
+
         public void CopyIgnore(ProjectileId from, ProjectileId to)
         {
         }

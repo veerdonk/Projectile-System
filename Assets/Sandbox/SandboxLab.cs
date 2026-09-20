@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 18 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
+    /// Phase 19 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -52,7 +52,14 @@ namespace Sandbox
         const int AreaAtStrongSlot = 33;
         const int SphereViewSlot = 34;
         const int CubeViewSlot = 35;
+        const int OnHitGroundFieldSlot = 36;
+        const int OnExpireGroundFieldSlot = 37;
+        const int StatusGroundFieldSlot = 38;
         const int HudPageCount = 2;
+        const float GroundFieldRadius = 2.25f;
+        const float GroundFieldLifetime = 2f;
+        const float GroundFieldDamage = 3f;
+        const float GroundFieldInterval = 0.5f;
         static readonly Color Dummy1Color = new Color(0.82f, 0.22f, 0.18f);
         static readonly Color Dummy2Color = new Color(0.85f, 0.45f, 0.15f);
         static readonly Color Dummy3Color = new Color(0.55f, 0.12f, 0.12f);
@@ -102,6 +109,9 @@ namespace Sandbox
         Recipe gravityCannonballRecipe;
         Recipe aimedCannonballRecipe;
         Recipe cubeRecipe;
+        Recipe onHitGroundFieldRecipe;
+        Recipe expireGroundFieldRecipe;
+        Recipe statusGroundFieldRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
@@ -196,8 +206,8 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 18 (view factory)");
-            GUILayout.Label("Space fires the selected Recipe. N pages the fire list. Page 1: 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, V, B. Page 2: 1 aims at DummyTarget, 2 Bounce at Basic, 3 Straight at Basic, 4 AreaEffect at Strong, 5 Sphere view, 6 Cube view. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 19 (ground fields)");
+            GUILayout.Label("Space fires the selected Recipe. N pages the fire list. Page 1: 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, V, B. Page 2: 1 aims at DummyTarget, 2 Bounce at Basic, 3 Straight at Basic, 4 AreaEffect at Strong, 5 Sphere view, 6 Cube view, 7 OnHit GroundField, 8 OnExpire GroundField, 9 GroundField status. - / + changes n for the next shot.");
             DrawHudPageRow();
             if (hudPage == 0)
                 DrawPage0FireButtons();
@@ -366,6 +376,12 @@ namespace Sandbox
                 selectedRecipe = SphereViewSlot;
             if (keyboard.digit6Key.wasPressedThisFrame)
                 selectedRecipe = CubeViewSlot;
+            if (keyboard.digit7Key.wasPressedThisFrame)
+                selectedRecipe = OnHitGroundFieldSlot;
+            if (keyboard.digit8Key.wasPressedThisFrame)
+                selectedRecipe = OnExpireGroundFieldSlot;
+            if (keyboard.digit9Key.wasPressedThisFrame)
+                selectedRecipe = StatusGroundFieldSlot;
         }
 
         void DrawPage1FireButtons()
@@ -388,6 +404,9 @@ namespace Sandbox
             FireButton("AreaEffect at Strong", AreaAtStrongSlot, onHitAreaRecipe);
             FireButton("Sphere view", SphereViewSlot, straightRecipe);
             FireButton("Cube view", CubeViewSlot, cubeRecipe);
+            FireButton("OnHit GroundField", OnHitGroundFieldSlot, onHitGroundFieldRecipe);
+            FireButton("OnExpire GroundField", OnExpireGroundFieldSlot, expireGroundFieldRecipe);
+            FireButton("GroundField status", StatusGroundFieldSlot, statusGroundFieldRecipe);
         }
 
         void FireButton(string title, int slot, Recipe recipe)
@@ -644,6 +663,12 @@ namespace Sandbox
                     return straightRecipe;
                 case CubeViewSlot:
                     return cubeRecipe;
+                case OnHitGroundFieldSlot:
+                    return onHitGroundFieldRecipe;
+                case OnExpireGroundFieldSlot:
+                    return expireGroundFieldRecipe;
+                case StatusGroundFieldSlot:
+                    return statusGroundFieldRecipe;
                 default:
                     return straightRecipe;
             }
@@ -792,6 +817,9 @@ namespace Sandbox
             aimedCannonballRecipe = CreateRecipe("cannonball-aimed", speed: AimedCannonballSpeed, lifetime: 5f);
             aimedCannonballRecipe.Gravity = CannonballGravity;
             cubeRecipe = CreateRecipe("cube", speed: 20f, lifetime: 5f, presentationId: "cube");
+            onHitGroundFieldRecipe = CreateRecipe("ground-onhit", speed: 20f, lifetime: 5f);
+            expireGroundFieldRecipe = CreateRecipe("ground-expire", speed: 4f, lifetime: 1f);
+            statusGroundFieldRecipe = CreateRecipe("ground-status", speed: 20f, lifetime: 5f);
             ApplyMagnitudes();
 
             var poolRoot = new GameObject("ProjectilePool");
@@ -828,6 +856,9 @@ namespace Sandbox
             world.Prewarm(gravityCannonballRecipe, PrewarmCount);
             world.Prewarm(aimedCannonballRecipe, PrewarmCount);
             world.Prewarm(cubeRecipe, PrewarmCount);
+            world.Prewarm(onHitGroundFieldRecipe, PrewarmCount);
+            world.Prewarm(expireGroundFieldRecipe, PrewarmCount);
+            world.Prewarm(statusGroundFieldRecipe, PrewarmCount);
 
             world.StatusApplied += OnStatusApplied;
             BindDummies();
@@ -895,6 +926,32 @@ namespace Sandbox
             {
                 aimedCannonballRecipe.Speed = aimedCannonballSpeed;
                 aimedCannonballRecipe.Gravity = CannonballGravity;
+            }
+            if (onHitGroundFieldRecipe != null)
+            {
+                onHitGroundFieldRecipe.OnHit = new IModifier[]
+                {
+                    new GroundField(GroundFieldRadius, GroundFieldLifetime, GroundFieldDamage, intervalSeconds: GroundFieldInterval)
+                };
+            }
+            if (expireGroundFieldRecipe != null)
+            {
+                expireGroundFieldRecipe.OnExpire = new IModifier[]
+                {
+                    new GroundField(GroundFieldRadius, GroundFieldLifetime, GroundFieldDamage, intervalSeconds: GroundFieldInterval)
+                };
+            }
+            if (statusGroundFieldRecipe != null)
+            {
+                statusGroundFieldRecipe.OnHit = new IModifier[]
+                {
+                    new GroundField(
+                        GroundFieldRadius,
+                        GroundFieldLifetime,
+                        GroundFieldDamage,
+                        new DummyStatusEffect(),
+                        GroundFieldInterval)
+                };
             }
         }
 
