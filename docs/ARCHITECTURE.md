@@ -230,7 +230,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Phase 23 (ADR-025) renames the package folder to `Packages/com.veerdonk.projectile-system/` and the namespace to `Veerdonk.ProjectileSystem`.
+Phase 23 (ADR-025) runs after 17–22: it renames the package folder to `Packages/com.veerdonk.projectile-system/` and the namespace to `Veerdonk.ProjectileSystem`, and documents / tests / Sonar-scans the public API including Protection, the view factory, GroundField, and `RecipeAsset`.
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 
