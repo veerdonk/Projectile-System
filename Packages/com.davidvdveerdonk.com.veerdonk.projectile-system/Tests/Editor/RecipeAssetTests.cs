@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -22,6 +23,21 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         {
             Assert.IsTrue(Contains(RecipeAssetEditor.ModifiersFor(RecipeStage.OnHit), typeof(Pierce)));
             Assert.IsFalse(Contains(RecipeAssetEditor.ModifiersFor(RecipeStage.OnSpawn), typeof(Pierce)));
+        }
+
+        [Test]
+        public void PatternCatalog_IncludesShippedMultiplyPatterns()
+        {
+            Type[] patterns = RecipeAssetEditor.Patterns();
+            Assert.IsTrue(Contains(patterns, typeof(SquarePattern)));
+            Assert.IsTrue(Contains(patterns, typeof(CirclePattern)));
+            Assert.IsTrue(Contains(patterns, typeof(RandomCirclePattern)));
+        }
+
+        [Test]
+        public void StatusCatalog_IncludesDummyStatusEffect()
+        {
+            Assert.IsTrue(Contains(RecipeAssetEditor.StatusEffects(), typeof(DummyStatusEffect)));
         }
 
         [Test]
@@ -70,6 +86,33 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void ToRecipe_KeepsAuthoredMultiplyPatternType()
+        {
+            child = ScriptableObject.CreateInstance<RecipeAsset>();
+            child.Id = "child";
+            parent = ScriptableObject.CreateInstance<RecipeAsset>();
+            parent.Id = "parent";
+            parent.OnHit = new IModifier[] { new Multiply(2, child, 1f, new CirclePattern()) };
+
+            var multiply = parent.ToRecipe().OnHit[0] as Multiply;
+            Assert.IsNotNull(multiply);
+            Assert.IsInstanceOf<CirclePattern>(multiply.Pattern);
+        }
+
+        [Test]
+        public void ToRecipe_KeepsAuthoredStatusEffectType()
+        {
+            parent = ScriptableObject.CreateInstance<RecipeAsset>();
+            parent.Id = "status";
+            parent.OnHit = new IModifier[] { new ApplyStatus(new DummyStatusEffect()) };
+
+            var apply = parent.ToRecipe().OnHit[0] as ApplyStatus;
+            Assert.IsNotNull(apply);
+            Assert.IsInstanceOf<DummyStatusEffect>(apply.Effect);
+            Assert.AreNotSame(parent.OnHit[0], apply);
+        }
+
+        [Test]
         public void ToRecipe_SelfChild_DoesNotThrow_AndSharesRecipe()
         {
             parent = ScriptableObject.CreateInstance<RecipeAsset>();
@@ -83,7 +126,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
             Assert.AreSame(recipe, multiply.ChildRecipe);
         }
 
-        static bool Contains(System.Type[] types, System.Type match)
+        static bool Contains(Type[] types, Type match)
         {
             for (int i = 0; i < types.Length; i++)
             {

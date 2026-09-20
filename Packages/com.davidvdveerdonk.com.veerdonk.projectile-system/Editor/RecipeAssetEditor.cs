@@ -10,16 +10,6 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     [CustomEditor(typeof(RecipeAsset))]
     public sealed class RecipeAssetEditor : UnityEditor.Editor
     {
-        static readonly string[] PatternLabels = { "Square", "Circle", "Random Circle" };
-        static readonly Type[] PatternTypes =
-        {
-            typeof(SquarePattern),
-            typeof(CirclePattern),
-            typeof(RandomCirclePattern)
-        };
-
-        static readonly string[] StatusLabels = { "None", "Dummy" };
-
         SerializedProperty id;
         SerializedProperty speed;
         SerializedProperty radius;
@@ -43,14 +33,35 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public static Type[] ModifiersFor(RecipeStage stage)
         {
             var result = new List<Type>();
-            foreach (Type type in TypeCache.GetTypesDerivedFrom<IModifier>())
+            foreach (Type type in ConcreteImplementations<IModifier>())
             {
-                if (type.IsAbstract || type.IsGenericTypeDefinition)
-                    continue;
                 ModifierStageAttribute attribute = type.GetCustomAttribute<ModifierStageAttribute>();
                 if (attribute == null)
                     continue;
                 if ((attribute.Stages & stage) == 0)
+                    continue;
+                result.Add(type);
+            }
+
+            return result.ToArray();
+        }
+
+        public static Type[] Patterns()
+        {
+            return ConcreteImplementations<IMultiplyPattern>();
+        }
+
+        public static Type[] StatusEffects()
+        {
+            return ConcreteImplementations<IStatusEffect>();
+        }
+
+        static Type[] ConcreteImplementations<T>()
+        {
+            var result = new List<Type>();
+            foreach (Type type in TypeCache.GetTypesDerivedFrom<T>())
+            {
+                if (type.IsAbstract || type.IsInterface || type.IsGenericTypeDefinition)
                     continue;
                 result.Add(type);
             }
@@ -271,33 +282,63 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         static void DrawPattern(ref Rect line, SerializedProperty property)
         {
-            if (property == null)
-                return;
-            int current = PatternIndex(property.managedReferenceValue);
-            int next = EditorGUI.Popup(line, "Pattern", current, PatternLabels);
-            if (next != current)
-                property.managedReferenceValue = Activator.CreateInstance(PatternTypes[next]);
-            line.y += Line;
-        }
-
-        static int PatternIndex(object pattern)
-        {
-            if (pattern is CirclePattern)
-                return 1;
-            if (pattern is RandomCirclePattern)
-                return 2;
-            return 0;
+            DrawTypePopup(ref line, property, "Pattern", Patterns(), includeNone: false);
         }
 
         static void DrawStatus(ref Rect line, SerializedProperty property)
         {
+            DrawTypePopup(ref line, property, "Status", StatusEffects(), includeNone: true);
+        }
+
+        static void DrawTypePopup(
+            ref Rect line,
+            SerializedProperty property,
+            string label,
+            Type[] types,
+            bool includeNone)
+        {
             if (property == null)
                 return;
-            int current = property.managedReferenceValue is DummyStatusEffect ? 1 : 0;
-            int next = EditorGUI.Popup(line, "Status", current, StatusLabels);
+
+            int offset = includeNone ? 1 : 0;
+            var labels = new string[types.Length + offset];
+            if (includeNone)
+                labels[0] = "None";
+            for (int i = 0; i < types.Length; i++)
+                labels[i + offset] = ObjectNames.NicifyVariableName(types[i].Name);
+
+            object currentValue = property.managedReferenceValue;
+            int current = includeNone ? 0 : IndexOf(types, typeof(SquarePattern));
+            if (current < 0)
+                current = 0;
+            if (currentValue != null)
+            {
+                int found = IndexOf(types, currentValue.GetType());
+                if (found >= 0)
+                    current = found + offset;
+            }
+
+            int next = EditorGUI.Popup(line, label, current, labels);
             if (next != current)
-                property.managedReferenceValue = next == 0 ? null : new DummyStatusEffect();
+            {
+                if (includeNone && next == 0)
+                    property.managedReferenceValue = null;
+                else
+                    property.managedReferenceValue = Activator.CreateInstance(types[next - offset]);
+            }
+
             line.y += Line;
+        }
+
+        static int IndexOf(Type[] types, Type match)
+        {
+            for (int i = 0; i < types.Length; i++)
+            {
+                if (types[i] == match)
+                    return i;
+            }
+
+            return -1;
         }
     }
 }

@@ -210,11 +210,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 case Homing homing:
                     return new Homing(homing.TurnRateDegreesPerSecond);
                 case ApplyStatus applyStatus:
-                    return new ApplyStatus(applyStatus.Effect ?? new DummyStatusEffect());
+                    return new ApplyStatus(CloneStatus(applyStatus.Effect) ?? new DummyStatusEffect());
                 case AreaEffect area:
                     return new AreaEffect(
                         area.Damage,
-                        area.Status,
+                        CloneStatus(area.Status),
                         area.IncludeDirectHit,
                         area.IncludeDirectStatus);
                 case GroundField field:
@@ -222,7 +222,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                         field.Radius,
                         field.LifetimeSeconds,
                         field.Damage,
-                        field.Status,
+                        CloneStatus(field.Status),
                         field.IntervalSeconds,
                         field.PresentationId);
                 case Multiply multiply:
@@ -249,11 +249,30 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         static IMultiplyPattern ClonePattern(IMultiplyPattern pattern)
         {
-            if (pattern is CirclePattern)
-                return new CirclePattern();
-            if (pattern is RandomCirclePattern)
-                return new RandomCirclePattern();
-            return new SquarePattern();
+            if (pattern == null)
+                return new SquarePattern();
+            return Create<IMultiplyPattern>(pattern.GetType()) ?? new SquarePattern();
+        }
+
+        static IStatusEffect CloneStatus(IStatusEffect effect)
+        {
+            if (effect == null)
+                return null;
+            return Create<IStatusEffect>(effect.GetType()) ?? effect;
+        }
+
+        static T Create<T>(Type type) where T : class
+        {
+            if (type == null || type.IsAbstract)
+                return null;
+            try
+            {
+                return Activator.CreateInstance(type) as T;
+            }
+            catch (MissingMethodException)
+            {
+                return null;
+            }
         }
     }
 }
