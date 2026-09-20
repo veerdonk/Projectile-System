@@ -1,0 +1,26 @@
+# Unity generated / binary
+Library/
+Temp/
+Logs/
+UserSettings/
+obj/
+Build/
+Builds/
+*.meta
+*.unity
+*.prefab
+*.asset
+*.mat
+*.png
+*.jpg
+*.fbx
+*.unitypackage
+
+# Third-party Editor bridge — not the product package
+Packages/com.coplaydev.unity-mcp/
+
+# Noise
+node_modules/
+*.generated.*
+*.min.js
+*.min.css

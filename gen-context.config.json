@@ -1,0 +1,41 @@
+{
+  "srcDirs": [
+    "Packages/com.davidvdveerdonk.com.veerdonk.projectile-system",
+    "Assets",
+    "docs"
+  ],
+  "exclude": [
+    "node_modules",
+    ".git",
+    "Library",
+    "Temp",
+    "Logs",
+    "UserSettings",
+    "Obj",
+    "obj",
+    "Build",
+    "Builds",
+    ".context",
+    "Packages/com.coplaydev.unity-mcp"
+  ],
+  "maxDepth": 8,
+  "maxSigsPerFile": 25,
+  "autoMaxTokens": true,
+  "coverageTarget": 0.9,
+  "secretScan": true,
+  "monorepo": false,
+  "diffPriority": true,
+  "strategy": "hot-cold",
+  "hotCommits": 10,
+  "outputs": ["copilot"],
+  "output": ".github/copilot-instructions.md",
+  "mcp": {
+    "autoRegister": true
+  },
+  "depMap": true,
+  "todos": true,
+  "changes": true,
+  "testDirs": [
+    "Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests"
+  ]
+}

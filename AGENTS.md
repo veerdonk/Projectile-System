@@ -12,7 +12,7 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 | `docs/DECISIONS.md` | ADRs |
 | `docs/SANDBOX.md` | Play Mode proofs |
 | `docs/ECS.md` | Hybrid ECS map (what each piece does) |
-| `docs/MCP.md` | Unity MCP: start, recover, how agents should call the Editor |
+| `docs/MCP.md` | SigMap (signatures) and Unity MCP (Editor): start, recover, how agents should call them |
 | `Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/` | Product runtime/editor/tests |
 | `Assets/` | Sandbox only |
 
@@ -49,6 +49,10 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 - Use `FindObjectOfType` in the package or `Update` on every instance
 - Edit `Library/`, `Temp/`, `Logs/`, or `UserSettings/`
 - Add comments to code an experienced developer can understand easily
+
+## SigMap
+
+Prefer SigMap MCP (`sigmap`) over dumping whole C# files: `query_context`, `get_callee_signatures`, `get_lines`, `verify_suggestion`. Generate / refresh the index with `npx sigmap`. Details: [docs/MCP.md](docs/MCP.md). Pairing stop lines still apply.
 
 ## Unity MCP
 

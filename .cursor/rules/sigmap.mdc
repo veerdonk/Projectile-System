@@ -1,0 +1,17 @@
+---
+description: Use SigMap MCP for C# signatures; Unity MCP for the Editor
+alwaysApply: true
+---
+
+# SigMap
+
+Namespace `sigmap`. Signature index for the projectile package, sandbox C#, and `docs/` — not a second architecture, and it does not skip pairing stop lines.
+
+Prefer SigMap over dumping whole files when looking up types, call sites, or blast radius:
+
+1. `query_context` (or `list_modules` then `read_context` with a module path) to rank files
+2. `get_callee_signatures` / `search_signatures` for exact public surfaces
+3. `get_lines` or `explain_file` for the anchored range
+4. After edits: `sigmap_notify_file_created` (or `npx sigmap`) so the index stays live; `verify_suggestion` before trusting a new call
+
+If the `sigmap` namespace is missing or `namespaceStatus` is error: `npx -y sigmap --mcp` is the server in `.cursor/mcp.json`. Generate the index with `npx sigmap` from the repo root. Spec still starts at `docs/PHASES.md`. Unity Editor work stays on `user-unityMCP` ([docs/MCP.md](docs/MCP.md)).

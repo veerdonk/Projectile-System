@@ -1,10 +1,27 @@
-# Unity MCP
+# MCP
 
-[MCP for Unity](https://github.com/CoplayDev/unity-mcp) (`com.coplaydev.unity-mcp`) is the preferred way for agents to talk to the open Editor: scenes, GameObjects, Play Mode, console, tests, and asset import. Pairing rules in [AGENTS.md](../AGENTS.md) still apply — MCP does not skip phase stop lines or authorize new public types.
+Two MCP servers, different jobs. Pairing rules in [AGENTS.md](../AGENTS.md) still apply — MCP does not skip phase stop lines or authorize new public types.
+
+| Server | Namespace | For |
+| --- | --- | --- |
+| [SigMap](https://sigmap.io/guide/mcp.html) | `sigmap` | Package / sandbox C# signatures, ranked files, blast radius, line ranges |
+| [MCP for Unity](https://github.com/CoplayDev/unity-mcp) (`com.coplaydev.unity-mcp`) | `user-unityMCP` | Open Editor: scenes, GameObjects, Play Mode, console, tests, asset import |
+
+## SigMap
+
+Project config: `.cursor/mcp.json` (`npx -y sigmap --mcp`), `gen-context.config.json`, `.contextignore`. Index the projectile package, `Assets/` C#, and `docs/` — not `Library/`, not `com.coplaydev.unity-mcp`.
+
+```text
+npx sigmap
+```
+
+That writes `.github/copilot-instructions.md` (hot/cold signature map). Agents should `query_context` / `get_callee_signatures` / `get_lines` instead of opening whole files. After C# edits, `npx sigmap` or the live-index notify tools. `get_method_impact` is JS/TS/Python/Java/Go/Rust only — for C# use `get_impact` on the file. Do not run `sigmap --setup` here: it starts a watcher and its default adapters would overwrite [AGENTS.md](../AGENTS.md).
+
+If `sigmap` is missing from the tool catalog, the Cursor session has not attached the project MCP server. Reload MCP / reconnect. Cloud agents only see SigMap if it is enabled for that environment — a desktop-only install is not inherited.
+
+## Unity MCP — start and recover
 
 Cursor client: namespace `user-unityMCP`, HTTP endpoint `http://127.0.0.1:8080/mcp` (see `~/.cursor/mcp.json`).
-
-## Start and recover
 
 Need **both**: the local HTTP server on port 8080 **and** Unity Editor with the MCP bridge connected (`Window > MCP for Unity`).
 
