@@ -23,7 +23,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             this.count = count;
         }
 
-        public int Count => count;
+        public int Count
+        {
+            get => count;
+            set => count = value;
+        }
 
         public void Apply(ModifierContext context)
         {

@@ -23,7 +23,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             this.seconds = seconds;
         }
 
-        public float Seconds => seconds;
+        public float Seconds
+        {
+            get => seconds;
+            set => seconds = value;
+        }
 
         public void Apply(ModifierContext context)
         {

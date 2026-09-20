@@ -36,7 +36,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             extraRecipe = null;
         }
 
-        public int Count => count;
+        public int Count
+        {
+            get => count;
+            set => count = value;
+        }
 
         public Recipe ExtraRecipe => extraRecipe;
 

@@ -33,7 +33,7 @@ C:\Users\David\.local\bin\uvx.exe --from "mcpforunityserver==10.2.0" mcp-for-uni
 
 Then:
 
-1. Confirm Unity is open on this project (`6000.6.0f1`) and `Assets/Scenes/Sandbox.unity` when proving a phase.
+1. Confirm Unity is open on this project (`6000.6.0f1`) and `Assets/Scenes/Sandbox.unity` when proving a phase. **Projectile Lab > Rebuild** rebuilds that sample.
 2. In Unity: **Window > MCP for Unity**. Start the Unity Bridge if it shows Stopped. Use **Auto-Setup** / **Start Local HTTP Server** when you want Unity to launch the server itself.
 3. In Cursor: reconnect the MCP server (`mcp_auth` on `user-unityMCP` if discovery failed). `namespaceStatus` should be `ready`.
 

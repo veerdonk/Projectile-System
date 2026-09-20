@@ -33,13 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 20 — Recipe editor**
+**Phase 21 — Sample scene**
 
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- `RecipeAsset` is the Unity authoring type; `Spawn` still takes `Recipe` from `ToRecipe()`. Child/sibling slots are `RecipeAsset` refs; a visited map shares one `Recipe` on cycles.
-- The inspector Add menu is filtered by `[ModifierStage]`. Pattern and status popups use `TypeCache` the same way (`IMultiplyPattern` / `IStatusEffect`); game types with a serializer ctor and `[Serializable]` show up without an editor edit. It is not a node graph and not Unity’s default managed-reference picker.
-- Sandbox keeps every C# Recipe. Optional `sampleRecipeAsset` slot (page 2 key `0`) fires `asset.ToRecipe()` when assigned. Sample asset Id is `pierce-asset` so it does not collide with the C# `pierce` Recipe in `RecipeStore`.
-- Phase 21 is the sample scene — do not start it until asked.
+- Play Mode demo is `Assets/Scenes/Sandbox.unity`. **Projectile Lab > Rebuild** writes the turret yard, curated `RecipeAsset`s under `Assets/Sandbox/Recipes/`, and wires `SampleLab`. Keyboard-slot `SandboxLab` is gone.
+- Presets are working copies from `ToRecipe()`. Sheet edits do not dirty assets. Reset disposes `ProjectileWorld`.
+- Phase 22 is barrel pitch + ballistic preset — do not start it until asked.
 
 ## Do not
 

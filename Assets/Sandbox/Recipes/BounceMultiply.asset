@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd308f6fee07fc54391b4678452531b0, type: 3}
-  m_Name: PierceRecipe
+  m_Name: BounceMultiply
   m_EditorClassIdentifier: Davidvdveerdonk.ComVeerdonkProjectileSystem::Davidvdveerdonk.ComVeerdonkProjectileSystem.RecipeAsset
-  id: pierce-asset
+  id: bounce-multiply
   speed: 20
   radius: 0.25
   lifetimeSeconds: 5
@@ -29,12 +29,24 @@ MonoBehaviour:
   onTick: []
   onInterval: []
   onHit:
-  - rid: 1000
+  - rid: 3954138888027504777
+  - rid: 3954138888027504778
   onExpire: []
   references:
     version: 2
     RefIds:
-    - rid: 1000
-      type: {class: Pierce, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
+    - rid: 3954138888027504777
+      type: {class: Bounce, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         count: 2
+    - rid: 3954138888027504778
+      type: {class: Multiply, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
+      data:
+        count: 2
+        childAsset: {fileID: 11400000, guid: ef7e3b63a51848e4894626cb711f2559, type: 2}
+        spread: 2
+        pattern:
+          rid: 3954138888027504779
+    - rid: 3954138888027504779
+      type: {class: SquarePattern, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
+      data: 

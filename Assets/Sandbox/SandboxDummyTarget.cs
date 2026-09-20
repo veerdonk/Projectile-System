@@ -43,6 +43,20 @@ namespace Sandbox
             protection = protectionLevel;
         }
 
+        public void Restore()
+        {
+            hp = maxHp;
+            lastStatusId = "";
+            if (flashRoutine != null)
+            {
+                StopCoroutine(flashRoutine);
+                flashRoutine = null;
+            }
+
+            if (hasRestColor)
+                SetColor(restColor);
+        }
+
         public void Bind(IProjectileWorld world)
         {
             Unbind();

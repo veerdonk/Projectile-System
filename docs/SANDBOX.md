@@ -5,77 +5,52 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 ## Current project
 
 - Editor: Unity 6 LTS `6000.6.0f1`
-- Default scene today: `Assets/Scenes/Sandbox.unity` (phase 0 lab; phase 21 replaces this as the Play Mode sample). `SampleScene.unity` is unused lighting leftover
+- Default Play Mode scene: `Assets/Scenes/Sandbox.unity` (phase 21 sample). `SampleScene.unity` is unused lighting leftover used only as the rebuild template
 - Package: `Packages/com.davidvdveerdonk.com.veerdonk.projectile-system`
 
-## Lab layout (phase 0 builds this)
+## Sample layout (phase 21)
 
-- Ground plane and a straight firing lane
-- Camera looking down the lane
-- Spawn point with a visible gizmo
-- At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
-- Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1); a second wall at −X for Bounce(2)+Multiply(2); a splash dummy near DummyTarget for phase 13 OnHit area; a muzzle dummy beside spawn for OnTravel burst; a Basic-protection dummy and a Strong shield for phase 17
-- Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). **N** pages the fire list (page 1 is the original 30 slots; page 2 is the aimed cannonball, protection proofs, cube vs sphere views, and GroundField). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed / Damage / Critical / Mana / Spread / EffectRadius / Size / Gravity scale), plus one **- / +** row for the shared interval length in seconds, plus Multiply **pattern** (Square / Circle / RandomCircle) and **Spread** meters. Cannonball is key **V**; Gravity(2) cannonball is key **B**. Aimed cannonball (page 2, key **1**) uses `BallisticAim.TrySolve` toward DummyTarget; **- / +** changes speed (too low does not spawn) and **Toggle** picks high arc. Page 2 key **2** is Bounce at DummyBasic; **3** is Straight at DummyBasic; **4** is OnHit AreaEffect at StrongShield; **5** is the sphere Recipe down the lane; **6** is the cube Recipe down the lane; **7** is OnHit GroundField at DummyTarget; **8** is OnExpire GroundField on a lifetime-only shot; **9** is OnHit GroundField with DummyStatusEffect. **Phase 21** replaces this key grid with a turret, preset dropdown, recipe sheet, and Reset
-- On-screen readout: last spawn request, active instances, pool available count, dummy HP, status ids on each dummy, selected Recipe damage / crit / mana / radius / effect radius / gravity, last instance mana and radius after fire. **Phase 21** keeps dummy HP/status plus a small active/pool line
+- Ground plane and a yard of dummies/walls, viewed from behind and above the turret (not the old side-on lane)
+- Turret: sphere body + cylinder barrel, no PhysX collider. Shots spawn at the barrel tip along flattened forward
+- Mouse aim: camera ray vs the ground plane (Y = 0); turret yaws only. Pointer over the on-screen sheet does not aim or fire
+- Fire: click in the world, on-screen **Fire**, or Space. One driver `Tick`s
+- Preset dropdown of `RecipeAsset`s. Play Mode edits a working `Recipe` from `ToRecipe()`; the asset on disk does not change. Switching preset or **Reset** copies again
+- Recipe sheet: base stats plus the six lists (magnitudes editable; no add/remove). Child Recipes are a name
+- **Reset:** dummy HP/status, turret yaw, working copy, `Dispose` + new `ProjectileWorld` (clears live shots and the pool)
+- Colored dummy cubes and status flash. Tiny HUD: active count, pool available, DummyTarget HP/status
+- Yard still has a pierce line of dummies, a bounce wall, DummyBounce off-lane, splash dummy, muzzle dummy, Basic dummy, Strong shield, and a second wall
+
+If the yard is missing in Edit Mode, use **Projectile Lab > Rebuild**. Agents should drive the Editor through [MCP.md](MCP.md) rather than editing the scene YAML by hand.
 
 ## How to prove a phase
 
-Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s scenario in [REQUIREMENTS.md](REQUIREMENTS.md), then exit Play Mode.
+Always: enter Play Mode from `Assets/Scenes/Sandbox.unity`, fire once, confirm the phase’s scenario in [REQUIREMENTS.md](REQUIREMENTS.md), then exit Play Mode.
 
 | Phase | What to fire | What you should see |
 | --- | --- | --- |
-| 0 | Space or on-screen **Fire** | Camera looks down the lane; HUD shows a spawn request; dummy and wall are present; nothing flies |
-| 1 | Straight Recipe | Hits dummy, dummy HP drops, pool count returns |
-| 1 | Lifetime-only Recipe | Dies at 3s, no child |
-| 1 / 3 | Multiply on hit (key **3**) | Parent dies on the dummy; children leave the hit point along the hit normal on the selected `IMultiplyPattern` (default Square, Spread 2 m) |
-| 1b | Same three Recipes as phase 1 | Same proofs; instances are ECS entities under the same HUD |
-| 2 | Pierce(2) (key **4**) | Three +Z dummies: first two live-through, third kills the instance |
-| 2 | Bounce(1) (key **5**) | Fires toward the side wall `(1,0,1)`, reflects, then dies on DummyBounce (remaining bounce is 0). A Bounce shot that hits a dummy first reflects and still drops dummy HP |
-| 3 | Multiply on interval (key **6**) | Extra instances every interval (0.5s by default), along travel, laid out by the selected multiply pattern |
-| 3 | Multiply on expire (key **7**) | Child when the parent dies at 1s (before the dummy) |
-| 4 | Multicast(3) (key **8**) | Three instances leave the spawn point immediately in a small random cone |
-| 5 | Homing(100) (key **9**) vs Homing(10) (key **0**) | Fire 25° off +Z; closest dummy in front is DummyTarget. Strong curves in and hits; weak misses |
-| 6 | Pierce(1)+Homing(300) (key **Q**) | First dummy on the lane is pierced; lock drops; instance then homes onto DummyBounce (closest remaining candidate in front). 300°/s is enough to leave DummyTarget instead of looping back into it |
-| 6 | Bounce(2)+Multiply(2) (key **E**) | Fires +X; two World walls; two extra instances at each bounce; parent stays live |
-| 7 | Speed(2) on travel (key **R**) | Leaves the muzzle twice as fast as the straight Recipe |
-| 7 | Speed(0.5) on interval (key **T**) | Slows by half every interval; the **Interval** row retimes both **6** and **T** |
-| 7 | Bounce(1)+Speed(2) (key **Y**) | Reflects off the wall and continues faster |
-| 8 | ApplyStatus (key **U**) | DummyTarget HUD shows `dummy, dummy` and the cube flashes green; instance despawns |
-| 8 | ApplyStatus at wall (key **O**) | Hits WorldWall; no dummy status or flash |
-| 8 | Pierce(1)+ApplyStatus (key **I**) | DummyTarget and DummyTarget2 both show `dummy, dummy` and flash green; instance dies on the second |
-| 9 | Damage 5 Recipe (key **P**) | Dummy loses 5 HP; HUD shows the selected Recipe damage / crit / mana / radius / effect radius |
-| 10 | Damage(2) on travel (key **F**) | Dummy loses twice the Recipe damage |
-| 10 | Pierce + OnHit Damage(2) (key **G**) | First dummy takes base damage; second takes double |
-| 10 | Mana(2) on travel (key **H**) | HUD last instance mana doubles; Recipe mana stays |
-| 11 | Square Multiply 5 / 7 / 9 | Die 5, then H, then 3×3 on the dummy (set count with **- / +**, pattern Square, Spread 2 m) |
-| 11 | Circle Multiply 3 / 6 | Triangle; then center + pentagon |
-| 11 | RandomCircle Multiply | Scatter inside a disk of radius Spread; children at least one child-diameter apart |
-| 11 | Multiply Spread 0 | Children stacked on the hit/parent |
-| 12 | Size(2) on travel (key **J**) | Sphere looks and hits larger; HUD last instance radius doubles |
-| 12 | Spread(2) on travel + Square Spread 2 (key **K**) | Pair 4 m apart |
-| 13 | OnHit AreaEffect (key **L**) | DummyTarget and DummySplash both lose area damage (DummyTarget also loses Recipe damage) |
-| 13 | Area-only OnHit (key **Z**) | Contact dummy loses area damage, not Recipe damage |
-| 13 | OnTravel AreaEffect (key **X**) | DummyMuzzle is hit before the shot moves |
-| 13 | Interval aura (key **C**) | Dummy beside the lane ticks each interval while the shot is in range |
-| 14 | Straight Recipe | Still hits DummyTarget; no drop |
-| 14 | Cannonball, aimed up (key **V**) | Visible arc, falls short of the dummy at the same speed as the straight shot |
-| 15 | Cannonball + Gravity(2) on travel (key **B**) | Drops harder than the phase 14 cannonball (key **V**) |
-| 16 | Aimed cannonball (page 2, key **1**) | Helper aims at DummyTarget; the shot hits. Toggle high arc for the lofted solution. Lower speed until unreachable — no spawn |
-| 17 | Bounce at Basic dummy | Reflects; that dummy’s HP unchanged |
-| 17 | Straight at Strong shield | Shot vanishes; no Hit, no splash |
-| 18 | Sphere view (page 2, key **5**) | Looks like today; hits DummyTarget |
-| 18 | Cube view (page 2, key **6**) | Cube flies the lane; still hits DummyTarget |
-| 19 | OnHit GroundField | Flat disk at DummyTarget; DummyTarget and splash dummy tick field damage each interval; disk gone after its lifetime |
-| 19 | OnExpire GroundField | Lifetime-only shot; disk appears where it died, not at DummyTarget |
-| 19 | GroundField + DummyStatusEffect | Dummy standing in the disk shows `dummy` each pulse |
+| 0 / 21 | Play Mode, look at the yard | Camera behind/above the turret; dropdown, sheet, Fire, Reset; dummy line and wall present |
+| 1 | **Straight** | Hits DummyTarget, dummy HP drops, pool count returns |
+| 1 / 3 | **Multiply on hit (Square)** | Parent dies on the dummy; children leave the hit on Square pips (Spread 2 m) |
+| 1b | Same presets | Same proofs; instances are ECS entities under the same HUD |
+| 2 | **Pierce** | Three +Z dummies: first two live-through, third kills the instance |
+| 2 | **Bounce** | Aim at the side wall, reflects, then dies on DummyBounce |
+| 3 | **Interval multiply** | Extra instances every 0.5s along travel |
+| 4 | **Multicast** | Three instances leave the muzzle immediately |
+| 5 | **Homing** | Aim ~25° off the dummy line; strong turn hits DummyTarget |
+| 6 | **Pierce+Homing** | First dummy is pierced; instance then homes onto DummyBounce |
+| 6 | **Bounce+Multiply** | Aim at +X walls; two extra instances at each bounce; parent stays live |
+| 7 | **Speed on travel** | Leaves the muzzle twice as fast as Straight |
+| 8 | **ApplyStatus** | DummyTarget HUD shows `dummy` and the cube flashes green |
+| 12 | **Size** | Sphere looks and hits larger |
 | 20 | Create > Projectile > Recipe | Inspector shows six lists; OnHit Add offers Pierce; OnSpawn Add does not |
-| 20 | Sample RecipeAsset Pierce | Optional sandbox slot fires `ToRecipe()`; dummy is pierced like the C# Pierce Recipe |
-| 21 | Sample scene, Pierce preset | Mouse-aim the turret, fire; first two dummies live through |
-| 21 | Tweak Pierce on the sheet | Count 1 dies on the second dummy; asset still 2 after Play Mode |
-| 21 | Reset | HP/status restored, in-flight shots gone, sheet matches the preset |
-| 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone; keyboard-slot lab HUD is gone |
+| 21 | **Pierce**, tweak count to 1 on the sheet | Dies on the second dummy; asset still 2 after Play Mode |
+| 21 | **Reset** | HP/status restored, in-flight shots gone, Pierce on the sheet is 2 again |
+| 21 | Click the dropdown | Aim does not fire |
+| 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone |
 
-Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.
+AreaEffect, GroundField, gravity, and ballistic aim are in the package. They are **not** sample presets yet (ballistic barrel pitch is phase 22).
+
+Open `Assets/Scenes/Sandbox.unity` before Play Mode.
 
 If a proof needs a new sandbox object (second dummy, wall), add it in the sandbox, not in the package.
 

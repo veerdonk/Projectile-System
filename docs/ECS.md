@@ -32,7 +32,7 @@ Those can become later adapters without rewriting Recipes, stage lists, or `IPro
 ## One tick
 
 ```text
-SandboxLab.Update
+SampleLab.Update
   → IProjectileWorld.Tick(dt)
        → write SimDeltaTime singleton
        → SimulationSystemGroup.Update

@@ -43,15 +43,27 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             childRecipe = null;
         }
 
-        public int Count => count;
+        public int Count
+        {
+            get => count;
+            set => count = value;
+        }
 
         public Recipe ChildRecipe => childRecipe;
 
         public RecipeAsset ChildAsset => childAsset;
 
-        public float Spread => spread;
+        public float Spread
+        {
+            get => spread;
+            set => spread = value;
+        }
 
-        public IMultiplyPattern Pattern => pattern;
+        public IMultiplyPattern Pattern
+        {
+            get => pattern;
+            set => pattern = value ?? new SquarePattern();
+        }
 
         public void Apply(ModifierContext context)
         {

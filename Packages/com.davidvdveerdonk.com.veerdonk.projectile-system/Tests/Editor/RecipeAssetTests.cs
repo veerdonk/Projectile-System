@@ -62,6 +62,21 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void ToRecipe_ChangingPierceCountOnCopy_LeavesAssetUnchanged()
+        {
+            parent = ScriptableObject.CreateInstance<RecipeAsset>();
+            parent.OnHit = new IModifier[] { new Pierce(2) };
+
+            Recipe copy = parent.ToRecipe();
+            var copyPierce = copy.OnHit[0] as Pierce;
+            Assert.IsNotNull(copyPierce);
+            copyPierce.Count = 1;
+
+            Assert.AreEqual(1, copyPierce.Count);
+            Assert.AreEqual(2, ((Pierce)parent.OnHit[0]).Count);
+        }
+
+        [Test]
         public void ToRecipe_ResolvesMultiplyChildAsset()
         {
             child = ScriptableObject.CreateInstance<RecipeAsset>();

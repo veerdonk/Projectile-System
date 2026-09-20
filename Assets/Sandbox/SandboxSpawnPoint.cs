@@ -2,9 +2,7 @@ using UnityEngine;
 
 namespace Sandbox
 {
-    /// <summary>
-    /// Visible muzzle for the firing lane. Phase 0 only records pose; the package world is phase 1.
-    /// </summary>
+    /// <summary>Muzzle pose for sample fire. Spawn uses world position and flattened forward.</summary>
     public sealed class SandboxSpawnPoint : MonoBehaviour
     {
         public Vector3 Position => transform.position;
