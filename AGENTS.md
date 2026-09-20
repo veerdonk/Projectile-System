@@ -33,13 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 21 — Sample scene**
+**Phase 21.b — Play Mode modifier compose**
 
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- Play Mode demo is `Assets/Scenes/Sandbox.unity`. **Projectile Lab > Rebuild** writes the turret yard, curated `RecipeAsset`s under `Assets/Sandbox/Recipes/`, and wires `SampleLab`. Keyboard-slot `SandboxLab` is gone.
-- Presets are working copies from `ToRecipe()`. Sheet edits do not dirty assets. Reset disposes `ProjectileWorld`.
-- Size on travel that would overlap the ground (muzzle y 0.7, default radius 0.25 → scale > ~2.8) is lifted at fire time so the first overlap does not World-despawn. `SampleYard.SpawnPosition`.
-- Sample dropdown includes AreaEffect, Cannonball / Gravity(2), and GroundField presets. Recipe sheet edits gravity and those modifier magnitudes. Ballistic barrel pitch is still phase 22.
+- Play Mode demo is still `Assets/Scenes/Sandbox.unity`. Sheet Add/Remove mutates the working `Recipe` only. Catalog is `Assets/Sandbox/SampleModifierCatalog.cs` (runtime reflection). Do not call `RecipeAssetEditor` from Play Mode.
+- Default child/extra for newly added Multiply/Multicast is the Straight preset (`ToRecipe()`). Other presets are pickable on the row.
+- Adding AreaEffect with `EffectRadius = 0` sets the working copy to 3 so the splash can fire. GroundField defaults match the OnHit preset (2.25 m, 2 s, damage 3, interval 0.5 s).
 - Phase 22 is barrel pitch + ballistic preset — do not start it until asked.
 
 ## Do not
