@@ -35,12 +35,13 @@ namespace Sandbox
 
         public ProtectionLevel Level => protection;
 
-        public void Configure(int id, float maxHpValue = 10f, ProtectionLevel protectionLevel = ProtectionLevel.None)
+        public void Configure(int id, float maxHpValue = 10f, ProtectionLevel protectionLevel = ProtectionLevel.None, bool restoreHp = true)
         {
             targetId = id;
             maxHp = maxHpValue;
-            hp = maxHpValue;
             protection = protectionLevel;
+            if (restoreHp)
+                hp = maxHpValue;
         }
 
         public void Restore()

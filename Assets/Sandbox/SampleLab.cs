@@ -164,7 +164,8 @@ namespace Sandbox
 
         void AimTurret()
         {
-            BindChildren();
+            if (turret == null)
+                BindChildren();
             Camera cam = Camera.main;
             Mouse mouse = Mouse.current;
             if (cam == null || mouse == null || turret == null)
@@ -191,7 +192,7 @@ namespace Sandbox
             world.Spawn(new SpawnRequest
             {
                 Recipe = working,
-                Position = muzzle.Position,
+                Position = SampleYard.SpawnPosition(muzzle.Position, working),
                 Direction = direction
             });
         }
@@ -276,7 +277,6 @@ namespace Sandbox
 
         public void BindChildren()
         {
-            SampleYard.BuildIfNeeded(transform);
             if (turret == null)
                 turret = SampleYard.FindTurret(transform);
             if (muzzle == null)

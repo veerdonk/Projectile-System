@@ -76,6 +76,33 @@ namespace Sandbox
             return created;
         }
 
+        const float SpawnGroundSkin = 0.02f;
+
+        public static Vector3 SpawnPosition(Vector3 muzzle, Recipe recipe)
+        {
+            Vector3 position = muzzle;
+            float minY = StartRadius(recipe) + SpawnGroundSkin;
+            if (position.y < minY)
+                position.y = minY;
+            return position;
+        }
+
+        public static float StartRadius(Recipe recipe)
+        {
+            float radius = recipe != null ? recipe.Radius : 0.25f;
+            IModifier[] travel = recipe != null ? recipe.OnTravel : null;
+            if (travel == null)
+                return radius;
+
+            for (int i = 0; i < travel.Length; i++)
+            {
+                if (travel[i] is Size size && size.Scale > 0f)
+                    radius *= size.Scale;
+            }
+
+            return radius;
+        }
+
         public static Transform FindTurret(Transform root)
         {
             return root.Find(TurretName);
@@ -200,8 +227,9 @@ namespace Sandbox
 
             existing.localPosition = position;
             var target = existing.GetComponent<SandboxDummyTarget>();
-            target?.Configure(targetId, 10f, protection);
+            target?.Configure(targetId, 10f, protection, restoreHp: !Application.isPlaying || created);
             Tint(existing.gameObject, color);
+            SandboxCubeLabel.Ensure(existing, DummyLabel(name, protection));
             return created;
         }
 
@@ -224,7 +252,31 @@ namespace Sandbox
             var protection = existing.GetComponent<SandboxProjectileProtection>();
             protection?.Configure(ProtectionLevel.Strong);
             Tint(existing.gameObject, color);
+            SandboxCubeLabel.Ensure(existing, "Strong");
             return created;
+        }
+
+        static string DummyLabel(string name, ProtectionLevel protection)
+        {
+            switch (name)
+            {
+                case DummyName:
+                    return "Target 1";
+                case Dummy2Name:
+                    return "Target 2";
+                case Dummy3Name:
+                    return "Target 3";
+                case DummyBounceName:
+                    return "Bounce";
+                case DummySplashName:
+                    return "Splash";
+                case DummyMuzzleName:
+                    return "Muzzle";
+                case DummyBasicName:
+                    return protection == ProtectionLevel.Basic ? "Basic" : name;
+                default:
+                    return name;
+            }
         }
 
         static void StripCollider(GameObject go)
