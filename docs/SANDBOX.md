@@ -52,10 +52,14 @@ Always: enter Play Mode from `Assets/Scenes/Sandbox.unity`, fire once, confirm t
 | 19 | **OnExpire GroundField** | Lifetime-only shot; disk appears where it died, not at DummyTarget |
 | 19 | **GroundField status** | Dummy standing in the disk shows `dummy` each pulse |
 | 20 | Create > Projectile > Recipe | Inspector shows six lists; OnHit Add offers Pierce; OnSpawn Add does not |
+| 21 | Sample scene, Pierce preset | Mouse-aim the turret, fire; first two dummies live through |
 | 21 | **Pierce**, tweak count to 1 on the sheet | Dies on the second dummy; asset still 2 after Play Mode |
 | 21 | **Reset** | HP/status restored, in-flight shots gone, Pierce on the sheet is 2 again |
 | 21 | Click the dropdown | Aim does not fire |
-| 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone |
+| 21.b | Straight + Add Pierce and Homing | First dummy pierced; shot can steer; Straight asset unchanged after Play Mode |
+| 21.b | OnSpawn Add | Does not list Pierce |
+| 21.b | Reset after compose | Sheet matches Straight again |
+| 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone; keyboard-slot lab HUD is gone |
 
 AreaEffect, GroundField, and Recipe gravity are sample presets. Barrel pitch / `BallisticAim` stay phase 22.
 

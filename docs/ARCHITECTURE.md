@@ -206,7 +206,7 @@ class RecipeAsset : ScriptableObject
 }
 ```
 
-Sandbox fire button / sample turret calls `Spawn`. A single sandbox driver calls `Tick` (for example from one `Update`). Instances do not have their own `Update`. `ProjectileWorld` is `IDisposable` (dispose the Entities `World`). Play Mode demo from phase 21: turret + preset dropdown + recipe sheet in `Assets/` ([DECISIONS.md](DECISIONS.md) ADR-024).
+Sandbox fire button / sample turret calls `Spawn`. A single sandbox driver calls `Tick` (for example from one `Update`). Instances do not have their own `Update`. `ProjectileWorld` is `IDisposable` (dispose the Entities `World`). Play Mode demo from phase 21: turret + preset dropdown + recipe sheet in `Assets/` ([DECISIONS.md](DECISIONS.md) ADR-024). Phase 21.b can Add/Remove modifiers on that working copy (ADR-027); it still does not write the `RecipeAsset`.
 
 ## Invariants
 
