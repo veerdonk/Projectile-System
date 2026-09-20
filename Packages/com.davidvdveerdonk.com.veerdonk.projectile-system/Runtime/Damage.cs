@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
@@ -8,14 +9,22 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// progressive, OnHit after bounce/pierce. The package does not apply HP.
     /// OnHit scales do not rewrite the sampled Direct <see cref="HitInfo"/> for this contact.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnInterval | RecipeStage.OnHit)]
     public sealed class Damage : IModifier
     {
-        public Damage(float scale)
+        [SerializeField] float scale;
+
+        public Damage()
         {
-            Scale = scale;
         }
 
-        public float Scale { get; }
+        public Damage(float scale)
+        {
+            this.scale = scale;
+        }
+
+        public float Scale => scale;
 
         public void Apply(ModifierContext context)
         {

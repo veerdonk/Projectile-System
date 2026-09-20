@@ -2351,6 +2351,8 @@ MonoBehaviour:
   worldWall2: {fileID: 1821090354}
   requestMarker: {fileID: 1885477782}
   cubeViewPrefab: {fileID: 8771233872668593771, guid: f2d697f6e2ce7eb4ca74ae6e3f0628b7, type: 3}
+  groundFieldViewPrefab: {fileID: 0}
+  sampleRecipeAsset: {fileID: 11400000, guid: 924eadfd82ddd014185d955206b44563, type: 2}
 --- !u!4 &1060518413
 Transform:
   m_ObjectHideFlags: 0

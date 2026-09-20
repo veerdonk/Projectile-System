@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
@@ -7,14 +8,22 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// EffectRadius(0.5) halves. Scale &lt;= 0 is a no-op. Same stages as <see cref="Speed"/>.
     /// Does not run an overlap query.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnInterval | RecipeStage.OnHit)]
     public sealed class EffectRadius : IModifier
     {
-        public EffectRadius(float scale)
+        [SerializeField] float scale;
+
+        public EffectRadius()
         {
-            Scale = scale;
         }
 
-        public float Scale { get; }
+        public EffectRadius(float scale)
+        {
+            this.scale = scale;
+        }
+
+        public float Scale => scale;
 
         public void Apply(ModifierContext context)
         {

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
@@ -5,6 +6,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// <summary>
     /// Dice-pip layouts through 9, then odd-sized grids (5×5, 7×7, …). Cell size is <c>spread</c>.
     /// </summary>
+    [Serializable]
     public sealed class SquarePattern : IMultiplyPattern
     {
         public Vector3 GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count)

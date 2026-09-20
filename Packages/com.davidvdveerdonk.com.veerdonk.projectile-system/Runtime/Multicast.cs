@@ -7,28 +7,50 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// OnSpawn: total instances is <see cref="Count"/> — the original plus <see cref="Count"/> - 1 extras of an explicit
     /// sibling Recipe. <see cref="Pattern"/> aims all of them, the original included. Extras never multicast again.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnSpawn)]
     public sealed class Multicast : IModifier
     {
-        public Multicast(int count, Recipe extraRecipe, IMulticastPattern pattern = null)
+        [SerializeField] int count;
+        [SerializeField] RecipeAsset extraAsset;
+
+        Recipe extraRecipe;
+        IMulticastPattern pattern;
+
+        public Multicast()
         {
-            Count = count;
-            ExtraRecipe = extraRecipe ?? throw new ArgumentNullException(nameof(extraRecipe));
-            Pattern = pattern ?? new RandomConePattern();
+            pattern = new RandomConePattern();
         }
 
-        public int Count { get; }
+        public Multicast(int count, Recipe extraRecipe, IMulticastPattern pattern = null)
+        {
+            this.count = count;
+            this.extraRecipe = extraRecipe ?? throw new ArgumentNullException(nameof(extraRecipe));
+            this.pattern = pattern ?? new RandomConePattern();
+        }
 
-        public Recipe ExtraRecipe { get; }
+        public Multicast(int count, RecipeAsset extraAsset, IMulticastPattern pattern = null)
+            : this(count, new Recipe(), pattern)
+        {
+            this.extraAsset = extraAsset ?? throw new ArgumentNullException(nameof(extraAsset));
+            extraRecipe = null;
+        }
 
-        public IMulticastPattern Pattern { get; }
+        public int Count => count;
+
+        public Recipe ExtraRecipe => extraRecipe;
+
+        public RecipeAsset ExtraAsset => extraAsset;
+
+        public IMulticastPattern Pattern => pattern;
 
         public void Apply(ModifierContext context)
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
 
-            int count = Count;
-            if (count <= 1)
+            int total = Count;
+            if (total <= 1)
                 return;
 
             Vector3 forward = context.Velocity;
@@ -41,9 +63,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 speed = context.Speed;
             }
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < total; i++)
             {
-                Vector3 direction = Aim(Pattern.GetDirection(context, forward, i, count), forward);
+                Vector3 direction = Aim(Pattern.GetDirection(context, forward, i, total), forward);
                 if (i == 0)
                     context.Velocity = direction * speed;
                 else

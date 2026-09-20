@@ -10,17 +10,27 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// in front of travel, so a pierce shot does not re-lock the dummy it is still overlapping. Other candidates
     /// may lock on a later tick.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnTick)]
     public sealed class Homing : IModifier
     {
-        public Homing(float turnRateDegreesPerSecond, IHomingAcquisition acquisition = null)
+        [SerializeField] float turnRateDegreesPerSecond;
+        IHomingAcquisition acquisition;
+
+        public Homing()
         {
-            TurnRateDegreesPerSecond = turnRateDegreesPerSecond;
-            Acquisition = acquisition ?? new ClosestInTravelDirectionAcquisition();
+            acquisition = new ClosestInTravelDirectionAcquisition();
         }
 
-        public float TurnRateDegreesPerSecond { get; }
+        public Homing(float turnRateDegreesPerSecond, IHomingAcquisition acquisition = null)
+        {
+            this.turnRateDegreesPerSecond = turnRateDegreesPerSecond;
+            this.acquisition = acquisition ?? new ClosestInTravelDirectionAcquisition();
+        }
 
-        public IHomingAcquisition Acquisition { get; }
+        public float TurnRateDegreesPerSecond => turnRateDegreesPerSecond;
+
+        public IHomingAcquisition Acquisition => acquisition;
 
         internal static void ReleaseLockOnTargetHit(ref Projectile projectile, in HitInfo hit)
         {

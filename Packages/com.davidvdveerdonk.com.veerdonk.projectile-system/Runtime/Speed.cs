@@ -10,14 +10,22 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// on the Recipe's OnSpawn list; OnHit scales after earlier modifiers in that list
     /// (so Bounce then Speed scales the reflected velocity).
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnInterval | RecipeStage.OnHit)]
     public sealed class Speed : IModifier
     {
-        public Speed(float scale)
+        [SerializeField] float scale;
+
+        public Speed()
         {
-            Scale = scale;
         }
 
-        public float Scale { get; }
+        public Speed(float scale)
+        {
+            this.scale = scale;
+        }
+
+        public float Scale => scale;
 
         public void Apply(ModifierContext context)
         {

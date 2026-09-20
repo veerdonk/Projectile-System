@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
@@ -8,14 +9,22 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// Same stages as <see cref="Speed"/>. Burst still applies gravity each tick;
     /// this modifier does not add g * dt itself.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnInterval | RecipeStage.OnHit)]
     public sealed class Gravity : IModifier
     {
-        public Gravity(float scale)
+        [SerializeField] float scale;
+
+        public Gravity()
         {
-            Scale = scale;
         }
 
-        public float Scale { get; }
+        public Gravity(float scale)
+        {
+            this.scale = scale;
+        }
+
+        public float Scale => scale;
 
         public void Apply(ModifierContext context)
         {

@@ -11,8 +11,21 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// The modifier queues a plant; it does not call Physics or spawn a Recipe.
     /// Radius or lifetime &lt;= 0 is a no-op. Interval &lt;= 0 never pulses.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnHit | RecipeStage.OnExpire)]
     public sealed class GroundField : IModifier
     {
+        [SerializeField] float radius;
+        [SerializeField] float lifetimeSeconds;
+        [SerializeField] float damage;
+        [SerializeReference] IStatusEffect status;
+        [SerializeField] float intervalSeconds;
+        [SerializeField] string presentationId;
+
+        public GroundField()
+        {
+        }
+
         public GroundField(
             float radius,
             float lifetimeSeconds,
@@ -21,29 +34,29 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             float intervalSeconds = 0f,
             string presentationId = null)
         {
-            Radius = radius;
-            LifetimeSeconds = lifetimeSeconds;
-            Damage = damage;
-            Status = status;
-            IntervalSeconds = intervalSeconds;
-            PresentationId = presentationId;
+            this.radius = radius;
+            this.lifetimeSeconds = lifetimeSeconds;
+            this.damage = damage;
+            this.status = status;
+            this.intervalSeconds = intervalSeconds;
+            this.presentationId = presentationId;
         }
 
-        public float Radius { get; }
+        public float Radius => radius;
 
-        public float LifetimeSeconds { get; }
+        public float LifetimeSeconds => lifetimeSeconds;
 
-        public float Damage { get; }
+        public float Damage => damage;
 
-        public IStatusEffect Status { get; }
+        public IStatusEffect Status => status;
 
-        public float IntervalSeconds { get; }
+        public float IntervalSeconds => intervalSeconds;
 
         /// <summary>
         /// Selects the GameObject view via <see cref="IGroundFieldViewFactory"/>.
         /// Unknown or empty ids use the primitive disk.
         /// </summary>
-        public string PresentationId { get; }
+        public string PresentationId => presentationId;
 
         public void Apply(ModifierContext context)
         {

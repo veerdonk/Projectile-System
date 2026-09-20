@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 19 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
+    /// Phase 20 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -55,6 +55,7 @@ namespace Sandbox
         const int OnHitGroundFieldSlot = 36;
         const int OnExpireGroundFieldSlot = 37;
         const int StatusGroundFieldSlot = 38;
+        const int SampleRecipeAssetSlot = 39;
         const int HudPageCount = 2;
         const float GroundFieldRadius = 2.25f;
         const float GroundFieldLifetime = 2f;
@@ -76,6 +77,7 @@ namespace Sandbox
         [SerializeField] Transform requestMarker;
         [SerializeField] GameObject cubeViewPrefab;
         [SerializeField] GameObject groundFieldViewPrefab;
+        [SerializeField] RecipeAsset sampleRecipeAsset;
 
         SandboxDummyTarget[] dummies = System.Array.Empty<SandboxDummyTarget>();
         ProjectileWorld world;
@@ -113,6 +115,7 @@ namespace Sandbox
         Recipe onHitGroundFieldRecipe;
         Recipe expireGroundFieldRecipe;
         Recipe statusGroundFieldRecipe;
+        Recipe sampleAssetRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
@@ -207,8 +210,8 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 19 (ground fields)");
-            GUILayout.Label("Space fires the selected Recipe. N pages the fire list. Page 1: 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, V, B. Page 2: 1 aims at DummyTarget, 2 Bounce at Basic, 3 Straight at Basic, 4 AreaEffect at Strong, 5 Sphere view, 6 Cube view, 7 OnHit GroundField, 8 OnExpire GroundField, 9 GroundField status. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 20 (recipe editor)");
+            GUILayout.Label("Space fires the selected Recipe. N pages the fire list. Page 1: 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, V, B. Page 2: 1 aims at DummyTarget, 2 Bounce at Basic, 3 Straight at Basic, 4 AreaEffect at Strong, 5 Sphere view, 6 Cube view, 7 OnHit GroundField, 8 OnExpire GroundField, 9 GroundField status, 0 sample RecipeAsset. - / + changes n for the next shot.");
             DrawHudPageRow();
             if (hudPage == 0)
                 DrawPage0FireButtons();
@@ -383,6 +386,8 @@ namespace Sandbox
                 selectedRecipe = OnExpireGroundFieldSlot;
             if (keyboard.digit9Key.wasPressedThisFrame)
                 selectedRecipe = StatusGroundFieldSlot;
+            if (keyboard.digit0Key.wasPressedThisFrame && sampleAssetRecipe != null)
+                selectedRecipe = SampleRecipeAssetSlot;
         }
 
         void DrawPage1FireButtons()
@@ -408,6 +413,8 @@ namespace Sandbox
             FireButton("OnHit GroundField", OnHitGroundFieldSlot, onHitGroundFieldRecipe);
             FireButton("OnExpire GroundField", OnExpireGroundFieldSlot, expireGroundFieldRecipe);
             FireButton("GroundField status", StatusGroundFieldSlot, statusGroundFieldRecipe);
+            if (sampleAssetRecipe != null)
+                FireButton("Fire RecipeAsset Pierce", SampleRecipeAssetSlot, sampleAssetRecipe);
         }
 
         void FireButton(string title, int slot, Recipe recipe)
@@ -670,6 +677,8 @@ namespace Sandbox
                     return expireGroundFieldRecipe;
                 case StatusGroundFieldSlot:
                     return statusGroundFieldRecipe;
+                case SampleRecipeAssetSlot:
+                    return sampleAssetRecipe;
                 default:
                     return straightRecipe;
             }
@@ -860,6 +869,11 @@ namespace Sandbox
             world.Prewarm(onHitGroundFieldRecipe, PrewarmCount);
             world.Prewarm(expireGroundFieldRecipe, PrewarmCount);
             world.Prewarm(statusGroundFieldRecipe, PrewarmCount);
+            if (sampleRecipeAsset != null)
+            {
+                sampleAssetRecipe = sampleRecipeAsset.ToRecipe();
+                world.Prewarm(sampleAssetRecipe, PrewarmCount);
+            }
 
             world.StatusApplied += OnStatusApplied;
             BindDummies();

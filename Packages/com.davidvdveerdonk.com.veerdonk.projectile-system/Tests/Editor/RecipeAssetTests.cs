@@ -1,0 +1,97 @@
+using NUnit.Framework;
+using UnityEngine;
+
+namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
+{
+    public sealed class RecipeAssetTests
+    {
+        RecipeAsset parent;
+        RecipeAsset child;
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (parent != null)
+                UnityEngine.Object.DestroyImmediate(parent);
+            if (child != null)
+                UnityEngine.Object.DestroyImmediate(child);
+        }
+
+        [Test]
+        public void Pierce_IsInOnHitCatalog_NotOnSpawn()
+        {
+            Assert.IsTrue(Contains(RecipeAssetEditor.ModifiersFor(RecipeStage.OnHit), typeof(Pierce)));
+            Assert.IsFalse(Contains(RecipeAssetEditor.ModifiersFor(RecipeStage.OnSpawn), typeof(Pierce)));
+        }
+
+        [Test]
+        public void ToRecipe_CopiesStatsAndPierceOnHit()
+        {
+            parent = ScriptableObject.CreateInstance<RecipeAsset>();
+            parent.Id = "pierce-asset";
+            parent.Speed = 20f;
+            parent.LifetimeSeconds = 3f;
+            parent.OnHit = new IModifier[] { new Pierce(2) };
+
+            Recipe recipe = parent.ToRecipe();
+
+            Assert.AreEqual("pierce-asset", recipe.Id);
+            Assert.AreEqual(20f, recipe.Speed);
+            Assert.AreEqual(3f, recipe.LifetimeSeconds);
+            Assert.AreEqual(1, recipe.OnHit.Length);
+            var pierce = recipe.OnHit[0] as Pierce;
+            Assert.IsNotNull(pierce);
+            Assert.AreEqual(2, pierce.Count);
+            Assert.AreNotSame(parent.OnHit[0], recipe.OnHit[0]);
+        }
+
+        [Test]
+        public void ToRecipe_ResolvesMultiplyChildAsset()
+        {
+            child = ScriptableObject.CreateInstance<RecipeAsset>();
+            child.Id = "child";
+            child.Speed = 8f;
+            child.LifetimeSeconds = 2f;
+
+            parent = ScriptableObject.CreateInstance<RecipeAsset>();
+            parent.Id = "parent";
+            parent.OnHit = new IModifier[] { new Multiply(2, child) };
+
+            Recipe recipe = parent.ToRecipe();
+
+            Assert.AreEqual(1, recipe.OnHit.Length);
+            var multiply = recipe.OnHit[0] as Multiply;
+            Assert.IsNotNull(multiply);
+            Assert.AreEqual(2, multiply.Count);
+            Assert.IsNotNull(multiply.ChildRecipe);
+            Assert.AreEqual("child", multiply.ChildRecipe.Id);
+            Assert.AreEqual(8f, multiply.ChildRecipe.Speed);
+            Assert.AreEqual(2f, multiply.ChildRecipe.LifetimeSeconds);
+        }
+
+        [Test]
+        public void ToRecipe_SelfChild_DoesNotThrow_AndSharesRecipe()
+        {
+            parent = ScriptableObject.CreateInstance<RecipeAsset>();
+            parent.Id = "loop";
+            parent.OnHit = new IModifier[] { new Multiply(1, parent) };
+
+            Recipe recipe = parent.ToRecipe();
+
+            var multiply = recipe.OnHit[0] as Multiply;
+            Assert.IsNotNull(multiply);
+            Assert.AreSame(recipe, multiply.ChildRecipe);
+        }
+
+        static bool Contains(System.Type[] types, System.Type match)
+        {
+            for (int i = 0; i < types.Length; i++)
+            {
+                if (types[i] == match)
+                    return true;
+            }
+
+            return false;
+        }
+    }
+}

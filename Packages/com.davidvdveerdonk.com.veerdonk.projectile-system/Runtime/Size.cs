@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
@@ -7,14 +8,22 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// Size(0.5) halves. Scale &lt;= 0 is a no-op. Same stages as <see cref="Speed"/>. There is no
     /// separate size field. SphereCast and the view follow the new radius.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnInterval | RecipeStage.OnHit)]
     public sealed class Size : IModifier
     {
-        public Size(float scale)
+        [SerializeField] float scale;
+
+        public Size()
         {
-            Scale = scale;
         }
 
-        public float Scale { get; }
+        public Size(float scale)
+        {
+            this.scale = scale;
+        }
+
+        public float Scale => scale;
 
         public void Apply(ModifierContext context)
         {

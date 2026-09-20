@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
@@ -7,14 +8,22 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// Spread(2) doubles pip spacing, Spread(0.5) halves. Scale &lt;= 0 is a no-op.
     /// Same stages as <see cref="Speed"/>. Does not jitter the original shot.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnInterval | RecipeStage.OnHit)]
     public sealed class Spread : IModifier
     {
-        public Spread(float scale)
+        [SerializeField] float scale;
+
+        public Spread()
         {
-            Scale = scale;
         }
 
-        public float Scale { get; }
+        public Spread(float scale)
+        {
+            this.scale = scale;
+        }
+
+        public float Scale => scale;
 
         public void Apply(ModifierContext context)
         {

@@ -11,27 +11,38 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// <see cref="IncludeDirectHit"/> / <see cref="IncludeDirectStatus"/> apply only on OnHit.
     /// EffectRadius 0 is a no-op. The modifier does not call Physics.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnInterval | RecipeStage.OnHit)]
     public sealed class AreaEffect : IModifier
     {
+        [SerializeField] float damage;
+        [SerializeReference] IStatusEffect status;
+        [SerializeField] bool includeDirectHit = true;
+        [SerializeField] bool includeDirectStatus = true;
+
+        public AreaEffect()
+        {
+        }
+
         public AreaEffect(
             float damage,
             IStatusEffect status = null,
             bool includeDirectHit = true,
             bool includeDirectStatus = true)
         {
-            Damage = damage;
-            Status = status;
-            IncludeDirectHit = includeDirectHit;
-            IncludeDirectStatus = includeDirectStatus;
+            this.damage = damage;
+            this.status = status;
+            this.includeDirectHit = includeDirectHit;
+            this.includeDirectStatus = includeDirectStatus;
         }
 
-        public float Damage { get; }
+        public float Damage => damage;
 
-        public IStatusEffect Status { get; }
+        public IStatusEffect Status => status;
 
-        public bool IncludeDirectHit { get; }
+        public bool IncludeDirectHit => includeDirectHit;
 
-        public bool IncludeDirectStatus { get; }
+        public bool IncludeDirectStatus => includeDirectStatus;
 
         public void Apply(ModifierContext context)
         {
