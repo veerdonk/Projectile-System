@@ -15,7 +15,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 - Spawn point with a visible gizmo
 - At least one dummy target (cube) with HP updated from `IProjectileWorld.Hit`
 - Three dummies on the +Z lane for Pierce(2); a bounce dummy off-lane; a side wall (`World`) for Bounce(1); a second wall at −X for Bounce(2)+Multiply(2); a splash dummy near DummyTarget for phase 13 OnHit area; a muzzle dummy beside spawn for OnTravel burst; a Basic-protection dummy and a Strong shield for phase 17
-- Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). **N** pages the fire list (page 1 is the original 30 slots; page 2 is the aimed cannonball plus protection proofs). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed / Damage / Critical / Mana / Spread / EffectRadius / Size / Gravity scale), plus one **- / +** row for the shared interval length in seconds, plus Multiply **pattern** (Square / Circle / RandomCircle) and **Spread** meters. Cannonball is key **V**; Gravity(2) cannonball is key **B**. Aimed cannonball (page 2, key **1**) uses `BallisticAim.TrySolve` toward DummyTarget; **- / +** changes speed (too low does not spawn) and **Toggle** picks high arc. Page 2 key **2** is Bounce at DummyBasic; **3** is Straight at DummyBasic; **4** is OnHit AreaEffect at StrongShield. **Phase 21** replaces this key grid with a turret, preset dropdown, recipe sheet, and Reset
+- Fire control (on-screen **Fire**, Space, or the SandboxLab inspector **Fire** context menu). **N** pages the fire list (page 1 is the original 30 slots; page 2 is the aimed cannonball, protection proofs, and cube vs sphere views). Modifier Recipes have **- / +** to change `n` for the next shot (Pierce, Bounce, Multiply, Multicast, Homing °/s, Speed / Damage / Critical / Mana / Spread / EffectRadius / Size / Gravity scale), plus one **- / +** row for the shared interval length in seconds, plus Multiply **pattern** (Square / Circle / RandomCircle) and **Spread** meters. Cannonball is key **V**; Gravity(2) cannonball is key **B**. Aimed cannonball (page 2, key **1**) uses `BallisticAim.TrySolve` toward DummyTarget; **- / +** changes speed (too low does not spawn) and **Toggle** picks high arc. Page 2 key **2** is Bounce at DummyBasic; **3** is Straight at DummyBasic; **4** is OnHit AreaEffect at StrongShield; **5** is the sphere Recipe down the lane; **6** is the cube Recipe down the lane. **Phase 21** replaces this key grid with a turret, preset dropdown, recipe sheet, and Reset
 - On-screen readout: last spawn request, active instances, pool available count, dummy HP, status ids on each dummy, selected Recipe damage / crit / mana / radius / effect radius / gravity, last instance mana and radius after fire. **Phase 21** keeps dummy HP/status plus a small active/pool line
 
 ## How to prove a phase
@@ -63,8 +63,8 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 16 | Aimed cannonball (page 2, key **1**) | Helper aims at DummyTarget; the shot hits. Toggle high arc for the lofted solution. Lower speed until unreachable — no spawn |
 | 17 | Bounce at Basic dummy | Reflects; that dummy’s HP unchanged |
 | 17 | Straight at Strong shield | Shot vanishes; no Hit, no splash |
-| 18 | Sphere Recipe | Looks like today; hits DummyTarget |
-| 18 | Cube Recipe | Cube flies the lane; still hits DummyTarget |
+| 18 | Sphere view (page 2, key **5**) | Looks like today; hits DummyTarget |
+| 18 | Cube view (page 2, key **6**) | Cube flies the lane; still hits DummyTarget |
 | 19 | OnHit GroundField | Flat disk at DummyTarget; DummyTarget and splash dummy tick field damage each interval; disk gone after its lifetime |
 | 19 | OnExpire GroundField | Lifetime-only shot; disk appears where it died, not at DummyTarget |
 | 19 | GroundField + DummyStatusEffect | Dummy standing in the disk shows `dummy` each pulse |

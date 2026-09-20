@@ -27,8 +27,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         int nextId = 1;
         bool disposed;
 
-        public ProjectileWorld(Transform poolParent = null)
-            : this(new PhysicsHitQuery(), createViews: true, poolParent)
+        public ProjectileWorld(Transform poolParent = null, IProjectileViewFactory viewFactory = null)
+            : this(new PhysicsHitQuery(), createViews: true, poolParent, seed: 1u, viewFactory)
         {
         }
 
@@ -37,12 +37,17 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         {
         }
 
-        ProjectileWorld(IHitQuery hitQuery, bool createViews, Transform poolParent, uint seed = 1u)
+        ProjectileWorld(
+            IHitQuery hitQuery,
+            bool createViews,
+            Transform poolParent,
+            uint seed = 1u,
+            IProjectileViewFactory viewFactory = null)
         {
             this.hitQuery = hitQuery ?? throw new ArgumentNullException(nameof(hitQuery));
             modifierContext = new ModifierContext(pendingSpawns, homingCatalog, seed);
             ecsWorld = new World("ProjectileSimulation");
-            pool = new ProjectilePool(ecsWorld, poolParent, createViews);
+            pool = new ProjectilePool(ecsWorld, poolParent, createViews, viewFactory);
 
             EntityManager em = ecsWorld.EntityManager;
             deltaTimeEntity = em.CreateEntity(typeof(SimDeltaTime));
