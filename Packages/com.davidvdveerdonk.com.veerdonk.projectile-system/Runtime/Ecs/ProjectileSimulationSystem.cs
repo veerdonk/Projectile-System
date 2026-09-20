@@ -16,6 +16,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public System.Action<HitInfo> Hit;
         public System.Action<ExpireInfo> Expired;
         public System.Action<StatusInfo> StatusApplied;
+        public GroundFieldSet GroundFields;
     }
 
     [DisableAutoCreation]
@@ -84,6 +85,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             RunStage(recipe.OnSpawn, entity, hasHit: false, default, dt: 0f, skipMulticast: multicastGenerationsLeft <= 0);
             RunStage(recipe.OnTravel, entity, hasHit: false, default, dt: 0f);
             FlushAreaOverlaps(entity);
+            FlushGroundFields(entity);
         }
 
         void TryMoveOrHit(Entity entity)
@@ -147,6 +149,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 if (!Bridge.ModifierContext.DirectStatusSuppressed)
                     FlushStatusApplied(hit);
                 FlushAreaOverlaps(entity);
+                FlushGroundFields(entity);
                 if (Bridge.ModifierContext.CancelDespawn)
                 {
                     ContinueAfterHit(entity, hit);
@@ -155,6 +158,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             }
 
             RunStage(recipe.OnExpire, entity, hasHit: runOnHit, hit, dt: 0f);
+            FlushGroundFields(entity);
 
             ReturnToPool(entity, em.GetComponentData<Projectile>(entity));
         }
@@ -301,6 +305,18 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             }
         }
 
+        void FlushGroundFields(Entity entity)
+        {
+            IReadOnlyList<GroundFieldPlantRequest> requests = Bridge.ModifierContext.RequestedGroundFields;
+            if (requests.Count == 0 || Bridge.GroundFields == null)
+                return;
+
+            Projectile projectile = EntityManager.GetComponentData<Projectile>(entity);
+            var instanceId = new ProjectileId(projectile.Id);
+            for (int i = 0; i < requests.Count; i++)
+                Bridge.GroundFields.Plant(instanceId, requests[i]);
+        }
+
         static bool ContainsTarget(List<TargetId> ids, TargetId id)
         {
             for (int i = 0; i < ids.Count; i++)
@@ -317,6 +333,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Bridge.ModifierContext.CancelDespawn = false;
             Bridge.ModifierContext.ClearRequestedStatus();
             Bridge.ModifierContext.ClearAreaRequests();
+            Bridge.ModifierContext.ClearGroundFieldRequests();
             if (modifiers == null || modifiers.Length == 0)
                 return;
 

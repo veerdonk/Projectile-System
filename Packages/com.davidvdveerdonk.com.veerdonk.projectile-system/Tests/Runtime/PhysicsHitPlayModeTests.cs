@@ -526,6 +526,79 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator OnTravel_GroundFieldDisk_HitsInsideXZ_IgnoresOutsideCircle()
+        {
+            GameObject inside = null;
+            GameObject standing = null;
+            GameObject beside = null;
+            GameObject poolRoot = null;
+            try
+            {
+                inside = CreateDummy(new Vector3(1f, 0f, 0f), new TargetId(1));
+                standing = CreateDummy(new Vector3(0.5f, 1f, 0f), new TargetId(2));
+                beside = CreateDummy(new Vector3(2.5f, 0.5f, 0f), new TargetId(3));
+                poolRoot = new GameObject("TestPool");
+                var world = new ProjectileWorld(poolRoot.transform);
+                try
+                {
+                    Recipe recipe = CreateRecipe("ground-travel", speed: 20f, lifetime: 5f);
+                    recipe.OnTravel = new IModifier[] { new GroundField(2f, 2f, 3f, intervalSeconds: 0.5f) };
+                    world.Prewarm(recipe, 4);
+
+                    var seen = new List<HitInfo>();
+                    world.Hit += info => seen.Add(info);
+
+                    Physics.SyncTransforms();
+                    yield return null;
+                    Physics.SyncTransforms();
+
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = recipe,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward
+                    });
+
+                    Assert.AreEqual(2, seen.Count);
+                    Assert.AreEqual(HitSource.Area, seen[0].Source);
+                    Assert.AreEqual(HitSource.Area, seen[1].Source);
+                    bool sawInside = false;
+                    bool sawStanding = false;
+                    bool sawBeside = false;
+                    for (int i = 0; i < seen.Count; i++)
+                    {
+                        Assert.AreEqual(3f, seen[i].Damage, 1e-4f);
+                        if (seen[i].TargetId == new TargetId(1))
+                            sawInside = true;
+                        else if (seen[i].TargetId == new TargetId(2))
+                            sawStanding = true;
+                        else if (seen[i].TargetId == new TargetId(3))
+                            sawBeside = true;
+                    }
+
+                    Assert.IsTrue(sawInside);
+                    Assert.IsTrue(sawStanding);
+                    Assert.IsFalse(sawBeside);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
+            }
+            finally
+            {
+                if (inside != null)
+                    Object.Destroy(inside);
+                if (standing != null)
+                    Object.Destroy(standing);
+                if (beside != null)
+                    Object.Destroy(beside);
+                if (poolRoot != null)
+                    Object.Destroy(poolRoot);
+            }
+        }
+
         static Recipe CreateRecipe(string id, float speed, float lifetime)
         {
             return new Recipe

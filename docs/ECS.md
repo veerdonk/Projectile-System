@@ -93,11 +93,14 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Interval.cs` | `OnSpawn`: seconds between `OnInterval` runs, onto `Projectile.IntervalSeconds`. One period per instance drives the whole list |
 | `Runtime/ApplyStatus.cs` | `OnHit` Target: request an `IStatusEffect`. Each request on the list is flushed as Direct `StatusApplied` after the list, in order, unless suppressed. World hits do nothing |
 | `Runtime/AreaEffect.cs` | Overlap Targets in instance `EffectRadius`. Own damage/status. OnHit at the contact point, OnTravel at spawn, OnInterval aura on the flying instance. Queues on `ModifierContext`; does not call Physics |
+| `Runtime/GroundField.cs` | Plants a lingering horizontal disk on OnHit / OnExpire / OnTravel. Own radius, lifetime, damage, optional status, pulse period. Owned by `ProjectileWorld`, ticked from the same `Tick`. Not a Recipe |
+| `Runtime/IGroundFieldViewFactory.cs` | `Create(radius, poolParent)` plus default `PrimitiveGroundFieldViewFactory` (thin cylinder scaled to `2 * radius` on XZ) |
+| `Runtime/PrefabGroundFieldViewFactory.cs` | Map `GroundField.PresentationId` → prefab; does not rescale; unknown ids fall back to the primitive |
 | `Runtime/IStatusEffect.cs` | Effect contract plus v1 `DummyStatusEffect` (`Id` `"dummy"`). Package does not tick DoT |
 | `Runtime/IStatusReceiver.cs` | Game/sandbox apply contract. Package never calls it; sandbox maps `StatusApplied` → `Apply` |
 | `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget` |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views from `IProjectileViewFactory` |
-| `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap; ignore last collider so pierce/bounce can leave the surface. `Overlap` returns `IDamageable` Targets only |
+| `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap; ignore last collider so pierce/bounce can leave the surface. `Overlap` returns `IDamageable` Targets only. `OverlapDisk` is a world-up cylinder then an XZ filter |
 | `Runtime/IProjectileViewFactory.cs` | `Create(recipe, poolParent)` plus default `PrimitiveViewFactory` (sphere scaled to `2 * Radius`) |
 | `Runtime/PrefabViewFactory.cs` | Map `PresentationId` → prefab; does not rescale; unknown ids fall back to the primitive factory |
 | `Runtime/ProjectileView.cs` | Public presentation adapter (`Bind` / `SetPose` / `Release`). Prefab views keep authored scale; primitive views follow `Radius` |

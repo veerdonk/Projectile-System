@@ -9,6 +9,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         void Overlap(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results);
 
+        void OverlapDisk(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results);
+
         void CopyIgnore(ProjectileId from, ProjectileId to);
     }
 }

@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-026 — GroundField views come from a factory
+
+- **Date:** 2026-09-20
+- **Decision:** `GroundField` views are created by `IGroundFieldViewFactory.Create(radius, presentationId, poolParent)`, the same one-method swap as `IProjectileViewFactory` (ADR-021). `GroundField.PresentationId` selects the look the way `Recipe.PresentationId` does. Default is `PrimitiveGroundFieldViewFactory` (thin cylinder, scaled to `2 * radius` on XZ). `PrefabGroundFieldViewFactory` maps id → prefab and does **not** overwrite `localScale`. Unknown or empty ids fall back to the primitive. Views are pooled per presentation id. `ProjectileView` is reused; prefabs may already carry it. `createViews: false` never calls the factory. Colliders on created views stay disabled. Hits stay the XZ disk. No Addressables, no Entities Graphics.
+- **Why:** Games need more than one puddle mesh without a factory per prefab. Reusing `IProjectileViewFactory` would take a `Recipe` the field does not have. The id lives on the modifier because the field is not a Recipe.
+- **Consequences:** Three new public types (`IGroundFieldViewFactory`, `PrimitiveGroundFieldViewFactory`, `PrefabGroundFieldViewFactory`) and `GroundField.PresentationId`. `ProjectileWorld` gains an optional `groundFieldViewFactory` argument; `new ProjectileWorld(poolParent, viewFactory)` keeps today’s primitive disk.
+
 ## ADR-025 — Package id is `com.veerdonk.projectile-system`
 
 - **Date:** 2026-09-19
@@ -28,7 +35,7 @@ Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if
 - **Date:** 2026-09-17
 - **Decision:** `GroundField` is a modifier on `OnHit`, `OnExpire`, and `OnTravel`. It plants a lingering **horizontal disk** owned by `ProjectileWorld`, ticked from the same `Tick`. Size (`radius`), `lifetimeSeconds`, `damage`, optional `IStatusEffect`, and `intervalSeconds` are authored on the modifier, not on `Recipe` / `EffectRadius`. The overlap is XZ distance ≤ radius (Y ignored). Pulses use the existing `Hit` (`HitSource.Area`) and `StatusApplied` events, immediately on plant and then every interval, the same way `AreaEffect` talks to the game. The field is not a projectile: no SphereCast, no stage lists, no child Recipe, no `Expired`. `IHitQuery.OverlapDisk` is the query; modifiers only queue a plant via `ModifierContext`. `intervalSeconds <= 0` never pulses. Occupancy enter/exit and per-frame `OnTick` auras stay later. No second façade.
 - **Why:** Phase 13’s interval `AreaEffect` is an aura on the **flying** instance; it dies with the shot. A fire pool has to outlive the projectile, sit still, and hit a circle on the ground rather than a sphere (a sphere of puddle radius would tick a dummy on a ledge above). Spawning a Speed-0 child Recipe would still SphereCast, still use a sphere overlap, and would pretend a zone is a bullet. The field is not a Recipe because it has no stage lists to compose; stuffing one in would be a second instance type behind the Recipe door. Pulse period lives on the modifier because ADR-012’s `Interval(n)` belongs to a projectile’s `OnInterval` list, and the field is not one.
-- **Consequences:** One new public modifier (`GroundField`) and `OverlapDisk` on `IHitQuery` / `ScriptedHitQuery`. Views are a thin primitive disk. Do not scale field radius/damage with `EffectRadius(n)` / `Damage(n)` in this phase. Do not raycast to terrain. Do not raise `Expired` for fields.
+- **Consequences:** One new public modifier (`GroundField`) and `OverlapDisk` on `IHitQuery` / `ScriptedHitQuery`. Views come from `IGroundFieldViewFactory` (ADR-026). v1 plants at `(x, 0, z)` (world ground plane). Terrain snap / sloped floors stay Later. Do not scale field radius/damage with `EffectRadius(n)` / `Damage(n)` in this phase. Do not raise `Expired` for fields.
 
 ## ADR-021 — Views come from a factory; hits stay a sphere
 

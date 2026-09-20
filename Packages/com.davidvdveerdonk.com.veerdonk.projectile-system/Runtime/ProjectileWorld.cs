@@ -18,6 +18,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         readonly HomingCatalog homingCatalog = new HomingCatalog();
         readonly ModifierContext modifierContext;
         readonly SimulationBridge bridge;
+        readonly GroundFieldSet groundFields;
         World ecsWorld;
         ProjectilePool pool;
         SimulationSystemGroup simulationGroup;
@@ -27,8 +28,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         int nextId = 1;
         bool disposed;
 
-        public ProjectileWorld(Transform poolParent = null, IProjectileViewFactory viewFactory = null)
-            : this(new PhysicsHitQuery(), createViews: true, poolParent, seed: 1u, viewFactory)
+        public ProjectileWorld(
+            Transform poolParent = null,
+            IProjectileViewFactory viewFactory = null,
+            IGroundFieldViewFactory groundFieldViewFactory = null)
+            : this(new PhysicsHitQuery(), createViews: true, poolParent, seed: 1u, viewFactory, groundFieldViewFactory)
         {
         }
 
@@ -37,15 +41,32 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         {
         }
 
+        internal ProjectileWorld(
+            IHitQuery hitQuery,
+            bool createViews,
+            IGroundFieldViewFactory groundFieldViewFactory,
+            uint seed = 1u)
+            : this(hitQuery, createViews, null, seed, null, groundFieldViewFactory)
+        {
+        }
+
         ProjectileWorld(
             IHitQuery hitQuery,
             bool createViews,
             Transform poolParent,
             uint seed = 1u,
-            IProjectileViewFactory viewFactory = null)
+            IProjectileViewFactory viewFactory = null,
+            IGroundFieldViewFactory groundFieldViewFactory = null)
         {
             this.hitQuery = hitQuery ?? throw new ArgumentNullException(nameof(hitQuery));
             modifierContext = new ModifierContext(pendingSpawns, homingCatalog, seed);
+            groundFields = new GroundFieldSet(
+                this.hitQuery,
+                createViews,
+                poolParent,
+                info => Hit?.Invoke(info),
+                info => StatusApplied?.Invoke(info),
+                groundFieldViewFactory);
             ecsWorld = new World("ProjectileSimulation");
             pool = new ProjectilePool(ecsWorld, poolParent, createViews, viewFactory);
 
@@ -69,7 +90,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 ModifierContext = modifierContext,
                 Hit = info => Hit?.Invoke(info),
                 Expired = info => Expired?.Invoke(info),
-                StatusApplied = info => StatusApplied?.Invoke(info)
+                StatusApplied = info => StatusApplied?.Invoke(info),
+                GroundFields = groundFields
             };
             simulation.Bridge = bridge;
         }
@@ -134,8 +156,10 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 dt = 0f;
 
             ecsWorld.EntityManager.SetComponentData(deltaTimeEntity, new SimDeltaTime { Value = dt });
+            groundFields.ClearPlantedThisTick();
             simulationGroup.Update();
             FlushPendingSpawns();
+            groundFields.Tick(dt);
         }
 
         public void SetHomingCandidate(TargetId id, Vector3 position)
@@ -408,6 +432,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
                 return;
             disposed = true;
 
+            groundFields?.Dispose();
             pool?.Dispose();
             pool = null;
 

@@ -19,6 +19,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         readonly List<SpawnRequest> pendingSpawns;
         readonly List<IStatusEffect> requestedStatuses = new List<IStatusEffect>();
         readonly List<AreaOverlapRequest> requestedAreas = new List<AreaOverlapRequest>();
+        readonly List<GroundFieldPlantRequest> requestedGroundFields = new List<GroundFieldPlantRequest>();
         bool suppressDirectHit;
         bool suppressDirectStatus;
         Unity.Mathematics.Random random;
@@ -124,6 +125,30 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             requestedAreas.Add(new AreaOverlapRequest(center, EffectRadius, damage, status));
         }
 
+        /// <summary>
+        /// Queues a lingering horizontal disk at <paramref name="center"/>. Flushed after the
+        /// stage as a field owned by <see cref="IProjectileWorld"/> (ADR-022).
+        /// </summary>
+        public void RequestGroundField(
+            Vector3 center,
+            float radius,
+            float lifetimeSeconds,
+            float damage,
+            IStatusEffect status,
+            float intervalSeconds,
+            string presentationId = null)
+        {
+            requestedGroundFields.Add(
+                new GroundFieldPlantRequest(
+                    center,
+                    radius,
+                    lifetimeSeconds,
+                    damage,
+                    status,
+                    intervalSeconds,
+                    presentationId));
+        }
+
         /// <summary>Skip the Direct contact <see cref="IProjectileWorld.Hit"/> after this OnHit list.</summary>
         public void SuppressDirectHit()
         {
@@ -140,6 +165,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         internal IReadOnlyList<AreaOverlapRequest> RequestedAreaOverlaps => requestedAreas;
 
+        internal IReadOnlyList<GroundFieldPlantRequest> RequestedGroundFields => requestedGroundFields;
+
         internal bool DirectHitSuppressed => suppressDirectHit;
 
         internal bool DirectStatusSuppressed => suppressDirectStatus;
@@ -154,6 +181,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             requestedAreas.Clear();
             suppressDirectHit = false;
             suppressDirectStatus = false;
+        }
+
+        internal void ClearGroundFieldRequests()
+        {
+            requestedGroundFields.Clear();
         }
 
         /// <summary>Multicast expansions the extras queued from this stage may still run. Set before <c>OnSpawn</c>.</summary>
@@ -243,6 +275,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             CancelDespawn = false;
             requestedStatuses.Clear();
             requestedAreas.Clear();
+            requestedGroundFields.Clear();
             suppressDirectHit = false;
             suppressDirectStatus = false;
             DeltaTime = deltaTime;
@@ -289,5 +322,40 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         public float Damage { get; }
 
         public IStatusEffect Status { get; }
+    }
+
+    readonly struct GroundFieldPlantRequest
+    {
+        public GroundFieldPlantRequest(
+            Vector3 center,
+            float radius,
+            float lifetimeSeconds,
+            float damage,
+            IStatusEffect status,
+            float intervalSeconds,
+            string presentationId)
+        {
+            Center = center;
+            Radius = radius;
+            LifetimeSeconds = lifetimeSeconds;
+            Damage = damage;
+            Status = status;
+            IntervalSeconds = intervalSeconds;
+            PresentationId = presentationId;
+        }
+
+        public Vector3 Center { get; }
+
+        public float Radius { get; }
+
+        public float LifetimeSeconds { get; }
+
+        public float Damage { get; }
+
+        public IStatusEffect Status { get; }
+
+        public float IntervalSeconds { get; }
+
+        public string PresentationId { get; }
     }
 }

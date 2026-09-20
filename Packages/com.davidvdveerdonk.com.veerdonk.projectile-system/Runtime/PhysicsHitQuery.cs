@@ -112,6 +112,62 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             }
         }
 
+        public void OverlapDisk(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
+        {
+            if (results == null)
+                throw new ArgumentNullException(nameof(results));
+
+            results.Clear();
+            if (radius <= 0f)
+                return;
+
+            const float halfHeight = 1f;
+            Vector3 point0 = center + Vector3.up * halfHeight;
+            Vector3 point1 = center - Vector3.up * halfHeight;
+            int count = Physics.OverlapCapsuleNonAlloc(
+                point0,
+                point1,
+                radius,
+                overlapBuffer,
+                ~0,
+                QueryTriggerInteraction.Ignore);
+
+            float radiusSq = radius * radius;
+            for (int i = 0; i < count; i++)
+            {
+                Collider collider = overlapBuffer[i];
+                if (collider == null || !collider.enabled)
+                    continue;
+
+                var damageable = collider.GetComponentInParent<IDamageable>();
+                if (damageable == null)
+                    continue;
+
+                ProtectionLevel protection = ReadProtection(collider);
+                if (protection == ProtectionLevel.Strong)
+                    continue;
+
+                Vector3 sample = ((Component)damageable).transform.position;
+                float dx = sample.x - center.x;
+                float dz = sample.z - center.z;
+                if (dx * dx + dz * dz > radiusSq)
+                    continue;
+
+                Vector3 point = collider.ClosestPoint(center);
+                Vector3 delta = point - center;
+                Vector3 normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up;
+                results.Add(new HitInfo
+                {
+                    InstanceId = instanceId,
+                    Kind = HitKind.Target,
+                    Protection = protection,
+                    TargetId = damageable.TargetId,
+                    Point = point,
+                    Normal = normal
+                });
+            }
+        }
+
         bool TryPickOverlap(
             ProjectileId instanceId,
             Vector3 origin,

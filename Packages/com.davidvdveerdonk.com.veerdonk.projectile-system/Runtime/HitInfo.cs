@@ -10,7 +10,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         World
     }
 
-    /// <summary>How a <see cref="HitInfo"/> was produced. Direct is the movement cast; Area is an overlap.</summary>
+    /// <summary>How a <see cref="HitInfo"/> was produced. Direct is the movement cast; Area is an AreaEffect or GroundField overlap.</summary>
     public enum HitSource
     {
         Direct,
