@@ -73,6 +73,9 @@ Always: enter Play Mode from the sandbox scene, fire once, confirm the phase’s
 | 21 | Sample scene, Pierce preset | Mouse-aim the turret, fire; first two dummies live through |
 | 21 | Tweak Pierce on the sheet | Count 1 dies on the second dummy; asset still 2 after Play Mode |
 | 21 | Reset | HP/status restored, in-flight shots gone, sheet matches the preset |
+| 21.b | Straight + Add Pierce and Homing | First dummy pierced; shot can steer; Straight asset unchanged after Play Mode |
+| 21.b | OnSpawn Add | Does not list Pierce |
+| 21.b | Reset after compose | Sheet matches Straight again |
 | 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone; keyboard-slot lab HUD is gone |
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode. If the lane objects are missing in Edit Mode, use **Projectile Lab > Rebuild Sandbox Scene**. Agents should drive the Editor through [MCP.md](MCP.md) (`manage_editor` for Play Mode, `manage_gameobject` for lab objects) rather than editing the scene YAML by hand.
