@@ -18,28 +18,74 @@ Always run `sigmap ask` (or `sigmap --query`) before searching for files relevan
 
 ## Assets
 
-### Assets/Sandbox/Editor/SandboxLabSceneBuilder.cs
+### Assets\Sandbox\Editor\GroundAimTests.cs
 ```
-class SandboxLabSceneBuilder  :11-71
-  RebuildSandboxScene() → void  :17-17
+class GroundAimTests  :6-26
+  AimDirection_IsHorizontalTowardGroundPoint() → void  :9-9
+  AimDirection_FalseWhenRayMissesGround() → void  :20-20
+```
+
+### Assets\Sandbox\Editor\SamplePresetAssets.cs
+```
+class SamplePresetAssets  :7-164
+  CreateOrUpdate() → SampleLab.Preset[]  :11-11
+```
+
+### Assets\Sandbox\Editor\SampleSceneBuilder.cs
+```
+class SampleSceneBuilder  :11-91
+  Rebuild() → void  :17-17
   RebuildFromCommandLine() → void  :29-29
 ```
 
-### Assets/Sandbox/SandboxSpawnPoint.cs
+### Assets\Sandbox\GroundAim.cs
 ```
-class SandboxSpawnPoint  :8-19
+class GroundAim  :8-31
+  TryDirection(Ray cameraRay, Vector3 from, out Vector3 direction) → bool  :10-10
+```
+
+### Assets\Sandbox\SampleLab.cs
+```
+class SampleLab  :11-339
+  Fire() → void  :181-181
+  ResetLab() → void  :200-200
+  BindChildren() → void  :277-277
+class Preset  :16-20
+```
+
+### Assets\Sandbox\SampleRecipeSheet.cs
+```
+class SampleRecipeSheet  :7-212
+  ClearBuffers() → void  :12-12
+  Draw(Recipe recipe) → void  :17-17
+```
+
+### Assets\Sandbox\SampleYard.cs
+```
+class SampleYard  :6-261
+  BuildIfNeeded(Transform root) → bool  :50-50
+  FindTurret(Transform root) → Transform  :79-79
+  FindMuzzle(Transform root) → SandboxSpawnPoint  :84-84
+  ResetTurretYaw(Transform root) → void  :91-91
+  AimCamera() → void  :98-98
+  ApplyColors(Transform root) → void  :108-108
+```
+
+### Assets\Sandbox\SandboxSpawnPoint.cs
+```
+class SandboxSpawnPoint  :6-17
 ```
 
 ## Packages
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/CHANGELOG.md
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\CHANGELOG.md
 ```
 h1 Changelog
 h2 [0.1.0] - 2026-09-14
 h3 This is the first release of *\<com.veerdonk.projectile-system\>*.
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Documentation/index.md
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Documentation\index.md
 ```
 h1 About &lt;package name&gt;
 h1 Installing &lt;package name&gt;
@@ -52,13 +98,7 @@ h2 Package contents
 h2 Document revision history
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/Bounce.cs
-```
-class Bounce  :11-33
-  Apply(ModifierContext context) → void  :20-20
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/ChainBudget.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\ChainBudget.cs
 ```
 struct ChainBudget  :8-27
   Inherit(int left) → ChainBudget  :13-13
@@ -66,38 +106,19 @@ struct ChainBudget  :8-27
   Resolve(int recipeGenerations) → int  :23-23
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/CirclePattern.cs
-```
-class CirclePattern  :9-94
-  GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count) → Vector3  :11-11
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/Critical.cs
-```
-class Critical  :11-29
-  Apply(ModifierContext context) → void  :20-20
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/Ecs/RecipeStore.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Ecs\RecipeStore.cs
 ```
 class RecipeStore  :6-34
   GetOrAdd(Recipe recipe) → int  :11-11
   Get(int index) → Recipe  :30-30
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/Homing.cs
-```
-class Homing  :13-107
-  ReleaseLockOnTargetHit(ref Projectile projectile, in HitInfo hit) → void  :25-25
-  Apply(ModifierContext context) → void  :36-36
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/IDamageable.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IDamageable.cs
 ```
 interface IDamageable  :6-9
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/IHomingAcquisition.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IHomingAcquisition.cs
 ```
 class HomingCatalog  :10-74
   Set(TargetId id, Vector3 position) → void  :16-16
@@ -109,7 +130,7 @@ class ClosestInTravelDirectionAcquisition  :93-144
   TryAcquire(ModifierContext context, out HomingTarget target) → bool  :95-95
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/IMulticastPattern.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IMulticastPattern.cs
 ```
 interface IMulticastPattern  :7-14
 class RandomConePattern  :17-57
@@ -117,7 +138,7 @@ class RandomConePattern  :17-57
   Sample(ModifierContext context, Vector3 forward, float halfAngleDegrees) → Vector3  :34-34
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/IMultiplyPattern.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IMultiplyPattern.cs
 ```
 interface IMultiplyPattern  :6-14
 class MultiplyPatternPlane  :16-39
@@ -125,70 +146,18 @@ class MultiplyPatternPlane  :16-39
   FromLocal(Vector3 forward, Vector2 local) → Vector3  :35-35
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/Interval.cs
-```
-class Interval  :10-26
-  Apply(ModifierContext context) → void  :19-19
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/IStatusEffect.cs
-```
-interface IStatusEffect  :4-7
-class DummyStatusEffect  :10-15
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/IStatusReceiver.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IStatusReceiver.cs
 ```
 interface IStatusReceiver  :7-10
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/Mana.cs
-```
-class Mana  :10-28
-  Apply(ModifierContext context) → void  :19-19
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/Multicast.cs
-```
-class Multicast  :10-58
-  Apply(ModifierContext context) → void  :25-25
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/ProjectilePool.cs
-```
-class ProjectilePool  :8-162
-  Prewarm(int recipeIndex, Recipe recipe, int count) → void  :44-44
-  Rent(int recipeIndex, Recipe recipe, out ProjectileView view) → Entity  :62-62
-  Return(int recipeIndex, Entity entity) → void  :89-89
-  TryGetView(Entity entity, out ProjectileView view) → bool  :105-105
-  Dispose() → void  :110-110
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/RandomCirclePattern.cs
-```
-class RandomCirclePattern  :13-76
-  GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count) → Vector3  :21-21
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/Speed.cs
-```
-class Speed  :13-43
-  Apply(ModifierContext context) → void  :22-22
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/SquarePattern.cs
-```
-class SquarePattern  :8-159
-  GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count) → Vector3  :10-10
-```
-
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Samples/Example/SampleExample.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Samples\Example\SampleExample.cs
 ```
 class MyPublicSampleExampleClass  :18-28
   CountThingsAndDoStuffAndOutputIt() → void  :23-23
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/ApplyStatusTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\ApplyStatusTests.cs
 ```
 class ApplyStatusTests  :7-231
   TargetHit_RaisesStatusApplied_WithDummyEffect_ThenDespawns() → void  :10-10
@@ -198,7 +167,7 @@ class ApplyStatusTests  :7-231
   Pierce1_TwoApplyStatus_RaisesEachEffectPerTargetHit() → void  :186-186
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/BounceTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\BounceTests.cs
 ```
 class BounceTests  :6-161
   Bounce1_ReflectsVelocity_ThenTargetHitDespawns() → void  :9-9
@@ -207,7 +176,7 @@ class BounceTests  :6-161
   Bounce1_TargetHit_Reflects_RaisesHit_AndStaysLive() → void  :123-123
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/CombatScaleTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\CombatScaleTests.cs
 ```
 class CombatScaleTests  :7-218
   Damage2_OnTravel_DoublesHitDamage() → void  :10-10
@@ -218,7 +187,7 @@ class CombatScaleTests  :7-218
   CombatScale_NonPositiveScale_IsNoOp() → void  :176-176
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/CombatStatsTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\CombatStatsTests.cs
 ```
 class CombatStatsTests  :6-185
   TargetHit_CarriesRecipeCombatStats() → void  :9-9
@@ -231,21 +200,21 @@ class StatProbe  :168-184
   Apply(ModifierContext context) → void  :176-176
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/CombinationTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\CombinationTests.cs
 ```
 class CombinationTests  :7-143
   Pierce1_Homing_ReleasesLockOnTargetHit_ThenAcquiresTheNextCandidate() → void  :10-10
   Bounce2_Multiply2_OnHit_SpawnsTwoChildrenPerWorldHit_ChildrenDoNotInherit() → void  :56-56
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/HitDespawnTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\HitDespawnTests.cs
 ```
 class HitDespawnTests  :6-69
   TargetHit_RaisesHit_Despawns_AndRestoresPool() → void  :9-9
   WorldHit_Despawns() → void  :50-50
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/HomingTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\HomingTests.cs
 ```
 class HomingTests  :6-295
   Homing_TurnsTowardAssignedTargetAtDegreesPerSecond() → void  :18-18
@@ -258,7 +227,7 @@ class HomingTests  :6-295
   Homing100_HitsSandboxDummy_Homing10_Misses() → void  :206-206
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/IntervalTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\IntervalTests.cs
 ```
 class IntervalTests  :8-160
   Interval_DrivesEveryModifierOnTheOnIntervalList() → void  :11-11
@@ -267,25 +236,25 @@ class IntervalTests  :8-160
   Interval_RemovedFromRecipe_DoesNotSurviveOnAPooledEntity() → void  :109-109
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/KinematicMoveTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\KinematicMoveTests.cs
 ```
 class KinematicMoveTests  :6-31
   Tick_MovesAlongDirectionBySpeedTimesDt() → void  :9-9
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/LifetimeExpireTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\LifetimeExpireTests.cs
 ```
 class LifetimeExpireTests  :6-39
   Tick_ExpiresAtLifetimeAndReturnsToPool_WithoutChildren() → void  :9-9
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/LiveSnapshotTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\LiveSnapshotTests.cs
 ```
 class LiveSnapshotTests  :6-47
   SecondInstanceStillMoves_WhenFirstDespawnsOnHit() → void  :9-9
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/MulticastTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\MulticastTests.cs
 ```
 class MulticastTests  :7-349
   Multicast3_OnSpawn_CreatesThreeInstancesInARandomCone() → void  :10-10
@@ -303,7 +272,7 @@ class FanPattern  :334-348
   GetDirection(ModifierContext context, Vector3 forward, int index, int count) → Vector3  :343-343
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/MultiplyPatternTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\MultiplyPatternTests.cs
 ```
 class MultiplyPatternTests  :7-404
   SquarePattern_NamedCounts_MatchLattice() → void  :13-13
@@ -319,7 +288,7 @@ class MultiplyPatternTests  :7-404
   Multiply5_Square_OnHit_PlacesDie5AroundHitPoint() → void  :257-257
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/MultiplyTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\MultiplyTests.cs
 ```
 class MultiplyTests  :7-418
   Multiply2_OnInterval_SpawnsTwoChildrenAlongTravel_AfterHalfSecond() → void  :10-10
@@ -336,14 +305,14 @@ class MultiplyTests  :7-418
   Multiply3_OnHit_RandomCircle_SameSeed_IsDeterministic() → void  :351-351
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/OnHitSpawnPoseTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\OnHitSpawnPoseTests.cs
 ```
 class OnHitSpawnPoseTests  :6-84
   MultiplyOnHit_SpawnsChildAtPointAlongNormal_UsingChildRecipe() → void  :9-9
   Multiply0_OnHit_DoesNotSpawnChild() → void  :53-53
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/PierceTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\PierceTests.cs
 ```
 class PierceTests  :6-118
   Pierce2_FirstTwoTargetHitsContinue_ThirdDespawns() → void  :9-9
@@ -351,13 +320,24 @@ class PierceTests  :6-118
   Pierce_DoesNotAbsorbWorldHit() → void  :95-95
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/PoolCountTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\PoolCountTests.cs
 ```
 class PoolCountTests  :6-33
   AvailableCount_UnchangedAfterRentAndReturn() → void  :9-9
 ```
 
-### Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/SpeedTests.cs
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\SizeSpreadScaleTests.cs
+```
+class SizeSpreadScaleTests  :7-231
+  Size2_OnTravel_DoublesRadius() → void  :10-10
+  Spread2_OnTravel_WithMultiply2_SquareSpread2_PlacesPair4mApart() → void  :35-35
+  Spread2_OnTravel_WithMultiplySpread0_StillStacks() → void  :68-68
+  EffectRadius2_OnTravel_DoublesHitInfoEffectRadius() → void  :103-103
+  SizeSpreadEffectRadius_NonPositiveScale_IsNoOp() → void  :134-134
+  Size05_OnInterval_ScalesAgainEachCrossing() → void  :187-187
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\SpeedTests.cs
 ```
 class SpeedTests  :6-200
   Speed2_OnTravel_StartsAtTwiceRecipeSpeed() → void  :9-9
@@ -366,17 +346,4 @@ class SpeedTests  :6-200
   Pierce1_ThenSpeed05_OnHit_ScalesAndStaysLive() → void  :107-107
   Speed_OnInterval_RunsWhenMultiplyGenerationsAreSpent() → void  :138-138
   Speed_NonPositiveScale_IsNoOp() → void  :179-179
-```
-
-## docs
-
-### docs/MCP.md
-```
-h1 MCP
-h2 SigMap
-h2 Start and recover
-h2 Use it this way
-h2 Project constraints
-code-fence text
-code-fence plain
 ```

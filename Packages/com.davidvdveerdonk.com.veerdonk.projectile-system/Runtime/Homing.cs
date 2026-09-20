@@ -28,7 +28,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             this.acquisition = acquisition ?? new ClosestInTravelDirectionAcquisition();
         }
 
-        public float TurnRateDegreesPerSecond => turnRateDegreesPerSecond;
+        public float TurnRateDegreesPerSecond
+        {
+            get => turnRateDegreesPerSecond;
+            set => turnRateDegreesPerSecond = value;
+        }
 
         public IHomingAcquisition Acquisition => acquisition;
 

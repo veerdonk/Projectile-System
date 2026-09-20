@@ -24,7 +24,11 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             this.scale = scale;
         }
 
-        public float Scale => scale;
+        public float Scale
+        {
+            get => scale;
+            set => scale = value;
+        }
 
         public void Apply(ModifierContext context)
         {

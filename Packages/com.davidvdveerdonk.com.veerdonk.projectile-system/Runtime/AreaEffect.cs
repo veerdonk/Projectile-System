@@ -36,13 +36,25 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             this.includeDirectStatus = includeDirectStatus;
         }
 
-        public float Damage => damage;
+        public float Damage
+        {
+            get => damage;
+            set => damage = value;
+        }
 
         public IStatusEffect Status => status;
 
-        public bool IncludeDirectHit => includeDirectHit;
+        public bool IncludeDirectHit
+        {
+            get => includeDirectHit;
+            set => includeDirectHit = value;
+        }
 
-        public bool IncludeDirectStatus => includeDirectStatus;
+        public bool IncludeDirectStatus
+        {
+            get => includeDirectStatus;
+            set => includeDirectStatus = value;
+        }
 
         public void Apply(ModifierContext context)
         {
