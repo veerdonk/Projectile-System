@@ -1,3 +1,5 @@
+using System;
+
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
     /// <summary>Named gameplay condition requested on a Target. The package does not simulate it.</summary>
@@ -7,6 +9,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     }
 
     /// <summary>v1 placeholder effect. <see cref="Id"/> is <c>dummy</c>.</summary>
+    [Serializable]
     public sealed class DummyStatusEffect : IStatusEffect
     {
         public const string EffectId = "dummy";

@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
@@ -6,14 +7,22 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// <see cref="HitKind.Target"/> hits and <see cref="ProtectionLevel.Basic"/> hits consume remaining pierce.
     /// Basic still consumes when <see cref="HitInfo.Kind"/> is World. Despawn is cancelled while remaining is greater than 0.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnHit)]
     public sealed class Pierce : IModifier
     {
-        public Pierce(int count)
+        [SerializeField] int count;
+
+        public Pierce()
         {
-            Count = count;
         }
 
-        public int Count { get; }
+        public Pierce(int count)
+        {
+            this.count = count;
+        }
+
+        public int Count => count;
 
         public void Apply(ModifierContext context)
         {

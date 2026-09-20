@@ -8,14 +8,22 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// velocity around <see cref="HitInfo.Normal"/>. The Hit event still fires, so dummy HP still drops on Target.
     /// Despawn is cancelled while remaining is greater than 0.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnHit)]
     public sealed class Bounce : IModifier
     {
-        public Bounce(int count)
+        [SerializeField] int count;
+
+        public Bounce()
         {
-            Count = count;
         }
 
-        public int Count { get; }
+        public Bounce(int count)
+        {
+            this.count = count;
+        }
+
+        public int Count => count;
 
         public void Apply(ModifierContext context)
         {

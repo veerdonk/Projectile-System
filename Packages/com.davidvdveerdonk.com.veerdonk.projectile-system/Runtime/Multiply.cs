@@ -6,29 +6,52 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// <summary>
     /// Spawns <see cref="Count"/> instances of an explicit child Recipe from OnHit, OnExpire, or OnInterval.
     /// Children keep the parent travel direction, or the hit normal on a hit. Positions come from
-    /// Positions come from <see cref="Pattern"/>. Pip spacing is the instance copy of
+    /// <see cref="Pattern"/>. Pip spacing is the instance copy of
     /// <see cref="Spread"/> (authored here, scaled by the Spread modifier). 0 stacks.
     /// On OnInterval the period comes from <see cref="Interval"/> on the Recipe's OnSpawn list.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnInterval | RecipeStage.OnHit | RecipeStage.OnExpire)]
     public sealed class Multiply : IModifier
     {
         const float SurfaceSkin = 0.01f;
 
-        public Multiply(int count, Recipe childRecipe, float spread = 0f, IMultiplyPattern pattern = null)
+        [SerializeField] int count;
+        [SerializeField] RecipeAsset childAsset;
+        [SerializeField] float spread;
+        [SerializeReference] IMultiplyPattern pattern;
+
+        Recipe childRecipe;
+
+        public Multiply()
         {
-            Count = count;
-            ChildRecipe = childRecipe ?? throw new ArgumentNullException(nameof(childRecipe));
-            Spread = spread;
-            Pattern = pattern ?? new SquarePattern();
+            pattern = new SquarePattern();
         }
 
-        public int Count { get; }
+        public Multiply(int count, Recipe childRecipe, float spread = 0f, IMultiplyPattern pattern = null)
+        {
+            this.count = count;
+            this.childRecipe = childRecipe ?? throw new ArgumentNullException(nameof(childRecipe));
+            this.spread = spread;
+            this.pattern = pattern ?? new SquarePattern();
+        }
 
-        public Recipe ChildRecipe { get; }
+        public Multiply(int count, RecipeAsset childAsset, float spread = 0f, IMultiplyPattern pattern = null)
+            : this(count, new Recipe(), spread, pattern)
+        {
+            this.childAsset = childAsset ?? throw new ArgumentNullException(nameof(childAsset));
+            childRecipe = null;
+        }
 
-        public float Spread { get; }
+        public int Count => count;
 
-        public IMultiplyPattern Pattern { get; }
+        public Recipe ChildRecipe => childRecipe;
+
+        public RecipeAsset ChildAsset => childAsset;
+
+        public float Spread => spread;
+
+        public IMultiplyPattern Pattern => pattern;
 
         public void Apply(ModifierContext context)
         {

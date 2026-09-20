@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
@@ -7,14 +8,23 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// The world raises <see cref="IProjectileWorld.StatusApplied"/> for each request after this OnHit list,
     /// unless an <see cref="AreaEffect"/> suppressed the Direct status flush.
     /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnHit)]
     public sealed class ApplyStatus : IModifier
     {
-        public ApplyStatus(IStatusEffect effect)
+        [SerializeReference] IStatusEffect effect;
+
+        public ApplyStatus()
         {
-            Effect = effect ?? throw new ArgumentNullException(nameof(effect));
+            effect = new DummyStatusEffect();
         }
 
-        public IStatusEffect Effect { get; }
+        public ApplyStatus(IStatusEffect effect)
+        {
+            this.effect = effect ?? throw new ArgumentNullException(nameof(effect));
+        }
+
+        public IStatusEffect Effect => effect;
 
         public void Apply(ModifierContext context)
         {

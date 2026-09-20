@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
@@ -6,6 +7,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// Triangle, then center-plus-ring, then an inner hexagon and outer rings.
     /// Adjacent chord on a ring is <c>spread</c> unless that would sit inside a previous ring.
     /// </summary>
+    [Serializable]
     public sealed class CirclePattern : IMultiplyPattern
     {
         public Vector3 GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count)

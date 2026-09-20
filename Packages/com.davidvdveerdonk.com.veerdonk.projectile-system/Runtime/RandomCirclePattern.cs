@@ -10,6 +10,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
     /// if closer than <see cref="MinDistance"/> to an already placed child.
     /// <see cref="Multiply"/> sets that to the child diameter. Randomness uses the world seed.
     /// </summary>
+    [Serializable]
     public sealed class RandomCirclePattern : IMultiplyPattern
     {
         const int MaxAttempts = 64;
