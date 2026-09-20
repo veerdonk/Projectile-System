@@ -465,6 +465,24 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** the user clicks
 - **Then:** no `Spawn` runs
 
+### Phase 23 — Package id is not doubled
+
+- **Given:** the embedded UPM package after the cleanup rename
+- **When:** Package Manager lists project packages
+- **Then:** the id is `com.veerdonk.projectile-system` (not `com.davidvdveerdonk.com.veerdonk.projectile-system`)
+
+### Phase 23 — Public façade is documented
+
+- **Given:** the runtime assembly after phases 17–22
+- **When:** a consumer inspects `IProjectileWorld`, `Recipe`, `IProjectileProtection`, `IProjectileViewFactory`, `GroundField`, `RecipeAsset`, and `BallisticAim`
+- **Then:** every public type and public member has XML documentation; `Documentation/index.md` is not the Unity template
+
+### Phase 23 — Sonar has no Blocker or Critical on the package
+
+- **Given:** the local SonarQube container at `http://localhost:9000` and a scan of the renamed Runtime + Editor
+- **When:** the quality pass finishes
+- **Then:** the project `com.veerdonk.projectile-system` has no remaining Blocker or Critical issues on package product code
+
 ## Product constraints
 
 - Sandbox uses URP
