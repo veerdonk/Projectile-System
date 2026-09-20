@@ -2,8 +2,20 @@ using UnityEngine;
 
 namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
-    sealed class ProjectileView : MonoBehaviour
+    /// <summary>
+    /// GameObject presentation for one instance. Prefabs may already carry this;
+    /// the factory adds it if missing. Does not write simulation state.
+    /// </summary>
+    public sealed class ProjectileView : MonoBehaviour
     {
+        bool scaleToRadius = true;
+
+        internal bool ScaleToRadius
+        {
+            get => scaleToRadius;
+            set => scaleToRadius = value;
+        }
+
         public void Bind(Vector3 position, float radius)
         {
             transform.position = position;
@@ -13,6 +25,9 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         public void SetRadius(float radius)
         {
+            if (!scaleToRadius)
+                return;
+
             float diameter = Mathf.Max(radius, 0.01f) * 2f;
             transform.localScale = new Vector3(diameter, diameter, diameter);
         }

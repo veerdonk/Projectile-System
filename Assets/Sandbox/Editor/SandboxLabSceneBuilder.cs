@@ -53,6 +53,15 @@ namespace Sandbox.Editor
 
             GameObject labGo = new GameObject("SandboxLab");
             SandboxLab lab = labGo.AddComponent<SandboxLab>();
+            GameObject cubePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Sandbox/Prefabs/ProjectileCube.prefab");
+            if (cubePrefab != null)
+            {
+                SerializedObject so = new SerializedObject(lab);
+                so.FindProperty("cubeViewPrefab").objectReferenceValue = cubePrefab;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+
             SandboxLab.BuildLaneIfNeeded(labGo.transform);
             lab.BindChildren();
             SandboxLab.AimCameraAtLane();

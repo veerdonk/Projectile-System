@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Davidvdveerdonk.ComVeerdonkProjectileSystem;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -5,7 +6,7 @@ using UnityEngine.InputSystem;
 namespace Sandbox
 {
     /// <summary>
-    /// Phase 17 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
+    /// Phase 18 lab driver: fires Recipes through <see cref="IProjectileWorld"/> and shows pool / dummy HP / status.
     /// </summary>
     public sealed class SandboxLab : MonoBehaviour
     {
@@ -49,6 +50,8 @@ namespace Sandbox
         const int BounceAtBasicSlot = 31;
         const int StraightAtBasicSlot = 32;
         const int AreaAtStrongSlot = 33;
+        const int SphereViewSlot = 34;
+        const int CubeViewSlot = 35;
         const int HudPageCount = 2;
         static readonly Color Dummy1Color = new Color(0.82f, 0.22f, 0.18f);
         static readonly Color Dummy2Color = new Color(0.85f, 0.45f, 0.15f);
@@ -64,6 +67,7 @@ namespace Sandbox
         [SerializeField] Transform worldWall;
         [SerializeField] Transform worldWall2;
         [SerializeField] Transform requestMarker;
+        [SerializeField] GameObject cubeViewPrefab;
 
         SandboxDummyTarget[] dummies = System.Array.Empty<SandboxDummyTarget>();
         ProjectileWorld world;
@@ -97,6 +101,7 @@ namespace Sandbox
         Recipe cannonballRecipe;
         Recipe gravityCannonballRecipe;
         Recipe aimedCannonballRecipe;
+        Recipe cubeRecipe;
         Recipe childRecipe;
         Recipe multicastExtraRecipe;
         int selectedRecipe;
@@ -191,8 +196,8 @@ namespace Sandbox
             float height = Mathf.Min(760f, Screen.height - 32f);
             GUILayout.BeginArea(new Rect(16f, 16f, width, height), GUI.skin.box);
             hudScroll = GUILayout.BeginScrollView(hudScroll);
-            GUILayout.Label("Projectile lab — phase 17 (projectile protection)");
-            GUILayout.Label("Space fires the selected Recipe. N pages the fire list. Page 1: 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, V, B. Page 2: 1 aims at DummyTarget, 2 Bounce at Basic, 3 Straight at Basic, 4 AreaEffect at Strong. - / + changes n for the next shot.");
+            GUILayout.Label("Projectile lab — phase 18 (view factory)");
+            GUILayout.Label("Space fires the selected Recipe. N pages the fire list. Page 1: 1–9, 0, Q, E, R, T, Y, U, I, O, P, F, G, H, J, K, L, Z, X, C, V, B. Page 2: 1 aims at DummyTarget, 2 Bounce at Basic, 3 Straight at Basic, 4 AreaEffect at Strong, 5 Sphere view, 6 Cube view. - / + changes n for the next shot.");
             DrawHudPageRow();
             if (hudPage == 0)
                 DrawPage0FireButtons();
@@ -357,6 +362,10 @@ namespace Sandbox
                 selectedRecipe = StraightAtBasicSlot;
             if (keyboard.digit4Key.wasPressedThisFrame)
                 selectedRecipe = AreaAtStrongSlot;
+            if (keyboard.digit5Key.wasPressedThisFrame)
+                selectedRecipe = SphereViewSlot;
+            if (keyboard.digit6Key.wasPressedThisFrame)
+                selectedRecipe = CubeViewSlot;
         }
 
         void DrawPage1FireButtons()
@@ -377,6 +386,8 @@ namespace Sandbox
             FireButton("Bounce at Basic", BounceAtBasicSlot, bounceRecipe);
             FireButton("Straight at Basic", StraightAtBasicSlot, straightRecipe);
             FireButton("AreaEffect at Strong", AreaAtStrongSlot, onHitAreaRecipe);
+            FireButton("Sphere view", SphereViewSlot, straightRecipe);
+            FireButton("Cube view", CubeViewSlot, cubeRecipe);
         }
 
         void FireButton(string title, int slot, Recipe recipe)
@@ -629,6 +640,10 @@ namespace Sandbox
                     return straightRecipe;
                 case AreaAtStrongSlot:
                     return onHitAreaRecipe;
+                case SphereViewSlot:
+                    return straightRecipe;
+                case CubeViewSlot:
+                    return cubeRecipe;
                 default:
                     return straightRecipe;
             }
@@ -776,11 +791,12 @@ namespace Sandbox
             gravityCannonballRecipe.Gravity = CannonballGravity;
             aimedCannonballRecipe = CreateRecipe("cannonball-aimed", speed: AimedCannonballSpeed, lifetime: 5f);
             aimedCannonballRecipe.Gravity = CannonballGravity;
+            cubeRecipe = CreateRecipe("cube", speed: 20f, lifetime: 5f, presentationId: "cube");
             ApplyMagnitudes();
 
             var poolRoot = new GameObject("ProjectilePool");
             poolRoot.transform.SetParent(transform, false);
-            world = new ProjectileWorld(poolRoot.transform);
+            world = new ProjectileWorld(poolRoot.transform, CreateViewFactory());
             world.Prewarm(straightRecipe, PrewarmCount);
             world.Prewarm(lifetimeRecipe, PrewarmCount);
             world.Prewarm(onHitRecipe, PrewarmCount);
@@ -811,6 +827,7 @@ namespace Sandbox
             world.Prewarm(cannonballRecipe, PrewarmCount);
             world.Prewarm(gravityCannonballRecipe, PrewarmCount);
             world.Prewarm(aimedCannonballRecipe, PrewarmCount);
+            world.Prewarm(cubeRecipe, PrewarmCount);
 
             world.StatusApplied += OnStatusApplied;
             BindDummies();
@@ -881,7 +898,12 @@ namespace Sandbox
             }
         }
 
-        static Recipe CreateRecipe(string id, float speed, float lifetime, float radius = 0.25f)
+        static Recipe CreateRecipe(
+            string id,
+            float speed,
+            float lifetime,
+            float radius = 0.25f,
+            string presentationId = "sphere")
         {
             return new Recipe
             {
@@ -889,8 +911,32 @@ namespace Sandbox
                 Speed = speed,
                 Radius = radius,
                 LifetimeSeconds = lifetime,
-                PresentationId = "sphere"
+                PresentationId = presentationId
             };
+        }
+
+        PrefabViewFactory CreateViewFactory()
+        {
+            GameObject cubePrefab = cubeViewPrefab != null
+                ? cubeViewPrefab
+                : CreateRuntimeViewPrefab(PrimitiveType.Cube, "RuntimeCubeView");
+            return new PrefabViewFactory(new Dictionary<string, GameObject>
+            {
+                ["cube"] = cubePrefab
+            });
+        }
+
+        GameObject CreateRuntimeViewPrefab(PrimitiveType primitive, string objectName)
+        {
+            GameObject go = GameObject.CreatePrimitive(primitive);
+            go.name = objectName;
+            go.transform.SetParent(transform, false);
+            go.transform.localScale = Vector3.one * 0.5f;
+            Collider collider = go.GetComponent<Collider>();
+            if (collider != null)
+                collider.enabled = false;
+            go.SetActive(false);
+            return go;
         }
 
         public void BindChildren()

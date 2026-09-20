@@ -10,6 +10,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         readonly World world;
         readonly Transform parent;
         readonly bool createViews;
+        readonly IProjectileViewFactory viewFactory;
         readonly EntityArchetype pooledArchetype;
         readonly Dictionary<int, Stack<Entity>> free = new Dictionary<int, Stack<Entity>>();
         readonly Dictionary<int, int> available = new Dictionary<int, int>();
@@ -17,11 +18,16 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
         readonly Dictionary<Entity, ProjectileView> liveViews = new Dictionary<Entity, ProjectileView>();
         readonly List<ProjectileView> allViews = new List<ProjectileView>();
 
-        public ProjectilePool(World world, Transform parent, bool createViews)
+        public ProjectilePool(
+            World world,
+            Transform parent,
+            bool createViews,
+            IProjectileViewFactory viewFactory = null)
         {
             this.world = world ?? throw new ArgumentNullException(nameof(world));
             this.parent = parent;
             this.createViews = createViews;
+            this.viewFactory = createViews ? viewFactory ?? new PrimitiveViewFactory() : null;
             pooledArchetype = world.EntityManager.CreateArchetype(
                 typeof(Projectile),
                 typeof(ProjectilePosition),
@@ -139,25 +145,32 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
         ProjectileView CreateView(Recipe recipe)
         {
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            go.name = "Projectile:" + recipe.Id;
-            if (parent != null)
-                go.transform.SetParent(parent, false);
+            ProjectileView view = viewFactory.Create(recipe, parent);
+            if (view == null)
+                throw new InvalidOperationException("IProjectileViewFactory.Create returned null.");
 
-            Collider collider = go.GetComponent<Collider>();
-            if (collider != null)
+            GameObject go = view.gameObject;
+            go.name = "Projectile:" + recipe.Id;
+            StripColliders(go);
+            view.Release();
+            allViews.Add(view);
+            return view;
+        }
+
+        static void StripColliders(GameObject go)
+        {
+            Collider[] colliders = go.GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
             {
+                Collider collider = colliders[i];
+                if (collider == null)
+                    continue;
                 collider.enabled = false;
                 if (Application.isPlaying)
                     UnityEngine.Object.Destroy(collider);
                 else
                     UnityEngine.Object.DestroyImmediate(collider);
             }
-
-            var view = go.AddComponent<ProjectileView>();
-            view.Release();
-            allViews.Add(view);
-            return view;
         }
     }
 }

@@ -96,8 +96,10 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/IStatusEffect.cs` | Effect contract plus v1 `DummyStatusEffect` (`Id` `"dummy"`). Package does not tick DoT |
 | `Runtime/IStatusReceiver.cs` | Game/sandbox apply contract. Package never calls it; sandbox maps `StatusApplied` → `Apply` |
 | `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget` |
-| `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views |
+| `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views from `IProjectileViewFactory` |
 | `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap; ignore last collider so pierce/bounce can leave the surface. `Overlap` returns `IDamageable` Targets only |
-| `Runtime/ProjectileView.cs` | Presentation adapter (MonoBehaviour) |
+| `Runtime/IProjectileViewFactory.cs` | `Create(recipe, poolParent)` plus default `PrimitiveViewFactory` (sphere scaled to `2 * Radius`) |
+| `Runtime/PrefabViewFactory.cs` | Map `PresentationId` → prefab; does not rescale; unknown ids fall back to the primitive factory |
+| `Runtime/ProjectileView.cs` | Public presentation adapter (`Bind` / `SetPose` / `Release`). Prefab views keep authored scale; primitive views follow `Radius` |
 
 `Dispose()` exists because an Entities `World` allocates native containers. Treat it like disposing a host that owns unmanaged memory: sandbox `OnDestroy`, tests `using` / `finally`.

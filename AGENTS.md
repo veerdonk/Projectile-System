@@ -33,13 +33,13 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 17 — Projectile protection**
+**Phase 18 — View factory**
 
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- `DummyBasic` is at `(-2.5, 1, 8)` next to DummyTarget: `IDamageable` + `IProjectileProtection` Basic. `StrongShield` is at `(-4, 1, 4)`, off the +Z lane, with `SandboxProjectileProtection` Strong and no `IDamageable` (Kind is World). Do not put the shield on the lane or every straight shot dies.
-- Page 2 key `2` aims Bounce at DummyBasic; `3` aims Straight at DummyBasic; `4` aims OnHit AreaEffect at StrongShield. Page 1 Bounce (`5`) still fires at the side wall.
-- Pierce consumes `Protection = Basic` even when `Kind` is World. Strong returns to the pool with `Expired` and skips `OnHit` / `OnExpire` / Direct `Hit` / `StatusApplied`. Area overlap skips Strong; Basic overlaps keep `Protection = Basic`.
-- Sandbox dummy HP ignores `Protection != None`. Direct `ApplyStatus` is not flushed for Basic. Phase 18 is the view factory — do not start it until asked.
+- `PrefabViewFactory` maps `"cube"` only in the sandbox. `"sphere"` (and every other Recipe) falls back to `PrimitiveViewFactory` so Size(2) still scales the mesh. Cube prefab: `Assets/Sandbox/Prefabs/ProjectileCube.prefab` (authored scale 0.5). Sphere prefab exists at `Assets/Sandbox/Prefabs/ProjectileSphere.prefab` but is unused by the lab factory.
+- Page 2 key `5` fires the existing straight Recipe (sphere primitive). Key `6` fires `cube` (`PresentationId = "cube"`) down the +Z lane. Hits stay SphereCast of `Radius`.
+- Prefab views skip `SetRadius` so authored scale is kept. Primitive views still scale to `2 * Radius`. `createViews: false` never calls the factory.
+- Phase 19 is lingering ground fields — do not start it until asked.
 
 ## Do not
 
