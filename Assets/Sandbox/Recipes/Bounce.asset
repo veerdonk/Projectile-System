@@ -29,12 +29,12 @@ MonoBehaviour:
   onTick: []
   onInterval: []
   onHit:
-  - rid: 3954138888027504827
+  - rid: 3954138888027504861
   onExpire: []
   references:
     version: 2
     RefIds:
-    - rid: 3954138888027504827
+    - rid: 3954138888027504861
       type: {class: Bounce, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         count: 1

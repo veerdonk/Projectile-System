@@ -17,12 +17,22 @@ namespace Sandbox
         {
             public string label;
             public RecipeAsset asset;
+            public bool useBallisticAim;
+        }
+
+        enum LastFire
+        {
+            None,
+            LowArc,
+            HighArc,
+            Unreachable
         }
 
         [SerializeField] Preset[] presets;
         [SerializeField] GameObject cubeViewPrefab;
         [SerializeField] SandboxSpawnPoint muzzle;
         [SerializeField] Transform turret;
+        [SerializeField] Transform gun;
 
         SandboxDummyTarget[] dummies = System.Array.Empty<SandboxDummyTarget>();
         SandboxDummyTarget selectedDummy;
@@ -31,6 +41,10 @@ namespace Sandbox
         Recipe working;
         int selectedPreset;
         bool presetMenuOpen;
+        bool highArc;
+        bool hasGroundPoint;
+        Vector3 lastGroundPoint;
+        LastFire lastFire;
         Rect sheetRect = new Rect(12f, 12f, 430f, 700f);
 
         void Awake()
@@ -82,6 +96,12 @@ namespace Sandbox
             if (GUILayout.Button("Reset", GUILayout.Height(28f)))
                 ResetLab();
             GUILayout.EndHorizontal();
+            if (UsesBallisticAim())
+            {
+                highArc = GUILayout.Toggle(highArc, "High arc");
+                GUILayout.Label(LastFireLabel());
+            }
+
             GUILayout.Label(
                 $"Active { (world != null ? world.ActiveCount : 0) }   pool { (world != null ? world.AvailableCount : 0) }");
             if (selectedDummy != null)
@@ -142,6 +162,8 @@ namespace Sandbox
         void SelectPreset(int index)
         {
             selectedPreset = index;
+            highArc = false;
+            lastFire = LastFire.None;
             LoadWorkingCopy();
             if (world != null && working != null)
                 world.Prewarm(working, PrewarmCount);
@@ -156,15 +178,41 @@ namespace Sandbox
 
         RecipeAsset CurrentAsset()
         {
+            Preset preset = CurrentPreset();
+            return preset != null ? preset.asset : null;
+        }
+
+        Preset CurrentPreset()
+        {
             if (presets == null || selectedPreset < 0 || selectedPreset >= presets.Length)
                 return null;
-            Preset preset = presets[selectedPreset];
-            return preset != null ? preset.asset : null;
+            return presets[selectedPreset];
+        }
+
+        bool UsesBallisticAim()
+        {
+            Preset preset = CurrentPreset();
+            return preset != null && preset.useBallisticAim;
+        }
+
+        string LastFireLabel()
+        {
+            switch (lastFire)
+            {
+                case LastFire.LowArc:
+                    return "Last fire: low arc";
+                case LastFire.HighArc:
+                    return "Last fire: high arc";
+                case LastFire.Unreachable:
+                    return "Last fire: unreachable";
+                default:
+                    return "Last fire: —";
+            }
         }
 
         void AimTurret()
         {
-            if (turret == null)
+            if (turret == null || gun == null)
                 BindChildren();
             Camera cam = Camera.main;
             Mouse mouse = Mouse.current;
@@ -172,10 +220,25 @@ namespace Sandbox
                 return;
 
             Ray ray = cam.ScreenPointToRay(mouse.position.ReadValue());
-            if (!GroundAim.TryDirection(ray, turret.position, out Vector3 direction))
+            if (!GroundAim.TryPoint(ray, out Vector3 point))
                 return;
 
-            turret.rotation = Quaternion.LookRotation(direction, Vector3.up);
+            lastGroundPoint = point;
+            hasGroundPoint = true;
+
+            Vector3 yaw = point - turret.position;
+            yaw.y = 0f;
+            if (yaw.sqrMagnitude >= 1e-8f)
+                turret.rotation = Quaternion.LookRotation(yaw.normalized, Vector3.up);
+
+            if (gun == null)
+                return;
+
+            Vector3 toPoint = point - gun.position;
+            if (toPoint.sqrMagnitude < 1e-8f)
+                return;
+
+            gun.rotation = Quaternion.LookRotation(toPoint.normalized, Vector3.up);
         }
 
         [ContextMenu("Fire")]
@@ -188,11 +251,34 @@ namespace Sandbox
                 return;
             }
 
-            Vector3 direction = Flatten(muzzle.Direction);
+            Vector3 position = SampleYard.SpawnPosition(muzzle.Position, working);
+            Vector3 direction;
+            if (UsesBallisticAim())
+            {
+                if (!hasGroundPoint ||
+                    !BallisticAim.TrySolve(
+                        position,
+                        lastGroundPoint,
+                        working.Speed,
+                        working.Gravity,
+                        out direction,
+                        highArc))
+                {
+                    lastFire = LastFire.Unreachable;
+                    return;
+                }
+
+                lastFire = highArc ? LastFire.HighArc : LastFire.LowArc;
+            }
+            else
+            {
+                direction = GroundAim.Flatten(muzzle.Direction);
+            }
+
             world.Spawn(new SpawnRequest
             {
                 Recipe = working,
-                Position = SampleYard.SpawnPosition(muzzle.Position, working),
+                Position = position,
                 Direction = direction
             });
         }
@@ -203,7 +289,9 @@ namespace Sandbox
             BindChildren();
             for (int i = 0; i < dummies.Length; i++)
                 dummies[i]?.Restore();
-            SampleYard.ResetTurretYaw(transform);
+            SampleYard.ResetTurretPose(transform);
+            highArc = false;
+            lastFire = LastFire.None;
             LoadWorkingCopy();
             CreateWorld();
         }
@@ -277,10 +365,9 @@ namespace Sandbox
 
         public void BindChildren()
         {
-            if (turret == null)
-                turret = SampleYard.FindTurret(transform);
-            if (muzzle == null)
-                muzzle = SampleYard.FindMuzzle(transform);
+            turret = SampleYard.FindTurret(transform);
+            gun = SampleYard.FindGun(transform);
+            muzzle = SampleYard.FindMuzzle(transform);
             dummies = GetComponentsInChildren<SandboxDummyTarget>(true);
             selectedDummy = null;
             for (int i = 0; i < dummies.Length; i++)
@@ -327,14 +414,6 @@ namespace Sandbox
                 if (dummy != null && dummy.TargetId == info.TargetId)
                     dummy.Apply(info.Effect);
             }
-        }
-
-        static Vector3 Flatten(Vector3 direction)
-        {
-            direction.y = 0f;
-            if (direction.sqrMagnitude < 1e-8f)
-                return Vector3.forward;
-            return direction.normalized;
         }
     }
 }

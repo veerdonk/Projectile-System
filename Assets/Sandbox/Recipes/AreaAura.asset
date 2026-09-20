@@ -25,11 +25,11 @@ MonoBehaviour:
   multicastGenerations: 0
   multiplyGenerations: 0
   onSpawn:
-  - rid: 3954138888027504825
+  - rid: 3954138888027504859
   onTravel: []
   onTick: []
   onInterval:
-  - rid: 3954138888027504826
+  - rid: 3954138888027504860
   onHit: []
   onExpire: []
   references:
@@ -37,11 +37,11 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 3954138888027504825
+    - rid: 3954138888027504859
       type: {class: Interval, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         seconds: 0.5
-    - rid: 3954138888027504826
+    - rid: 3954138888027504860
       type: {class: AreaEffect, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         damage: 3

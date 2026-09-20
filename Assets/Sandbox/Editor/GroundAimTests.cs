@@ -26,6 +26,43 @@ namespace Sandbox.Editor.Tests
         }
 
         [Test]
+        public void TryPoint_HitsGroundPlane()
+        {
+            var ray = new Ray(new Vector3(0f, 10f, 0f), new Vector3(4f, -10f, 8f));
+            Assert.IsTrue(GroundAim.TryPoint(ray, out Vector3 point));
+            Assert.AreEqual(0f, point.y, 1e-5f);
+            Assert.AreEqual(4f, point.x, 1e-4f);
+            Assert.AreEqual(8f, point.z, 1e-4f);
+        }
+
+        [Test]
+        public void TryPoint_FalseWhenRayMissesGround()
+        {
+            var ray = new Ray(new Vector3(0f, 2f, 0f), Vector3.up);
+            Assert.IsFalse(GroundAim.TryPoint(ray, out _));
+        }
+
+        [Test]
+        public void PitchLook_HasVerticalTowardGroundPoint()
+        {
+            var from = new Vector3(0f, 0.7f, 2f);
+            var ray = new Ray(new Vector3(0f, 10f, 0f), new Vector3(0f, -10f, 8f));
+            Assert.IsTrue(GroundAim.TryPoint(ray, out Vector3 point));
+            Vector3 look = (point - from).normalized;
+            Assert.Less(look.y, 0f);
+            Assert.AreNotEqual(0f, look.y);
+        }
+
+        [Test]
+        public void Flatten_ZerosY()
+        {
+            Vector3 flat = GroundAim.Flatten(new Vector3(3f, 5f, 4f));
+            Assert.AreEqual(0f, flat.y, 1e-5f);
+            Vector3 expected = new Vector3(3f, 0f, 4f).normalized;
+            Assert.Less((flat - expected).sqrMagnitude, 1e-6f);
+        }
+
+        [Test]
         public void SpawnPosition_LiftsAboveGround_WhenOnTravelSizeWouldOverlap()
         {
             var recipe = new Recipe

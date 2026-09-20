@@ -26,7 +26,7 @@ MonoBehaviour:
   multiplyGenerations: 0
   onSpawn: []
   onTravel:
-  - rid: 3954138888027504813
+  - rid: 3954138888027504847
   onTick: []
   onInterval: []
   onHit: []
@@ -36,7 +36,7 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 3954138888027504813
+    - rid: 3954138888027504847
       type: {class: AreaEffect, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         damage: 3

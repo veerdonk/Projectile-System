@@ -25,7 +25,7 @@ MonoBehaviour:
   multicastGenerations: 0
   multiplyGenerations: 0
   onSpawn:
-  - rid: 3954138888027504812
+  - rid: 3954138888027504846
   onTravel: []
   onTick: []
   onInterval: []
@@ -34,7 +34,7 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 3954138888027504812
+    - rid: 3954138888027504846
       type: {class: Multicast, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         count: 3

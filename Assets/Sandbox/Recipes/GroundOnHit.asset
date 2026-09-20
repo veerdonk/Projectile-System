@@ -29,14 +29,14 @@ MonoBehaviour:
   onTick: []
   onInterval: []
   onHit:
-  - rid: 3954138888027504811
+  - rid: 3954138888027504845
   onExpire: []
   references:
     version: 2
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 3954138888027504811
+    - rid: 3954138888027504845
       type: {class: GroundField, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         radius: 2.25

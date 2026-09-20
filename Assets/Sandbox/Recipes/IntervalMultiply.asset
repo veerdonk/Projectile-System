@@ -25,28 +25,28 @@ MonoBehaviour:
   multicastGenerations: 0
   multiplyGenerations: 0
   onSpawn:
-  - rid: 3954138888027504822
+  - rid: 3954138888027504856
   onTravel: []
   onTick: []
   onInterval:
-  - rid: 3954138888027504823
+  - rid: 3954138888027504857
   onHit: []
   onExpire: []
   references:
     version: 2
     RefIds:
-    - rid: 3954138888027504822
+    - rid: 3954138888027504856
       type: {class: Interval, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         seconds: 0.5
-    - rid: 3954138888027504823
+    - rid: 3954138888027504857
       type: {class: Multiply, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         count: 2
         childAsset: {fileID: 11400000, guid: ef7e3b63a51848e4894626cb711f2559, type: 2}
         spread: 2
         pattern:
-          rid: 3954138888027504824
-    - rid: 3954138888027504824
+          rid: 3954138888027504858
+    - rid: 3954138888027504858
       type: {class: SquarePattern, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data: 

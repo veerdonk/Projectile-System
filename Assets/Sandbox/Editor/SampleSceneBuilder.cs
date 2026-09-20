@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 namespace Sandbox.Editor
 {
     /// <summary>
-    /// Builds <c>Assets/Scenes/Sandbox.unity</c> as the phase 21 sample (turret, yard, presets).
+    /// Builds <c>Assets/Scenes/Sandbox.unity</c> as the sample (turret, yard, presets, ballistic Cannonball).
     /// </summary>
     public static class SampleSceneBuilder
     {
@@ -65,6 +65,7 @@ namespace Sandbox.Editor
                 SerializedProperty element = presetProp.GetArrayElementAtIndex(i);
                 element.FindPropertyRelative("label").stringValue = presets[i].label;
                 element.FindPropertyRelative("asset").objectReferenceValue = presets[i].asset;
+                element.FindPropertyRelative("useBallisticAim").boolValue = presets[i].useBallisticAim;
             }
 
             GameObject cubePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(

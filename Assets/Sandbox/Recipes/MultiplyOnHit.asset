@@ -29,19 +29,19 @@ MonoBehaviour:
   onTick: []
   onInterval: []
   onHit:
-  - rid: 3954138888027504828
+  - rid: 3954138888027504862
   onExpire: []
   references:
     version: 2
     RefIds:
-    - rid: 3954138888027504828
+    - rid: 3954138888027504862
       type: {class: Multiply, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         count: 3
         childAsset: {fileID: 11400000, guid: ef7e3b63a51848e4894626cb711f2559, type: 2}
         spread: 2
         pattern:
-          rid: 3954138888027504829
-    - rid: 3954138888027504829
+          rid: 3954138888027504863
+    - rid: 3954138888027504863
       type: {class: SquarePattern, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data: 
