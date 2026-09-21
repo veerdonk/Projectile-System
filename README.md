@@ -31,4 +31,4 @@ Namespace: `Veerdonk.ProjectileSystem`.
 5. Listen to `Hit` for HP in your game. Mark targets with `IDamageable`.
 6. `Dispose()` on teardown.
 
-See `Packages/com.veerdonk.projectile-system/README.md` for a copy-paste driver, and `Documentation/index.md` in that folder for the public API.
+See `Packages/com.veerdonk.projectile-system/README.md` for a copy-paste driver, `Documentation/index.md` for the public API, and `AGENTS.md` in that folder for game-side agent rules.

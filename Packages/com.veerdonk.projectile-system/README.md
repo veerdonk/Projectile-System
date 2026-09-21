@@ -2,7 +2,7 @@
 
 Kinematic projectile simulation for Unity 6 LTS. Games spawn through `IProjectileWorld`, tick the world once per frame, and listen to `Hit` / `Expired` / `StatusApplied`. The package does not apply HP, spend mana, or own the player, camera, or input.
 
-**License:** MIT. **Namespace:** `Veerdonk.ProjectileSystem`.
+**License:** MIT. **Namespace:** `Veerdonk.ProjectileSystem`. Agents integrating this package: [AGENTS.md](AGENTS.md).
 
 ## Add the package
 

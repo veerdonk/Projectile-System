@@ -71,3 +71,4 @@ Import **Projectile Yard** from Package Manager, then open `Scenes/Yard.unity` a
 | `Tests/` | Edit Mode and Play Mode tests |
 | `Samples~/Yard/` | Play Mode sample (hidden until Import) |
 | `Documentation/` | This file |
+| `AGENTS.md` | How game-side agents should call the package |
