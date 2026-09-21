@@ -16,21 +16,40 @@ namespace Sandbox.Editor.Tests
         {
             Assert.IsTrue(BallisticAim.TrySolve(Origin, BounceGround, Speed, Gravity, out Vector3 low, highArc: false));
             Assert.IsTrue(BallisticClearance.TrySolve(
-                Origin, BounceGround, Speed, Gravity, _ => false, out Vector3 chosen));
+                Origin,
+                BounceGround,
+                Speed,
+                Gravity,
+                _ => BallisticClearance.PathOutcome.Clear,
+                out Vector3 chosen));
             Assert.Less((chosen - low).sqrMagnitude, 1e-6f);
         }
 
         [Test]
-        public void TrySolve_BlockedFlatterPath_UsesHighRoot()
+        public void TrySolve_BlockedFlatterPath_UsesMinimumPitchNotHighRoot()
         {
             Assert.IsTrue(BallisticAim.TrySolve(Origin, BounceGround, Speed, Gravity, out Vector3 low, highArc: false));
             Assert.IsTrue(BallisticAim.TrySolve(Origin, BounceGround, Speed, Gravity, out Vector3 high, highArc: true));
             Assert.Greater(high.y, low.y);
 
-            float midY = (low.y + high.y) * 0.5f;
+            float lowPitch = BallisticClearance.Pitch(low);
+            float highPitch = BallisticClearance.Pitch(high);
+            float clearPitch = Mathf.Lerp(lowPitch, highPitch, 0.12f);
+
             Assert.IsTrue(BallisticClearance.TrySolve(
-                Origin, BounceGround, Speed, Gravity, dir => dir.y < midY, out Vector3 chosen));
-            Assert.Less((chosen - high).sqrMagnitude, 1e-6f);
+                Origin,
+                BounceGround,
+                Speed,
+                Gravity,
+                dir => BallisticClearance.Pitch(dir) + 1e-4f < clearPitch
+                    ? BallisticClearance.PathOutcome.Blocked
+                    : BallisticClearance.PathOutcome.Clear,
+                out Vector3 chosen));
+
+            float chosenPitch = BallisticClearance.Pitch(chosen);
+            Assert.Greater(chosenPitch, lowPitch);
+            Assert.Less(chosenPitch, Mathf.Lerp(lowPitch, highPitch, 0.4f));
+            Assert.Less(Mathf.Abs(chosenPitch - clearPitch), 0.08f);
         }
 
         [Test]
@@ -38,7 +57,12 @@ namespace Sandbox.Editor.Tests
         {
             Vector3 far = new Vector3(0f, 0f, 80f);
             Assert.IsFalse(BallisticClearance.TrySolve(
-                Origin, far, Speed, Gravity, _ => false, out Vector3 direction));
+                Origin,
+                far,
+                Speed,
+                Gravity,
+                _ => BallisticClearance.PathOutcome.Clear,
+                out Vector3 direction));
             Assert.AreEqual(Vector3.zero, direction);
         }
     }

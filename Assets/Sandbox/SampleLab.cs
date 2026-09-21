@@ -41,7 +41,8 @@ namespace Sandbox
         int selectedPreset;
         bool presetMenuOpen;
         bool hasGroundPoint;
-        Vector3 lastGroundPoint;
+        Vector3 lastAimPoint;
+        Collider lastAimCollider;
         LastFire lastFire;
         Rect sheetRect = new Rect(12f, 12f, 430f, 700f);
 
@@ -198,6 +199,7 @@ namespace Sandbox
                 working.Gravity,
                 SampleYard.StartRadius(working),
                 working.LifetimeSeconds,
+                lastAimCollider,
                 out direction);
         }
 
@@ -224,10 +226,11 @@ namespace Sandbox
                 return;
 
             Ray ray = cam.ScreenPointToRay(mouse.position.ReadValue());
-            if (!GroundAim.TryPoint(ray, out Vector3 point))
+            if (!GroundAim.TryAimPoint(ray, out Vector3 point, out Collider collider))
                 return;
 
-            lastGroundPoint = point;
+            lastAimPoint = point;
+            lastAimCollider = collider;
             hasGroundPoint = true;
 
             Vector3 yaw = point - turret.position;
@@ -269,7 +272,7 @@ namespace Sandbox
             Vector3 direction;
             if (UsesBallisticAim())
             {
-                if (!hasGroundPoint || !TryBallisticDirection(position, lastGroundPoint, out direction))
+                if (!hasGroundPoint || !TryBallisticDirection(position, lastAimPoint, out direction))
                 {
                     lastFire = LastFire.Unreachable;
                     return;

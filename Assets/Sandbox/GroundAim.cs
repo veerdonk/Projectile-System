@@ -3,10 +3,12 @@ using UnityEngine;
 namespace Sandbox
 {
     /// <summary>
-    /// Aim from a camera ray against the world ground plane (Y = 0).
+    /// Aim from a camera ray: colliders first (dummy tops), else the world ground plane (Y = 0).
     /// </summary>
     public static class GroundAim
     {
+        const float AimRayLength = 500f;
+
         public static bool TryPoint(Ray cameraRay, out Vector3 point)
         {
             var ground = new Plane(Vector3.up, Vector3.zero);
@@ -18,6 +20,19 @@ namespace Sandbox
 
             point = cameraRay.GetPoint(enter);
             return true;
+        }
+
+        public static bool TryAimPoint(Ray cameraRay, out Vector3 point, out Collider collider)
+        {
+            if (Physics.Raycast(cameraRay, out RaycastHit hit, AimRayLength) && hit.collider != null)
+            {
+                point = hit.point;
+                collider = hit.collider;
+                return true;
+            }
+
+            collider = null;
+            return TryPoint(cameraRay, out point);
         }
 
         public static bool TryDirection(Ray cameraRay, Vector3 from, out Vector3 direction)

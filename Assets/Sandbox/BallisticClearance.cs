@@ -5,13 +5,21 @@ using UnityEngine;
 namespace Sandbox
 {
     /// <summary>
-    /// Prefers the flatter <see cref="BallisticAim"/> root, then the high root if that path
-    /// hits a collider before the aim point. No high-arc HUD; this is obstacle clearance.
+    /// Prefers the flatter <see cref="BallisticAim"/> root. If that path hits something
+    /// other than the aimed collider, searches the minimum extra pitch that still hits it.
     /// </summary>
     public static class BallisticClearance
     {
         public const float SimDt = 0.01f;
         public const float TargetHitRadius = 2.5f;
+        public const int LoftSearchSteps = 14;
+
+        public enum PathOutcome
+        {
+            Clear,
+            Blocked,
+            Miss
+        }
 
         public static bool TrySolve(
             Vector3 origin,
@@ -20,6 +28,7 @@ namespace Sandbox
             float gravity,
             float radius,
             float lifetimeSeconds,
+            Collider intended,
             out Vector3 direction)
         {
             return TrySolve(
@@ -27,7 +36,7 @@ namespace Sandbox
                 target,
                 speed,
                 gravity,
-                dir => PathHitsObstacle(origin, dir, speed, gravity, radius, target, lifetimeSeconds),
+                dir => Trace(origin, dir, speed, gravity, radius, target, lifetimeSeconds, intended),
                 out direction);
         }
 
@@ -36,22 +45,27 @@ namespace Sandbox
             Vector3 target,
             float speed,
             float gravity,
-            Func<Vector3, bool> pathHitsObstacle,
+            Func<Vector3, PathOutcome> trace,
             out Vector3 direction)
         {
             direction = default;
             if (!BallisticAim.TrySolve(origin, target, speed, gravity, out Vector3 low, highArc: false))
                 return false;
 
-            if (pathHitsObstacle == null || !pathHitsObstacle(low))
+            if (trace == null || trace(low) == PathOutcome.Clear)
             {
                 direction = low;
                 return true;
             }
 
-            if (BallisticAim.TrySolve(origin, target, speed, gravity, out Vector3 high, highArc: true) &&
-                (high - low).sqrMagnitude > 1e-6f &&
-                !pathHitsObstacle(high))
+            Vector3 high = default;
+            bool hasHigh = BallisticAim.TrySolve(origin, target, speed, gravity, out high, highArc: true) &&
+                           (high - low).sqrMagnitude > 1e-6f;
+
+            if (TryMinimumLoft(origin, target, low, hasHigh ? high : low, trace, out direction))
+                return true;
+
+            if (hasHigh && trace(high) == PathOutcome.Clear)
             {
                 direction = high;
                 return true;
@@ -61,17 +75,82 @@ namespace Sandbox
             return true;
         }
 
-        public static bool PathHitsObstacle(
+        public static bool TryMinimumLoft(
+            Vector3 origin,
+            Vector3 target,
+            Vector3 low,
+            Vector3 high,
+            Func<Vector3, PathOutcome> trace,
+            out Vector3 direction)
+        {
+            direction = default;
+            if (trace == null)
+                return false;
+
+            float lo = Pitch(low);
+            float hi = Pitch(high);
+            if (hi < lo + 1e-4f)
+                hi = lo + 70f * Mathf.Deg2Rad;
+
+            Vector3 azimuth = target - origin;
+            Vector3 best = default;
+            bool found = false;
+
+            for (int i = 0; i < LoftSearchSteps; i++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                Vector3 dir = DirectionFromPitch(azimuth, mid);
+                PathOutcome outcome = trace(dir);
+                if (outcome == PathOutcome.Blocked)
+                {
+                    lo = mid;
+                    continue;
+                }
+
+                hi = mid;
+                if (outcome == PathOutcome.Clear)
+                {
+                    best = dir;
+                    found = true;
+                }
+            }
+
+            if (!found)
+                return false;
+
+            direction = best;
+            return true;
+        }
+
+        public static float Pitch(Vector3 direction)
+        {
+            Vector3 n = direction.sqrMagnitude > 1e-8f ? direction.normalized : Vector3.forward;
+            return Mathf.Asin(Mathf.Clamp(n.y, -1f, 1f));
+        }
+
+        public static Vector3 DirectionFromPitch(Vector3 azimuth, float pitch)
+        {
+            Vector3 flat = azimuth;
+            flat.y = 0f;
+            if (flat.sqrMagnitude < 1e-8f)
+                flat = Vector3.forward;
+            flat.Normalize();
+            float xz = Mathf.Cos(pitch);
+            return new Vector3(flat.x * xz, Mathf.Sin(pitch), flat.z * xz);
+        }
+
+        public static PathOutcome Trace(
             Vector3 origin,
             Vector3 direction,
             float speed,
             float gravity,
             float radius,
             Vector3 target,
-            float lifetimeSeconds)
+            float lifetimeSeconds,
+            Collider intended)
         {
             if (direction.sqrMagnitude < 1e-8f || speed <= 0f || lifetimeSeconds <= 0f)
-                return false;
+                return PathOutcome.Miss;
 
             if (radius < 0.01f)
                 radius = 0.01f;
@@ -94,7 +173,9 @@ namespace Sandbox
                     Physics.SphereCast(position, radius, delta / dist, out RaycastHit hit, dist) &&
                     hit.distance > 1e-4f)
                 {
-                    return (hit.point - target).sqrMagnitude > arrivalSq;
+                    return IsIntendedHit(hit, intended, target, arrivalSq)
+                        ? PathOutcome.Clear
+                        : PathOutcome.Blocked;
                 }
 
                 position = next;
@@ -102,11 +183,31 @@ namespace Sandbox
 
                 Vector3 toTarget = target - position;
                 toTarget.y = 0f;
-                if (toTarget.sqrMagnitude <= arrivalSq)
-                    return false;
+                if (toTarget.sqrMagnitude > arrivalSq)
+                    continue;
+
+                if (intended != null)
+                    return PathOutcome.Miss;
+
+                return PathOutcome.Clear;
             }
 
-            return false;
+            return PathOutcome.Miss;
+        }
+
+        static bool IsIntendedHit(RaycastHit hit, Collider intended, Vector3 target, float arrivalSq)
+        {
+            if (intended != null)
+            {
+                if (hit.collider == intended)
+                    return true;
+
+                SandboxDummyTarget hitDummy = hit.collider.GetComponentInParent<SandboxDummyTarget>();
+                SandboxDummyTarget intendedDummy = intended.GetComponentInParent<SandboxDummyTarget>();
+                return hitDummy != null && hitDummy == intendedDummy;
+            }
+
+            return (hit.point - target).sqrMagnitude <= arrivalSq;
         }
     }
 }

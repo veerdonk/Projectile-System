@@ -37,9 +37,10 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
 - Play Mode demo is still `Assets/Scenes/Sandbox.unity`. **Projectile Lab > Rebuild** writes the Gun pitch pivot and `useBallisticAim` on Cannonball.
-- Cannonball is the ballistic preset: speed 32, gravity 80, `BallisticAim.TrySolve` toward the last ground-aim point **without** a high-arc HUD. The barrel pitches to that loft while aiming. If PhysX says the flatter arc hits something before the aim point, the sample retries the high root (`BallisticClearance`). **Cannonball Gravity(2)** still flattens spawn.
+- Cannonball is the ballistic preset: speed 32, gravity 80, `BallisticAim.TrySolve` toward the last **collider or ground** aim point, no high-arc HUD. The barrel pitches to that loft while aiming. If PhysX says the flatter arc hits a different collider first, `BallisticClearance` binary-searches the minimum extra pitch that still hits the aimed cube (not the classic high root). **Cannonball Gravity(2)** still flattens spawn.
 - Last-fire HUD is `solved` / `unreachable` only while Cannonball is selected. No high-arc toggle. Unreachable solves do not spawn.
-- Phase 22.b drops `highArc` from the package API (ADR-028) — do not start it until asked. Keep an internal second-root fallback for clearance or Bounce-through-Splash regresses. Phase 23 stays after 22.b.
+- Clicking a dummy uses `Physics.Raycast` (cube top). Ground-plane fallback is only when the ray misses colliders.
+- Phase 22.b drops `highArc` from the package API (ADR-028) — do not start it until asked. Phase 23 stays after 22.b.
 
 ## Do not
 

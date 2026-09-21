@@ -63,6 +63,32 @@ namespace Sandbox.Editor.Tests
         }
 
         [Test]
+        public void TryAimPoint_HitsCubeTop_NotGroundBehind()
+        {
+            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                cube.transform.position = new Vector3(0f, 1f, 8f);
+                cube.transform.localScale = Vector3.one * 2f;
+                Physics.SyncTransforms();
+
+                var ray = new Ray(new Vector3(0f, 14f, -12f), new Vector3(0f, -12f, 20f));
+                Assert.IsTrue(GroundAim.TryPoint(ray, out Vector3 ground));
+                Assert.AreEqual(0f, ground.y, 1e-4f);
+                Assert.Greater(ground.z, 10f);
+
+                Assert.IsTrue(GroundAim.TryAimPoint(ray, out Vector3 point, out Collider collider));
+                Assert.AreEqual(cube.GetComponent<Collider>(), collider);
+                Assert.Greater(point.y, 1.5f);
+                Assert.Less(Mathf.Abs(point.z - 8f), 1.05f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(cube);
+            }
+        }
+
+        [Test]
         public void SpawnPosition_LiftsAboveGround_WhenOnTravelSizeWouldOverlap()
         {
             var recipe = new Recipe
