@@ -1,0 +1,24 @@
+# Changelog
+
+All notable changes to this package will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] - 2026-09-20
+
+First release of **com.veerdonk.projectile-system**.
+
+### Added
+
+- `IProjectileWorld` façade: `Spawn`, `Tick`, pool, `Hit` / `Expired` / `StatusApplied`
+- `Recipe` with six ordered modifier lists and combat/cast stats (damage, crit chance, mana cost, radius, effect radius, gravity)
+- Named modifiers: Pierce, Bounce, Multiply (Square / Circle / RandomCircle patterns), Multicast, Homing, Interval, Speed / Damage / Critical / Mana / Size / Spread / EffectRadius / Gravity scales, ApplyStatus, AreaEffect, GroundField
+- `BallisticAim.TrySolve` needed-arc launch direction (no high-arc pick)
+- `IProjectileProtection` (Basic / Strong), `IProjectileViewFactory` / `IGroundFieldViewFactory` (primitive and prefab)
+- `RecipeAsset` ScriptableObject authoring with a stage-filtered inspector
+- Hybrid ECS simulation behind the façade (Entities world owned by `ProjectileWorld`)
+
+### Changed
+
+- Package id and C# namespace are `com.veerdonk.projectile-system` / `Veerdonk.ProjectileSystem` (ADR-025). The doubled template id is not published.

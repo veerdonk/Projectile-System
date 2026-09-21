@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Davidvdveerdonk.ComVeerdonkProjectileSystem;
+using Veerdonk.ProjectileSystem;
 using UnityEngine;
 using UnityEngine.InputSystem;
 

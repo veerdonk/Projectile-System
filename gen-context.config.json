@@ -1,6 +1,6 @@
 {
   "srcDirs": [
-    "Packages/com.davidvdveerdonk.com.veerdonk.projectile-system",
+    "Packages/com.veerdonk.projectile-system",
     "Assets",
     "docs"
   ],
@@ -36,6 +36,6 @@
   "todos": true,
   "changes": true,
   "testDirs": [
-    "Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests"
+    "Packages/com.veerdonk.projectile-system/Tests"
   ]
 }

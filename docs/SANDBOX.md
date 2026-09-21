@@ -5,8 +5,8 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 ## Current project
 
 - Editor: Unity 6 LTS `6000.6.0f1`
-- Default Play Mode scene: `Assets/Scenes/Sandbox.unity` (phase 21 sample). `SampleScene.unity` is unused lighting leftover used only as the rebuild template
-- Package: `Packages/com.davidvdveerdonk.com.veerdonk.projectile-system`
+- Default Play Mode scene: `Assets/Scenes/Sandbox.unity` (phase 21 sample). **Projectile Lab > Rebuild** creates that scene from a new default camera/light setup
+- Package: `Packages/com.veerdonk.projectile-system` (`Veerdonk.ProjectileSystem`)
 
 ## Sample layout (phase 21 / 21.b / 22)
 

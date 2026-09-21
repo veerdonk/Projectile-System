@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd308f6fee07fc54391b4678452531b0, type: 3}
   m_Name: AreaAura
-  m_EditorClassIdentifier: Davidvdveerdonk.ComVeerdonkProjectileSystem::Davidvdveerdonk.ComVeerdonkProjectileSystem.RecipeAsset
+  m_EditorClassIdentifier: Veerdonk.ProjectileSystem::Veerdonk.ProjectileSystem.RecipeAsset
   id: area-aura
   speed: 20
   radius: 0.25
@@ -38,11 +38,11 @@ MonoBehaviour:
     - rid: -2
       type: {class: , ns: , asm: }
     - rid: 3954138888027504859
-      type: {class: Interval, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
+      type: {class: Interval, ns: Veerdonk.ProjectileSystem, asm: Veerdonk.ProjectileSystem}
       data:
         seconds: 0.5
     - rid: 3954138888027504860
-      type: {class: AreaEffect, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
+      type: {class: AreaEffect, ns: Veerdonk.ProjectileSystem, asm: Veerdonk.ProjectileSystem}
       data:
         damage: 3
         status:

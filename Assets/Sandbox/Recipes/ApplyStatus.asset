@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd308f6fee07fc54391b4678452531b0, type: 3}
   m_Name: ApplyStatus
-  m_EditorClassIdentifier: Davidvdveerdonk.ComVeerdonkProjectileSystem::Davidvdveerdonk.ComVeerdonkProjectileSystem.RecipeAsset
+  m_EditorClassIdentifier: Veerdonk.ProjectileSystem::Veerdonk.ProjectileSystem.RecipeAsset
   id: apply-status
   speed: 20
   radius: 0.25
@@ -35,10 +35,10 @@ MonoBehaviour:
     version: 2
     RefIds:
     - rid: 3954138888027504851
-      type: {class: ApplyStatus, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
+      type: {class: ApplyStatus, ns: Veerdonk.ProjectileSystem, asm: Veerdonk.ProjectileSystem}
       data:
         effect:
           rid: 3954138888027504852
     - rid: 3954138888027504852
-      type: {class: DummyStatusEffect, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
+      type: {class: DummyStatusEffect, ns: Veerdonk.ProjectileSystem, asm: Veerdonk.ProjectileSystem}
       data: 

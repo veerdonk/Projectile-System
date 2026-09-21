@@ -13,7 +13,7 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 | `docs/SANDBOX.md` | Play Mode proofs |
 | `docs/ECS.md` | Hybrid ECS map (what each piece does) |
 | `docs/MCP.md` | SigMap (signatures) and Unity MCP (Editor): start, recover, how agents should call them |
-| `Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/` | Product runtime/editor/tests |
+| `Packages/com.veerdonk.projectile-system/` | Product runtime/editor/tests |
 | `Assets/` | Sandbox only |
 
 ## Pairing protocol
@@ -33,12 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 22.b — Needed-arc ballistic solve**
+**Phase 23 — Cleanup**
 
+- Package folder is `Packages/com.veerdonk.projectile-system/`, namespace `Veerdonk.ProjectileSystem` (ADR-025).
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- `BallisticAim.TrySolve(origin, target, speed, gravity, out direction)` has no `highArc`. Always the flatter root (ADR-028). Sample `BallisticClearance` searches extra pitch against an 80° cap, not a second `TrySolve` root.
-- Play Mode demo is still `Assets/Scenes/Sandbox.unity`. Cannonball is ballistic; no high-arc HUD. Clicking a dummy aims at the cube. **Cannonball Gravity(2)** still flattens spawn.
-- Phase 23 is cleanup (UPM id rename, XML docs, leftovers, coverage holes, local Sonar) — do not start it until asked.
+- Play Mode demo is `Assets/Scenes/Sandbox.unity`. **Projectile Lab > Rebuild** creates it from a new default camera/light scene (the old `SampleScene.unity` template is gone).
+- Local SonarQube at `http://localhost:9000` (project key `com.veerdonk.projectile-system`). Analysis needs `SONAR_TOKEN` in the environment; do not commit it. `sonar-project.properties` has host/sources only.
 
 ## Do not
 
@@ -60,5 +60,3 @@ Prefer the Editor MCP over scene YAML or guessing compile state. Setup, the manu
 ## Tests
 
 Unity Test Framework is a package dependency. Edit Mode tests live in `Packages/.../Tests/Editor` (and simulation tests may live in `Tests/Runtime` if they do not need Play Mode). Run via Unity Test Runner.
-
-Template `*Example*` scripts in the package are placeholders; do not treat them as the architecture.

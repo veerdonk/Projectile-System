@@ -1,0 +1,10 @@
+{
+    "name": "Veerdonk.ProjectileSystem.Editor",
+    "references": [
+      "Veerdonk.ProjectileSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}

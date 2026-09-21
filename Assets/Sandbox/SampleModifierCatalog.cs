@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Davidvdveerdonk.ComVeerdonkProjectileSystem;
+using Veerdonk.ProjectileSystem;
 
 namespace Sandbox
 {

@@ -1,0 +1,16 @@
+{
+	"name": "com.veerdonk.projectile-system",
+	"displayName": "com.veerdonk.projectile-system",
+	"version": "0.1.0",
+	"unity": "6000.6",
+	"unityRelease": "0f1",
+	"description": "Kinematic projectile simulation for Unity 6: spawn, tick, pool, hits, and six-stage Recipe modifiers (pierce, bounce, multiply, multicast, homing, combat scales, area, ground fields, ballistic aim).",
+	"dependencies": {
+		"com.unity.test-framework": "1.6.0",
+		"com.unity.entities": "6.6.0"
+	},
+	"author": {
+		"name": "David Van de Veerdonk"
+	},
+	"hideInEditor": false
+}

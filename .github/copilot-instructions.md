@@ -21,7 +21,7 @@ Always run `sigmap ask` (or `sigmap --query`) before searching for files relevan
 
 ## changes (last 10 commits — 6 minutes ago)
 ```
-Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\RecipeAssetTests.cs +RecipeAssetTests
+Packages\com.veerdonk.projectile-system\Tests\Editor\RecipeAssetTests.cs +RecipeAssetTests
 Assets\Sandbox\BallisticClearance.cs          +BallisticClearance
 Assets\Sandbox\Editor\BallisticClearanceTests.cs +BallisticClearanceTests
 Assets\Sandbox\Editor\GroundAimTests.cs       +GroundAimTests
@@ -179,43 +179,43 @@ class SandboxSpawnPoint  :6-17
 
 ## Packages
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\AreaEffect.cs
+### Packages\com.veerdonk.projectile-system\Runtime\AreaEffect.cs
 ```
 class AreaEffect  :16-76
   Apply(ModifierContext context) → void  :59-59
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Bounce.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Bounce.cs
 ```
 class Bounce  :13-45
   Apply(ModifierContext context) → void  :32-32
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Critical.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Critical.cs
 ```
 class Critical  :13-41
   Apply(ModifierContext context) → void  :32-32
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Damage.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Damage.cs
 ```
 class Damage  :14-42
   Apply(ModifierContext context) → void  :33-33
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\EffectRadius.cs
+### Packages\com.veerdonk.projectile-system\Runtime\EffectRadius.cs
 ```
 class EffectRadius  :13-41
   Apply(ModifierContext context) → void  :32-32
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Gravity.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Gravity.cs
 ```
 class Gravity  :14-42
   Apply(ModifierContext context) → void  :33-33
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\GroundField.cs
+### Packages\com.veerdonk.projectile-system\Runtime\GroundField.cs
 ```
 class GroundField  :16-98
   Apply(ModifierContext context) → void  :81-81
@@ -227,62 +227,62 @@ class GroundFieldSet  :100-364
 struct LiveField  :350-363
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Homing.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Homing.cs
 ```
 class Homing  :15-121
   ReleaseLockOnTargetHit(ref Projectile projectile, in HitInfo hit) → void  :39-39
   Apply(ModifierContext context) → void  :50-50
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Interval.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Interval.cs
 ```
 class Interval  :13-39
   Apply(ModifierContext context) → void  :32-32
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Mana.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Mana.cs
 ```
 class Mana  :13-41
   Apply(ModifierContext context) → void  :32-32
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Multicast.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Multicast.cs
 ```
 class Multicast  :12-84
   Apply(ModifierContext context) → void  :51-51
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Multiply.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Multiply.cs
 ```
 class Multiply  :15-107
   Apply(ModifierContext context) → void  :68-68
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Pierce.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Pierce.cs
 ```
 class Pierce  :12-45
   Apply(ModifierContext context) → void  :31-31
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Size.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Size.cs
 ```
 class Size  :13-41
   Apply(ModifierContext context) → void  :32-32
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Speed.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Speed.cs
 ```
 class Speed  :15-55
   Apply(ModifierContext context) → void  :34-34
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Spread.cs
+### Packages\com.veerdonk.projectile-system\Runtime\Spread.cs
 ```
 class Spread  :13-41
   Apply(ModifierContext context) → void  :32-32
 ```
 
-### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\RecipeAssetTests.cs
+### Packages\com.veerdonk.projectile-system\Tests\Editor\RecipeAssetTests.cs
 ```
 class RecipeAssetTests  :7-154
   TearDown() → void  :13-13

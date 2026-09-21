@@ -1,4 +1,4 @@
-using Davidvdveerdonk.ComVeerdonkProjectileSystem;
+using Veerdonk.ProjectileSystem;
 using NUnit.Framework;
 using UnityEngine;
 

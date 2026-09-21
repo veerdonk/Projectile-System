@@ -9,7 +9,7 @@ Context health: **100/100 (A)**.
 ## Modules
 | Module | Files | Sig tokens | Key files |
 |--------|-------|------------|-----------|
-| `Packages` | 69 | ~4656 | `Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/ProjectileWorld.cs`, `Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Runtime/IModifier.cs`, `Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/Tests/Editor/GravityTests.cs` |
+| `Packages` | 69 | ~4656 | `Packages/com.veerdonk.projectile-system/Runtime/ProjectileWorld.cs`, `Packages/com.veerdonk.projectile-system/Runtime/IModifier.cs`, `Packages/com.veerdonk.projectile-system/Tests/Editor/GravityTests.cs` |
 | `docs` | 7 | ~904 | `docs/DECISIONS.md`, `docs/PHASES.md`, `docs/REQUIREMENTS.md` |
 | `Assets` | 5 | ~175 | `Assets/Sandbox/SandboxDummyTarget.cs`, `Assets/Sandbox/SandboxLab.cs`, `Assets/Sandbox/Editor/SandboxLabSceneBuilder.cs` |
 

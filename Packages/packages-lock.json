@@ -16,8 +16,8 @@
         "com.unity.test-framework": "1.1.31"
       }
     },
-    "com.davidvdveerdonk.com.veerdonk.projectile-system": {
-      "version": "file:com.davidvdveerdonk.com.veerdonk.projectile-system",
+    "com.veerdonk.projectile-system": {
+      "version": "file:com.veerdonk.projectile-system",
       "depth": 0,
       "source": "embedded",
       "dependencies": {

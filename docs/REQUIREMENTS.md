@@ -85,7 +85,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 ## Package vs game boundary
 
-**Package (`Packages/com.davidvdveerdonk.com.veerdonk.projectile-system`)**
+**Package (`Packages/com.veerdonk.projectile-system`)**
 
 - Spawn, simulate, compose (stage lists), pool
 - Hit pipeline and events
