@@ -37,9 +37,9 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
 - Play Mode demo is still `Assets/Scenes/Sandbox.unity`. **Projectile Lab > Rebuild** writes the Gun pitch pivot and `useBallisticAim` on Cannonball.
-- Cannonball is the ballistic preset: speed 32, gravity 80, `BallisticAim.TrySolve` toward the last ground-aim point. **Cannonball Gravity(2)** still flattens spawn.
-- High-arc toggle and last-fire HUD are on the sheet only while Cannonball is selected. Unreachable solves do not spawn.
-- Phase 23 is cleanup (UPM id rename, XML docs, leftovers, coverage holes, local Sonar) — do not start it until asked.
+- Cannonball is the ballistic preset: speed 32, gravity 80, `BallisticAim.TrySolve` toward the last ground-aim point **without** `highArc`. The barrel pitches to that loft while aiming. **Cannonball Gravity(2)** still flattens spawn.
+- Last-fire HUD is `solved` / `unreachable` only while Cannonball is selected. No high-arc toggle. Unreachable solves do not spawn.
+- Phase 22.b drops `highArc` from the package API (ADR-028) — do not start it until asked. Phase 23 stays after 22.b.
 
 ## Do not
 

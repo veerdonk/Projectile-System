@@ -23,8 +23,7 @@ namespace Sandbox
         enum LastFire
         {
             None,
-            LowArc,
-            HighArc,
+            Solved,
             Unreachable
         }
 
@@ -41,7 +40,6 @@ namespace Sandbox
         Recipe working;
         int selectedPreset;
         bool presetMenuOpen;
-        bool highArc;
         bool hasGroundPoint;
         Vector3 lastGroundPoint;
         LastFire lastFire;
@@ -97,10 +95,7 @@ namespace Sandbox
                 ResetLab();
             GUILayout.EndHorizontal();
             if (UsesBallisticAim())
-            {
-                highArc = GUILayout.Toggle(highArc, "High arc");
                 GUILayout.Label(LastFireLabel());
-            }
 
             GUILayout.Label(
                 $"Active { (world != null ? world.ActiveCount : 0) }   pool { (world != null ? world.AvailableCount : 0) }");
@@ -162,7 +157,6 @@ namespace Sandbox
         void SelectPreset(int index)
         {
             selectedPreset = index;
-            highArc = false;
             lastFire = LastFire.None;
             LoadWorkingCopy();
             if (world != null && working != null)
@@ -199,10 +193,8 @@ namespace Sandbox
         {
             switch (lastFire)
             {
-                case LastFire.LowArc:
-                    return "Last fire: low arc";
-                case LastFire.HighArc:
-                    return "Last fire: high arc";
+                case LastFire.Solved:
+                    return "Last fire: solved";
                 case LastFire.Unreachable:
                     return "Last fire: unreachable";
                 default:
@@ -234,6 +226,16 @@ namespace Sandbox
             if (gun == null)
                 return;
 
+            if (UsesBallisticAim() && working != null && muzzle != null)
+            {
+                Vector3 origin = SampleYard.SpawnPosition(muzzle.Position, working);
+                if (BallisticAim.TrySolve(origin, point, working.Speed, working.Gravity, out Vector3 loft))
+                {
+                    gun.rotation = Quaternion.LookRotation(loft, Vector3.up);
+                    return;
+                }
+            }
+
             Vector3 toPoint = point - gun.position;
             if (toPoint.sqrMagnitude < 1e-8f)
                 return;
@@ -261,14 +263,15 @@ namespace Sandbox
                         lastGroundPoint,
                         working.Speed,
                         working.Gravity,
-                        out direction,
-                        highArc))
+                        out direction))
                 {
                     lastFire = LastFire.Unreachable;
                     return;
                 }
 
-                lastFire = highArc ? LastFire.HighArc : LastFire.LowArc;
+                lastFire = LastFire.Solved;
+                if (gun != null)
+                    gun.rotation = Quaternion.LookRotation(direction, Vector3.up);
             }
             else
             {
@@ -290,7 +293,6 @@ namespace Sandbox
             for (int i = 0; i < dummies.Length; i++)
                 dummies[i]?.Restore();
             SampleYard.ResetTurretPose(transform);
-            highArc = false;
             lastFire = LastFire.None;
             LoadWorkingCopy();
             CreateWorld();
