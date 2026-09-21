@@ -207,7 +207,7 @@ class RecipeAsset : ScriptableObject
 }
 ```
 
-Sandbox fire button / sample turret calls `Spawn`. A single sandbox driver calls `Tick` (for example from one `Update`). Instances do not have their own `Update`. `ProjectileWorld` is `IDisposable` (dispose the Entities `World`). Play Mode demo from phase 21: turret + preset dropdown + recipe sheet in `Assets/` ([DECISIONS.md](DECISIONS.md) ADR-024). Phase 21.b can Add/Remove modifiers on that working copy (ADR-027); it still does not write the `RecipeAsset`.
+Sandbox fire button / sample turret calls `Spawn`. A single sandbox driver calls `Tick` (for example from one `Update`). Instances do not have their own `Update`. `ProjectileWorld` is `IDisposable` (dispose the Entities `World`). Play Mode demo from phase 21: turret + preset dropdown + recipe sheet ([DECISIONS.md](DECISIONS.md) ADR-024). Phase 21.b can Add/Remove modifiers on that working copy (ADR-027); it still does not write the `RecipeAsset`. **Phase 24** moves that demo into `Samples~/Yard/` (ADR-029); Runtime still has no camera, input, or HP.
 
 ## Invariants
 
@@ -230,7 +230,8 @@ Packages/com.veerdonk.projectile-system/
   Editor/      RecipeAsset inspector (ADR-023); more tooling later
   Tests/Runtime
   Tests/Editor
-Assets/        sandbox only (scenes, dummy targets, turret, sample UI)
+  Samples~/Yard/   UPM sample (ADR-029): turret yard, presets, dummy HP. Hidden until Import
+Assets/        host project only after 24 (imported sample copy is gitignored)
 docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
@@ -244,7 +245,7 @@ New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a
 - Central `IProjectileWorld.Tick`; no per-instance `Update`
 - 3D PhysX queries for hits
 - Pooling required from phase 1
-- Input System and URP stay in the sandbox
+- Input System and URP stay in the host project / sample, not Runtime
 - Runtime package: no `UnityEditor` namespace, no camera / input / UI
 
 ## Hybrid ECS (ADR-005)
