@@ -53,7 +53,7 @@ Recipe
 
 **Authoring:** `RecipeAsset` is the Unity asset ([DECISIONS.md](DECISIONS.md) ADR-023). Tests and `Spawn` keep using `Recipe`. `ToRecipe()` copies stats and builds modifier instances. Multiply/Multicast children on the asset are other `RecipeAsset` references, resolved on build. Do not put `RecipeAsset` on `SpawnRequest`.
 
-**Gravity:** `Recipe.Gravity` is downward acceleration in m/s², default 0 ([DECISIONS.md](DECISIONS.md) ADR-017). Burst integrates it each tick; `Gravity(n)` scales the instance value (ADR-018). Aim-to-point is `BallisticAim.TrySolve` at fire time (ADR-019), not a baked curve.
+**Gravity:** `Recipe.Gravity` is downward acceleration in m/s², default 0 ([DECISIONS.md](DECISIONS.md) ADR-017). Burst integrates it each tick; `Gravity(n)` scales the instance value (ADR-018). Aim-to-point is `BallisticAim.TrySolve` at fire time (ADR-019, ADR-028): it returns the elevation that speed + gravity need to pass through the point (fast → nearly straight, barely enough on the level → ~45°). Not a baked curve and not an authored Range.
 
 ## Modifier contract
 
@@ -174,9 +174,10 @@ interface IMultiplyPattern
 
 static class BallisticAim
 {
-    // Fire-time direction so speed+gravity pass through target. Low arc default.
+    // Fire-time direction so speed+gravity pass through target.
+    // Always the flatter (shorter-time) root. Fast → nearly LOS; level min speed → ~45°.
     // false = unreachable. Does not simulate; copy into SpawnRequest.Direction.
-    bool TrySolve(Vector3 origin, Vector3 target, float speed, float gravity, out Vector3 direction, bool highArc = false);
+    bool TrySolve(Vector3 origin, Vector3 target, float speed, float gravity, out Vector3 direction);
 }
 
 interface IProjectileViewFactory
@@ -235,7 +236,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Phase 23 (ADR-025) runs after 17–22: it renames the package folder to `Packages/com.veerdonk.projectile-system/` and the namespace to `Veerdonk.ProjectileSystem`, and documents / tests / Sonar-scans the public API including Protection, the view factory, GroundField, and `RecipeAsset`.
+Phase 23 (ADR-025) runs after 17–22.b: it renames the package folder to `Packages/com.veerdonk.projectile-system/` and the namespace to `Veerdonk.ProjectileSystem`, and documents / tests / Sonar-scans the public API including Protection, the view factory, GroundField, `RecipeAsset`, and the needed-arc `BallisticAim` signature.
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 

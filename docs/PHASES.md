@@ -357,16 +357,16 @@ A fire-time solver that returns a launch **direction** so a given speed and grav
 
 **In scope**
 
-- Public `BallisticAim.TrySolve(origin, target, speed, gravity, out direction, highArc = false)` → `false` if unreachable. Uses world down. Low arc is the default of the two classic solutions
+- Public `BallisticAim.TrySolve(origin, target, speed, gravity, out direction, highArc = false)` → `false` if unreachable. Uses world down. Low arc is the default of the two classic solutions. **Phase 22.b** drops `highArc` (ADR-028)
 - Callers put `direction` on `SpawnRequest.Direction`. Do not add a second façade or a `Spawn` overload that aims for you
 - Edit Mode tests: reachable dummy at sandbox range returns a direction that, when simulated with that speed/gravity, the instance’s path meets the target (within a small tolerance); too-far or `gravity = 0` with a high target returns false (gravity 0 only works if the target lies on the ray)
-- Sandbox: cannonball fire uses the helper toward DummyTarget — it hits; toggle high arc if both solutions exist
+- Sandbox: cannonball fire uses the helper toward DummyTarget — it hits; toggle high arc if both solutions exist (removed in **phase 22.b**)
 
 **Out of scope:** replacing tick integrate with closed-form `x(t)` during flight; Rigidbody; editor tooling; Unity Physics; Entities Graphics
 
 **Proof:** fire the aimed cannonball — it hits DummyTarget. Fire with speed too low — helper returns false and the lab does not spawn.
 
-**Stop.** Sample-scene barrel pitch and a ballistic preset are **phase 22** (do not build them in the same session). Hold-to-fire, WASD, and orbit camera stay Later unless that follow-up says otherwise.
+**Stop.** Sample-scene barrel pitch and a ballistic preset are **phase 22** (do not build them in the same session). Dropping the high-arc pick is **phase 22.b**. Hold-to-fire, WASD, and orbit camera stay Later unless that follow-up says otherwise.
 
 ## Phase 17 — Projectile protection
 
@@ -501,39 +501,57 @@ Let the user add and remove modifiers on the sample sheet while playing, so one 
 
 ## Phase 22 — Sample barrel pitch and ballistic preset
 
-Phase 21 left lofted aim under Later until gravity and `BallisticAim` existed. Add barrel pitch and one ballistic preset to the sample scene. Do not grow the keyboard lab HUD.
+Phase 21 left lofted aim under Later until gravity and `BallisticAim` existed. Add barrel pitch and one ballistic preset to the sample scene. Do not grow the keyboard lab HUD. The helper computes the needed elevation (ADR-028) — do **not** add a high-arc toggle.
 
 **In scope**
 
 - Sample turret barrel pitches so `SpawnRequest.Direction` can leave the horizontal plane (still no PhysX collider on the gun)
 - Mouse aim still hits the ground plane, then the barrel pitches toward that point (yaw + pitch). Horizontal-only presets can keep using flattened forward
-- One ballistic `RecipeAsset` preset that calls `BallisticAim.TrySolve` toward the ground-aim point and copies the direction onto `SpawnRequest`. Toggle high arc when both solutions exist
+- One ballistic `RecipeAsset` preset that calls `BallisticAim.TrySolve` toward the ground-aim point and copies the direction onto `SpawnRequest`. If 22.b is not yet in, call the current helper **without** `highArc` (the default is already the flatter root)
 - Unreachable: helper returns false and the sample does not spawn (same as the phase 16 lab)
-- Recipe sheet / HUD: show whether the last fire used low arc, high arc, or was unreachable
+- Recipe sheet / HUD: show whether the last fire solved or was unreachable. Do **not** show or toggle high vs low arc
 - Rewrite [SANDBOX.md](SANDBOX.md) proofs for the ballistic preset
 
-**Out of scope:** hold-to-fire; WASD turret move; orbit camera; saving Play Mode tweaks to `RecipeAsset`; add/remove modifiers in Play Mode (phase 21.b); putting turret/input/HP in the runtime package; replacing tick integrate; Unity Physics; Entities Graphics
+**Out of scope:** high-arc pick; `Recipe.Range` / `Range(n)`; hold-to-fire; WASD turret move; orbit camera; saving Play Mode tweaks to `RecipeAsset`; add/remove modifiers in Play Mode (phase 21.b); putting turret/input/HP in the runtime package; replacing tick integrate; Unity Physics; Entities Graphics
 
-**Proof:** Play Mode, pick the ballistic preset, aim at DummyTarget, fire — the shot hits. Toggle high arc — a lofted shot still hits when both solutions exist. Lower speed until `TrySolve` fails — no spawn.
+**Proof:** Play Mode, pick the ballistic preset, aim at DummyTarget, fire — the shot hits and the barrel is lofted. Raise speed on the sheet — the next solve is flatter (closer to the line of sight). Lower speed until `TrySolve` fails — no spawn.
+
+**Stop.** Dropping `highArc` from the package API is **phase 22.b**. Do not start it in the same session.
+
+## Phase 22.b — Needed-arc ballistic solve
+
+`BallisticAim` computes the loft that Recipe speed and gravity need to hit the point. It does not allow or disallow a chosen high vs low arc. A shot with spare speed is nearly straight; a shot that can only just reach a level target leaves at about 45°. ADR-028. No `Recipe.Range` / `Range(n)`. If both 22 and 22.b are still unbuilt, implement **this phase first** so the sample never compiles against `highArc`.
+
+**In scope**
+
+- Drop `highArc` from `TrySolve(origin, target, speed, gravity, out direction)`. Always the shorter-time (flatter) root. When a level target is barely reachable, that root is ~45° (max range ≈ `Speed² / Gravity` on flat ground)
+- Callers still copy `direction` onto `SpawnRequest.Direction`. Flight is still phase 14 Burst integrate. Gravity 0 is unchanged (horizontal ray only)
+- Edit Mode tests: same-height target at the **lowest** speed that still returns true → launch elevation within a few degrees of 45°; the same geometry at several times that speed → elevation much closer to the line of sight (near 0°) than to 45°, and the simulated path still meets the target; too slow / too far still false. Delete `TrySolve_HighArc_AlsoMeetsReachableSandboxDummy`
+- Sample: do not add a high-arc control. If phase 22 already shipped a high/low HUD, remove it
+- Docs: [ARCHITECTURE.md](ARCHITECTURE.md) sketch, [ECS.md](ECS.md) map, [SANDBOX.md](SANDBOX.md) proofs, ADR-019 high-arc clause superseded
+
+**Out of scope:** `Recipe.Range` / `Range(n)` / an OnExpire-at-distance fuse; barrel pitch / ballistic sample preset (phase 22); changing the Burst integrate; closed-form `x(t)` during flight; Rigidbody; editor tooling; Unity Physics; Entities Graphics
+
+**Proof:** Edit Mode min-speed level shot is ~45°; fast shot is nearly straight and still hits. Play Mode ballistic preset (if 22 is in) still hits DummyTarget; there is no high-arc control.
 
 **Stop.**
 
 ## Phase 23 — Cleanup
 
-Housekeeping after **phases 1–22 are in code**. Rename the UPM id, document the full public API (including 17–22), delete leftovers, fill test holes, Sonar quality pass against the local SonarQube container. ADR-025. No new modifiers, no second façade. Do not start this phase on a tree that still has 17–22 unbuilt.
+Housekeeping after **phases 1–22.b are in code**. Rename the UPM id, document the full public API (including 17–22.b), delete leftovers, fill test holes, Sonar quality pass against the local SonarQube container. ADR-025. No new modifiers, no second façade. Do not start this phase on a tree that still has 17–22.b unbuilt.
 
 **In scope**
 
 - **UPM id:** `package.json` `name` and folder `Packages/com.veerdonk.projectile-system/`. Namespace `Veerdonk.ProjectileSystem`; asmdefs `Veerdonk.ProjectileSystem` / `.Editor` / `.Tests` (and InternalsVisibleTo). Update sandbox usings, `packages-lock.json`, [AGENTS.md](../AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md) folder map, [SANDBOX.md](SANDBOX.md), [REQUIREMENTS.md](REQUIREMENTS.md). Display name stays `com.veerdonk.projectile-system`
-- **User docs:** XML `<summary>` on every **public** package type and public member through phase 22: façade (`IProjectileWorld`, `Recipe`, `SpawnRequest`, `HitInfo`, `HitKind`, `HitSource`, `ProtectionLevel`), modifiers (including `GroundField`, `AreaEffect`, `Gravity`, scales, `ApplyStatus`), patterns, `BallisticAim`, `IProjectileProtection`, `IProjectileViewFactory` / `PrimitiveViewFactory` / `PrefabViewFactory` / `IGroundFieldViewFactory` / `PrimitiveGroundFieldViewFactory` / `PrefabGroundFieldViewFactory` / `ProjectileView`, `IHitQuery.OverlapDisk`, `RecipeAsset` / `RecipeStage` / `ModifierStageAttribute`. Enable documentation generation on the runtime asmdef. Replace template `Documentation/index.md`, package `README.md`, `package.json` description (drop example.com author/changelog URLs or omit them). `CHANGELOG.md` matches 0.1.0. Do **not** narrate internal ECS (`Runtime/Ecs/`) for consumers; [ECS.md](ECS.md) stays the agent map. Do not XML-doc sandbox `Assets/` (turret, sample UI, dummy HP). Inline comments on obvious code stay out ([AGENTS.md](../AGENTS.md))
+- **User docs:** XML `<summary>` on every **public** package type and public member through phase 22.b: façade (`IProjectileWorld`, `Recipe`, `SpawnRequest`, `HitInfo`, `HitKind`, `HitSource`, `ProtectionLevel`), modifiers (including `GroundField`, `AreaEffect`, `Gravity`, scales, `ApplyStatus`), patterns, `BallisticAim`, `IProjectileProtection`, `IProjectileViewFactory` / `PrimitiveViewFactory` / `PrefabViewFactory` / `IGroundFieldViewFactory` / `PrimitiveGroundFieldViewFactory` / `PrefabGroundFieldViewFactory` / `ProjectileView`, `IHitQuery.OverlapDisk`, `RecipeAsset` / `RecipeStage` / `ModifierStageAttribute`. Enable documentation generation on the runtime asmdef. Replace template `Documentation/index.md`, package `README.md`, `package.json` description (drop example.com author/changelog URLs or omit them). `CHANGELOG.md` matches 0.1.0. Do **not** narrate internal ECS (`Runtime/Ecs/`) for consumers; [ECS.md](ECS.md) stays the agent map. Do not XML-doc sandbox `Assets/` (turret, sample UI, dummy HP). Inline comments on obvious code stay out ([AGENTS.md](../AGENTS.md))
 - **Leftovers:** delete Unity template `Samples/Example` (`*Example*` / `MyPublicSampleExampleClass`), template `Documentation/images/example.png` if unused, unused `Assets/Scenes/SampleScene.unity`. After phase 21, delete the keyboard-slot lab driver if it is still in the tree (`SandboxLab` key grid). Strip empty template Third-Party boilerplate only if it is still placeholder. No dead `using`s in the package
-- **Tests:** Unity Code Coverage on Edit Mode package tests. Inventory **all** shipped public types through 22 vs `Tests/Editor` (and Play Mode pool/physics/views). Add Edit Mode tests for holes — especially spec no-ops (`n <= 0` scales, `EffectRadius = 0` area, `Gravity = 0` straight, `GroundField` `radius`/`lifetimeSeconds` `<= 0`), `Prewarm` chain counts (ADR-008), protection edges that 17’s list missed, unknown `PresentationId` falling back to the primitive factory, `RecipeAsset.ToRecipe` cycle sharing. Do not chase 100% on Burst/ECS generated code. Sample-scene behaviour stays proven in Play Mode / `Assets/` tests, not by inventing a second façade
+- **Tests:** Unity Code Coverage on Edit Mode package tests. Inventory **all** shipped public types through 22.b vs `Tests/Editor` (and Play Mode pool/physics/views). Add Edit Mode tests for holes — especially spec no-ops (`n <= 0` scales, `EffectRadius = 0` area, `Gravity = 0` straight, `GroundField` `radius`/`lifetimeSeconds` `<= 0`), `Prewarm` chain counts (ADR-008), protection edges that 17’s list missed, unknown `PresentationId` falling back to the primitive factory, `RecipeAsset.ToRecipe` cycle sharing. Do not chase 100% on Burst/ECS generated code. Sample-scene behaviour stays proven in Play Mode / `Assets/` tests, not by inventing a second façade
 - **Sonar:** analyze the **renamed** package Runtime + Editor on the **local SonarQube container** (Community, default Docker: `http://localhost:9000`). Project key `com.veerdonk.projectile-system`. Auth is `SONAR_TOKEN` (and optional `SONAR_HOST_URL`); **never commit the token**, a user/password, or `sonar.login` / `sonar.token` in the repo. A committed `sonar-project.properties` may set project key, `sonar.host.url=http://localhost:9000`, `sonar.sources` (Runtime + Editor after the folder rename), and `sonar.tests`; it must not set credentials. Exclude `Assets/`, `Library/`, `Temp/`, `com.coplaydev.unity-mcp`. Fix Blocker, Critical, and Major in Runtime/Editor product code. Do not mass-`#pragma` them away. Do **not** add Sonar as a UPM dependency. Record the dashboard URL and what was fixed. If the container is down, start it (default SonarQube image, port 9000) rather than falling back to an unreviewed local-only rule dump
 - Existing Edit Mode + Play Mode tests still pass
 
-**Out of scope:** new modifiers or types beyond what 17–22 already shipped; publishing to a registry; OpenUPM; renaming the GitHub repo; putting turret/input/HP in the runtime package; Unity Physics; Entities Graphics
+**Out of scope:** new modifiers or types beyond what 17–22.b already shipped; publishing to a registry; OpenUPM; renaming the GitHub repo; putting turret/input/HP in the runtime package; Unity Physics; Entities Graphics
 
-**Proof:** Package Manager shows `com.veerdonk.projectile-system`. No `MyPublicSampleExampleClass`. `Documentation/index.md` describes Spawn / Tick / Recipe stage lists and names the 17–22 public types. New coverage tests are green (including GroundField no-ops, view-factory fallback, RecipeAsset cycle). Local SonarQube at `http://localhost:9000` has no remaining Blocker/Critical on package Runtime/Editor.
+**Proof:** Package Manager shows `com.veerdonk.projectile-system`. No `MyPublicSampleExampleClass`. `Documentation/index.md` describes Spawn / Tick / Recipe stage lists and names the 17–22.b public types. New coverage tests are green (including GroundField no-ops, view-factory fallback, RecipeAsset cycle). Local SonarQube at `http://localhost:9000` has no remaining Blocker/Critical on package Runtime/Editor.
 
 **Stop.**
 
@@ -545,4 +563,5 @@ Housekeeping after **phases 1–22 are in code**. Rename the UPM id, document th
 - GroundField plant pose: v1 snaps Y to the world ground plane (`0`). Revisit spawn process and positioning (terrain / ground raycast, sloped floors, a chosen ground height) without changing the disk overlap or pulse contract
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Hold-to-fire; save Play Mode tweaks to `RecipeAsset`
+- Authored `Range` / `Range(n)` / an OnExpire-at-distance fuse (ballistic reach stays Speed + Gravity, ADR-028)
 - Convert remaining sandbox C# Recipes; package `Samples/` vs `Assets/` split
