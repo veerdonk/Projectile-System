@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Sandbox
+namespace Veerdonk.ProjectileSystem.Samples
 {
     /// <summary>World-space name and HP label sitting above a sample cube.</summary>
     public sealed class SandboxCubeLabel : MonoBehaviour

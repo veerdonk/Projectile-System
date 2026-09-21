@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Veerdonk.ProjectileSystem;
 using UnityEngine;
 
-namespace Sandbox
+namespace Veerdonk.ProjectileSystem.Samples
 {
     static class SampleRecipeSheet
     {

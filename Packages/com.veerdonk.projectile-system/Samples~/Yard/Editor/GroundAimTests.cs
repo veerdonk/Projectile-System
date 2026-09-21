@@ -2,7 +2,7 @@ using Veerdonk.ProjectileSystem;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Sandbox.Editor.Tests
+namespace Veerdonk.ProjectileSystem.Samples.Editor.Tests
 {
     public sealed class GroundAimTests
     {

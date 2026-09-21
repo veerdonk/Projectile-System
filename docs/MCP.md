@@ -33,7 +33,7 @@ C:\Users\David\.local\bin\uvx.exe --from "mcpforunityserver==10.2.0" mcp-for-uni
 
 Then:
 
-1. Confirm Unity is open on this project (`6000.6.0f1`) and `Assets/Scenes/Sandbox.unity` when proving a phase. **Projectile Lab > Rebuild** rebuilds that sample.
+1. Confirm Unity is open on this project (`6000.6.0f1`) and the imported `Yard.unity` when proving a phase. **Projectile Lab > Rebuild** rebuilds `Samples~/Yard` into gitignored `Assets/Samples/`.
 2. In Unity: **Window > MCP for Unity**. Start the Unity Bridge if it shows Stopped. Use **Auto-Setup** / **Start Local HTTP Server** when you want Unity to launch the server itself.
 3. In Cursor: reconnect the MCP server (`mcp_auth` on `user-unityMCP` if discovery failed). `namespaceStatus` should be `ready`.
 
@@ -64,7 +64,7 @@ Keep payloads small: page searches, `include_properties=false` until you need pr
 
 ## Project constraints
 
-- Lab objects and Play Mode proofs stay in `Assets/` and `Assets/Scenes/Sandbox.unity`. Runtime simulation stays in the projectile package.
+- Lab objects and Play Mode proofs stay in the Projectile Yard sample (`Samples~/Yard`, imported under `Assets/Samples/`). Runtime simulation stays in the projectile package.
 - Do not leave stray MCP test objects in the sandbox. Name probes clearly and delete them when done.
 - `unity_docs` / `unity_reflect` need the `docs` tool group (`manage_tools`) before trusting API names.
 - Do not use MCP to edit `Library/`, `Temp/`, `Logs/`, or `UserSettings/`.

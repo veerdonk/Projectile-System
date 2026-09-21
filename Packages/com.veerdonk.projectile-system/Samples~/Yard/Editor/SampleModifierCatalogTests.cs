@@ -2,7 +2,7 @@ using System;
 using Veerdonk.ProjectileSystem;
 using NUnit.Framework;
 
-namespace Sandbox.Editor.Tests
+namespace Veerdonk.ProjectileSystem.Samples.Editor.Tests
 {
     public sealed class SampleModifierCatalogTests
     {

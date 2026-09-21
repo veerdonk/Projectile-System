@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Sandbox
+namespace Veerdonk.ProjectileSystem.Samples
 {
     /// <summary>Muzzle pose for sample fire. Spawn uses world position and flattened forward.</summary>
     public sealed class SandboxSpawnPoint : MonoBehaviour

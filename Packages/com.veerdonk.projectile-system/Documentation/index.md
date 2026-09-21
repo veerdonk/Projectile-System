@@ -49,7 +49,11 @@ Requires Unity 6 LTS (`6000.6`) and `com.unity.entities`. MIT license.
 https://github.com/veerdonk/Projectile-System.git?path=/Packages/com.veerdonk.projectile-system
 ```
 
-Or copy this folder into the other project’s `Packages/`. This repository already embeds the package. Play Mode demo: `Assets/Scenes/Sandbox.unity`. Full steps: [README.md](../README.md).
+Or copy this folder into the other project’s `Packages/`. This repository already embeds the package. Full steps: [README.md](../README.md).
+
+## Sample
+
+Import **Projectile Yard** from Package Manager, then open `Scenes/Yard.unity` and enter Play Mode. The sample shows `Spawn`, `Tick`, and `Hit`. It is not part of the Runtime assembly and does not compile until you import it.
 
 ## Requirements
 
@@ -65,4 +69,5 @@ Or copy this folder into the other project’s `Packages/`. This repository alre
 | `Runtime/Ecs/` | Internal simulation components and systems |
 | `Editor/` | `RecipeAsset` inspector |
 | `Tests/` | Edit Mode and Play Mode tests |
+| `Samples~/Yard/` | Play Mode sample (hidden until Import) |
 | `Documentation/` | This file |

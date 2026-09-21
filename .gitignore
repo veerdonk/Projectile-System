@@ -117,5 +117,9 @@ InitTestScene*.unity*
 .sigmap-cache.json
 .context/
 
+# UPM sample import. Source of truth is Packages/com.veerdonk.projectile-system/Samples~/Yard
+/[Aa]ssets/Samples/
+/[Aa]ssets/Samples.meta
+
 # SonarScanner for .NET working directory
 .sonarqube/

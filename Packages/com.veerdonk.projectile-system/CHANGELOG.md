@@ -17,6 +17,7 @@ First release of **com.veerdonk.projectile-system**.
 - `BallisticAim.TrySolve` needed-arc launch direction (no high-arc pick)
 - `IProjectileProtection` (Basic / Strong), `IProjectileViewFactory` / `IGroundFieldViewFactory` (primitive and prefab)
 - `RecipeAsset` ScriptableObject authoring with a stage-filtered inspector
+- Play Mode sample **Projectile Yard** under `Samples~/Yard` (import from Package Manager; not part of Runtime)
 - Hybrid ECS simulation behind the façade (Entities world owned by `ProjectileWorld`)
 
 ### Changed

@@ -1,7 +1,7 @@
 using Veerdonk.ProjectileSystem;
 using UnityEngine;
 
-namespace Sandbox
+namespace Veerdonk.ProjectileSystem.Samples
 {
     public static class SampleYard
     {

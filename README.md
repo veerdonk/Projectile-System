@@ -18,7 +18,7 @@ To pin a release later, append `#` and the tag name (for example `#v0.1.0`) afte
 
 Alternatively, copy `Packages/com.veerdonk.projectile-system/` into the other project’s `Packages/` folder.
 
-This repository already embeds the package. Open it in Unity 6 LTS. Play Mode demo: `Assets/Scenes/Sandbox.unity`.
+This repository already embeds the package. Open it in Unity 6 LTS. Import sample **Projectile Yard** (or run **Projectile Lab > Rebuild**) and open `Scenes/Yard.unity`.
 
 ## Basic use
 

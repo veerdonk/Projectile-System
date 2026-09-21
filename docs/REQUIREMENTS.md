@@ -66,7 +66,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - 3D projectiles only
 - Unity 6 LTS (project is `6000.6.0f1`)
-- Ship as an embedded UPM package with a Play Mode sample (through 23: host `Assets/` lab; phase 24: `Samples~/Yard/`)
+- Ship as an embedded UPM package with a Play Mode sample at `Samples~/Yard/` (ADR-029)
 - GameObject adapters around hybrid ECS simulation (Entities for instance state, PhysX hits, GameObject views; see [DECISIONS.md](DECISIONS.md) ADR-005)
 - Composition via the six stage lists
 - Object pooling required

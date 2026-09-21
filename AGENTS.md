@@ -13,8 +13,8 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 | `docs/SANDBOX.md` | Play Mode proofs |
 | `docs/ECS.md` | Hybrid ECS map (what each piece does) |
 | `docs/MCP.md` | SigMap (signatures) and Unity MCP (Editor): start, recover, how agents should call them |
-| `Packages/com.veerdonk.projectile-system/` | Product runtime/editor/tests |
-| `Assets/` | Sandbox only |
+| `Packages/com.veerdonk.projectile-system/` | Product runtime/editor/tests, and `Samples~/Yard` |
+| `Assets/` | Host project. The imported yard under `Assets/Samples/` is gitignored |
 
 ## Pairing protocol
 
@@ -33,12 +33,14 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 23 — Cleanup**
+**Phase 24 — Projectile Yard sample**
 
-- Package folder is `Packages/com.veerdonk.projectile-system/`, namespace `Veerdonk.ProjectileSystem` (ADR-025).
+- Source of truth is `Packages/com.veerdonk.projectile-system/Samples~/Yard/` (namespace `Veerdonk.ProjectileSystem.Samples`). `Samples~` does not compile until Import or Rebuild copies it to `Assets/Samples/` (gitignored).
+- **Projectile Lab > Rebuild** resolves the import folder with `Sample.FindByPackage`. On Unity 6000.6 that folder is `Assets/Samples/com.veerdonk.projectile-system/<version>/Projectile Yard/` (the sample display name, not `Yard`). It writes `Scenes/Yard.unity` there and copies that scene file back into `Samples~/Yard/Scenes/`.
+- Sample asmdef references `Unity.InputSystem` and `UnityEngine.UI`. They are not `package.json` dependencies. This project’s Active Input Handling is Input System only, so Fire/Aim stay on `UnityEngine.InputSystem` (legacy `UnityEngine.Input` throws).
+- Runtime `[assembly: AssemblyVersion]` must stay `0.0.0.0`. Package version lives in `package.json`.
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- Play Mode demo is `Assets/Scenes/Sandbox.unity`. **Projectile Lab > Rebuild** creates it from a new default camera/light scene (the old `SampleScene.unity` template is gone).
-- Local SonarQube: `http://localhost:9000/dashboard?id=com.veerdonk.projectile-system`. Auth is `SONAR_TOKEN` in the environment; do not commit it. `sonar-project.properties` has host/sources only. C# analysis needs `dotnet-sonarscanner` (not the generic CLI). Temporarily rename `sonar-project.properties` for begin/build/end. `Directory.Build.props` sets `SonarQubeTestProject=false` on Runtime/Editor so Unity assemblies count as MAIN code. Runtime `[assembly: AssemblyVersion]` must stay `0.0.0.0` — `0.1.0.0` changes identity enough that Burst `LifetimeJob` stops applying. Package version lives in `package.json`. Editor may use `0.1.0.0`.
+- Local SonarQube: `http://localhost:9000/dashboard?id=com.veerdonk.projectile-system`. Auth is `SONAR_TOKEN` in the environment; do not commit it. `sonar.sources` stays Runtime + Editor and excludes `Samples~`.
 
 ## Do not
 

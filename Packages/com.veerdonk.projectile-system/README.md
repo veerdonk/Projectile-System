@@ -28,7 +28,7 @@ Copy `Packages/com.veerdonk.projectile-system/` into the other project’s `Pack
 
 ### This repository
 
-The package is already embedded. Open the project in Unity 6 LTS. Play Mode demo: `Assets/Scenes/Sandbox.unity` (**Projectile Lab > Rebuild** if the yard is missing).
+The package is already embedded. Open the project in Unity 6 LTS. Import sample **Projectile Yard** (or run **Projectile Lab > Rebuild**) and open `Scenes/Yard.unity`.
 
 ## Basic use
 
@@ -84,3 +84,9 @@ public sealed class ProjectileDriver : MonoBehaviour
 ```
 
 Recipe composition is six ordered stage lists: `OnSpawn`, `OnTravel`, `OnTick`, `OnInterval`, `OnHit`, `OnExpire`. API list: [Documentation/index.md](Documentation/index.md).
+
+## Sample
+
+Package Manager → **com.veerdonk.projectile-system** → Samples → **Projectile Yard** → Import. Open `Scenes/Yard.unity` and enter Play Mode. The turret calls `Spawn` / `Tick`. Dummy HP listens to `Hit`. That code is not in the Runtime assembly; it compiles only after Import.
+
+In this repository, **Projectile Lab > Rebuild** writes the same scene into `Samples~/Yard` and the gitignored import under `Assets/Samples/`. The sample assembly references Input System and uGUI, which are host-project packages, not dependencies of this package.

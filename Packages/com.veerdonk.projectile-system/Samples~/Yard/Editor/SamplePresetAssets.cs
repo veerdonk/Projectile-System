@@ -2,16 +2,15 @@ using Veerdonk.ProjectileSystem;
 using UnityEditor;
 using UnityEngine;
 
-namespace Sandbox.Editor
+namespace Veerdonk.ProjectileSystem.Samples.Editor
 {
     static class SamplePresetAssets
     {
-        public const string Folder = "Assets/Sandbox/Recipes";
+        static string Folder => SampleSceneBuilder.RecipesFolder;
 
         public static SampleLab.Preset[] CreateOrUpdate()
         {
-            if (!AssetDatabase.IsValidFolder(Folder))
-                AssetDatabase.CreateFolder("Assets/Sandbox", "Recipes");
+            SampleSceneBuilder.EnsureAssetFolder(Folder);
 
             RecipeAsset multiplyChild = Upsert("MultiplyChild", asset =>
             {
@@ -162,9 +161,6 @@ namespace Sandbox.Editor
                     };
                 }))
             };
-
-            if (AssetDatabase.LoadAssetAtPath<RecipeAsset>("Assets/Sandbox/PierceRecipe.asset") != null)
-                AssetDatabase.DeleteAsset("Assets/Sandbox/PierceRecipe.asset");
 
             AssetDatabase.SaveAssets();
             return presets;
