@@ -2,7 +2,7 @@ using System.Collections;
 using Veerdonk.ProjectileSystem;
 using UnityEngine;
 
-namespace Sandbox
+namespace Veerdonk.ProjectileSystem.Samples
 {
     /// <summary>
     /// Sandbox cube that implements <see cref="IDamageable"/>, <see cref="IStatusReceiver"/>,

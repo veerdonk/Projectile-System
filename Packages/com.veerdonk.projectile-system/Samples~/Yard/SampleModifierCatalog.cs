@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Veerdonk.ProjectileSystem;
 
-namespace Sandbox
+namespace Veerdonk.ProjectileSystem.Samples
 {
     public static class SampleModifierCatalog
     {

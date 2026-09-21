@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Sandbox.unity
-    guid: a8f31c2e9b7640d1a5e64c7b8d9e0123
+    path: Assets/Samples/com.veerdonk.projectile-system/0.1.0/Projectile Yard/Scenes/Yard.unity
+    guid: 255d8083ad456424f949088fe8b8ce4d
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

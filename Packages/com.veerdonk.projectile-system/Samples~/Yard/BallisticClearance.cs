@@ -2,7 +2,7 @@ using System;
 using Veerdonk.ProjectileSystem;
 using UnityEngine;
 
-namespace Sandbox
+namespace Veerdonk.ProjectileSystem.Samples
 {
     /// <summary>
     /// Prefers the flatter <see cref="BallisticAim"/> root. If that path hits something

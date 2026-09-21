@@ -3,7 +3,7 @@ using Veerdonk.ProjectileSystem;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Sandbox
+namespace Veerdonk.ProjectileSystem.Samples
 {
     /// <summary>
     /// Play Mode sample: turret, mouse aim, RecipeAsset presets, working-copy sheet, Reset.

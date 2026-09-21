@@ -14,3 +14,9 @@ Stage lists on the Recipe are the composition model: `OnSpawn`, `OnTravel`, `OnT
 ## Namespace
 
 `Veerdonk.ProjectileSystem`
+
+## Sample
+
+Package Manager → **com.veerdonk.projectile-system** → Samples → **Projectile Yard** → Import. Open `Scenes/Yard.unity` and enter Play Mode. The turret calls `Spawn` / `Tick`. Dummy HP listens to `Hit`. That code is not in the Runtime assembly; it compiles only after Import.
+
+In this repository, **Projectile Lab > Rebuild** writes the same scene into `Samples~/Yard` and the gitignored import under `Assets/Samples/`. The sample assembly references Input System and uGUI, which are host-project packages, not dependencies of this package.

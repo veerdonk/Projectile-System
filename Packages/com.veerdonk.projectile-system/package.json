@@ -12,5 +12,12 @@
 	"author": {
 		"name": "David Van de Veerdonk"
 	},
+	"samples": [
+		{
+			"displayName": "Projectile Yard",
+			"description": "Import this sample, open Scenes/Yard.unity, and enter Play Mode. The turret calls Spawn and Tick; dummy HP listens to Hit.",
+			"path": "Samples~/Yard"
+		}
+	],
 	"hideInEditor": false
 }

@@ -43,7 +43,9 @@ Internal ECS types under `Runtime/Ecs/` are not a consumer API.
 
 Embedded in this project under `Packages/com.veerdonk.projectile-system/`. For another project, add the folder as a UPM package. Requires Unity 6 LTS (`6000.6`) and `com.unity.entities`.
 
-The Play Mode sample lives in the host project (`Assets/Scenes/Sandbox.unity`), not in this package.
+## Sample
+
+Import **Projectile Yard** from Package Manager, then open `Scenes/Yard.unity` and enter Play Mode. The sample shows `Spawn`, `Tick`, and `Hit`. It is not part of the Runtime assembly and does not compile until you import it.
 
 ## Requirements
 
@@ -59,4 +61,5 @@ The Play Mode sample lives in the host project (`Assets/Scenes/Sandbox.unity`), 
 | `Runtime/Ecs/` | Internal simulation components and systems |
 | `Editor/` | `RecipeAsset` inspector |
 | `Tests/` | Edit Mode and Play Mode tests |
+| `Samples~/Yard/` | Play Mode sample (hidden until Import) |
 | `Documentation/` | This file |

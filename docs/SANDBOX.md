@@ -1,12 +1,12 @@
 # Sandbox
 
-The sandbox is the lab for proving a phase. Through phase 23 it lives under `Assets/`. **Phase 24** moves it into the package sample `Samples~/Yard/` (Import from Package Manager). Dummy HP, camera, and input still stay out of Runtime.
+The sandbox is the lab for proving a phase. It lives in the package sample `Packages/com.veerdonk.projectile-system/Samples~/Yard/` (ADR-029). Import **Projectile Yard** from Package Manager, or run **Projectile Lab > Rebuild**, which copies the yard into gitignored `Assets/Samples/`. Dummy HP, camera, and input stay out of Runtime.
 
 ## Current project
 
 - Editor: Unity 6 LTS `6000.6.0f1`
-- Default Play Mode scene today: `Assets/Scenes/Sandbox.unity` (phase 21 sample). **Phase 24:** Import **Projectile Yard**, then `Yard.unity` (Rebuild writes `Samples~/Yard/Scenes/Yard.unity` and copies into gitignored `Assets/Samples/...`). **Projectile Lab > Rebuild** creates that scene from a new default camera/light setup
-- Package: `Packages/com.veerdonk.projectile-system` (`Veerdonk.ProjectileSystem`)
+- Play Mode scene: imported `Yard.unity` at `Assets/Samples/com.veerdonk.projectile-system/<version>/Projectile Yard/Scenes/Yard.unity`. Package Manager names that folder from the sample display name. Rebuild writes the scene there and back to `Samples~/Yard/Scenes/Yard.unity`
+- Package: `Packages/com.veerdonk.projectile-system` (`Veerdonk.ProjectileSystem`). Sample scripts are `Veerdonk.ProjectileSystem.Samples`
 
 ## Sample layout (phase 21 / 21.b / 22)
 
@@ -25,7 +25,7 @@ If the yard is missing in Edit Mode, use **Projectile Lab > Rebuild**. Agents sh
 
 ## How to prove a phase
 
-Always: enter Play Mode from the sample scene (`Assets/Scenes/Sandbox.unity` until phase 24; then imported `Yard.unity`), fire once, confirm the phase’s scenario in [REQUIREMENTS.md](REQUIREMENTS.md), then exit Play Mode.
+Always: enter Play Mode from the imported `Yard.unity`, fire once, confirm the phase’s scenario in [REQUIREMENTS.md](REQUIREMENTS.md), then exit Play Mode.
 
 | Phase | What to fire | What you should see |
 | --- | --- | --- |
@@ -67,7 +67,7 @@ Always: enter Play Mode from the sample scene (`Assets/Scenes/Sandbox.unity` unt
 
 AreaEffect, GroundField, Recipe gravity, barrel pitch, and needed-arc `BallisticAim` (Cannonball) are sample presets.
 
-Open the Play Mode scene before Play Mode (`Assets/Scenes/Sandbox.unity` until phase 24; then the imported `Yard.unity`).
+Open the imported `Yard.unity` before Play Mode. `Assets/Samples/` is gitignored; Import or Rebuild creates it.
 
 If a proof needs a new yard object (second dummy, wall), add it in the **sample**, not in Runtime.
 

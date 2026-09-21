@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Sandbox
+namespace Veerdonk.ProjectileSystem.Samples
 {
     /// <summary>
     /// Aim from a camera ray: colliders first (dummy tops), else the world ground plane (Y = 0).

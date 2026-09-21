@@ -1,7 +1,7 @@
 using Veerdonk.ProjectileSystem;
 using UnityEngine;
 
-namespace Sandbox
+namespace Veerdonk.ProjectileSystem.Samples
 {
     /// <summary>Sandbox collider marker for a Strong shield (or Basic without dummy HP).</summary>
     public sealed class SandboxProjectileProtection : MonoBehaviour, IProjectileProtection
