@@ -12,5 +12,6 @@
 	"author": {
 		"name": "David Van de Veerdonk"
 	},
+	"license": "MIT",
 	"hideInEditor": false
 }
