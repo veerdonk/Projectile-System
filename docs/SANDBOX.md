@@ -11,13 +11,13 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 ## Sample layout (phase 21 / 21.b / 22)
 
 - Ground plane and a yard of dummies/walls, viewed from behind and above the turret (not the old side-on lane)
-- Turret: sphere body + cylinder barrel on a **Gun** pitch pivot, no PhysX collider. Horizontal presets spawn at the barrel tip along flattened forward. **Cannonball** uses `BallisticAim.TrySolve` toward the ground-aim point (speed 32, gravity 80)
-- Mouse aim: camera ray vs the ground plane (Y = 0); turret yaws and the barrel pitches toward that point. Pointer over the on-screen sheet does not aim or fire
+- Turret: sphere body + cylinder barrel on a **Gun** pitch pivot, no PhysX collider. Horizontal presets spawn at the barrel tip along flattened forward. **Cannonball** uses `BallisticAim.TrySolve` toward the ground-aim point (speed 32, gravity 80) with no `highArc` argument
+- Mouse aim: camera ray vs the ground plane (Y = 0); turret yaws. Horizontal presets pitch the barrel toward that point. Cannonball pitches to the solved loft (faster Speed is flatter). Pointer over the on-screen sheet does not aim or fire
 - Fire: click in the world, on-screen **Fire**, or Space. One driver `Tick`s. Unreachable ballistic solves do not spawn
 - Preset dropdown of `RecipeAsset`s. Play Mode edits a working `Recipe` from `ToRecipe()`; the asset on disk does not change. Switching preset or **Reset** copies again
 - Recipe sheet: base stats plus the six lists with **Add** / **Remove**. Magnitudes stay editable. Add menus are `[ModifierStage]`-filtered (Pierce is OnHit, not OnSpawn). Multiply child / Multicast extra pick a sample preset (`ToRecipe()`). Child Recipes are a name, not a nested editor. Working copy only — the `RecipeAsset` does not change
-- Cannonball HUD: **High arc** toggle and last-fire line (`low arc` / `high arc` / `unreachable`)
-- **Reset:** dummy HP/status, turret yaw and barrel pitch, working copy, high-arc toggle, `Dispose` + new `ProjectileWorld` (clears live shots and the pool)
+- Cannonball HUD: last-fire line (`solved` / `unreachable`). No high-arc toggle
+- **Reset:** dummy HP/status, turret yaw and barrel pitch, working copy, `Dispose` + new `ProjectileWorld` (clears live shots and the pool)
 - Colored dummy cubes and status flash. Tiny HUD: active count, pool available, DummyTarget HP/status
 - Yard still has a pierce line of dummies, a bounce wall, DummyBounce off-lane, splash dummy, muzzle dummy, Basic dummy, Strong shield, and a second wall
 
@@ -47,7 +47,7 @@ Always: enter Play Mode from `Assets/Scenes/Sandbox.unity`, fire once, confirm t
 | 13 | **Area-only OnHit** | Contact dummy loses area damage, not Recipe damage |
 | 13 | **OnTravel AreaEffect** | DummyMuzzle is hit before the shot moves |
 | 13 | **Interval aura** | Dummy beside the lane ticks each interval while the shot is in range |
-| 14 / 16 / 22 | **Cannonball** | Aim at DummyTarget, fire — the shot hits. **High arc** still hits when both solutions exist. Lower Speed on the sheet until last fire is `unreachable` — no spawn |
+| 14 / 16 / 22 | **Cannonball** | Aim at DummyTarget, fire — the shot hits and the barrel is lofted. Raise Speed on the sheet — flatter loft. Lower Speed until last fire is `unreachable` — no spawn. No high-arc toggle |
 | 15 | **Cannonball Gravity(2)** | Flattened spawn; drops harder than an unsolved cannonball |
 | 19 | **OnHit GroundField** | Flat disk at DummyTarget; DummyTarget and splash dummy tick field damage each interval |
 | 19 | **OnExpire GroundField** | Lifetime-only shot; disk appears where it died, not at DummyTarget |
@@ -60,10 +60,11 @@ Always: enter Play Mode from `Assets/Scenes/Sandbox.unity`, fire once, confirm t
 | 21.b | Straight + Add Pierce and Homing | First dummy pierced; shot can steer; Straight asset unchanged after Play Mode |
 | 21.b | OnSpawn Add | Does not list Pierce |
 | 21.b | Reset after compose | Sheet matches Straight again |
-| 22 | **Cannonball**, barrel pitch | Barrel tilts toward the ground click; horizontal presets still leave the muzzle flat |
+| 22 | **Cannonball** | Barrel pitches to the solved loft; shot hits DummyTarget. Raise Speed — flatter. Lower Speed until unreachable — no spawn. No high-arc toggle |
+| 22.b | **Cannonball**, tweak Speed | Fast is nearly straight; slowest reachable on the level is ~45°. `TrySolve` has no `highArc` argument |
 | 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone; keyboard-slot lab HUD is gone |
 
-AreaEffect, GroundField, Recipe gravity, barrel pitch, and `BallisticAim` (Cannonball) are sample presets.
+AreaEffect, GroundField, Recipe gravity, barrel pitch, and `BallisticAim` (Cannonball) are sample presets. Dropping `highArc` from the package API is phase 22.b (ADR-028).
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode.
 

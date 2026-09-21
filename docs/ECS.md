@@ -83,7 +83,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Homing.cs` | `OnTick`: steer at n degrees/second toward a lock. Acquires via `IHomingAcquisition` when unassigned. A Target hit drops the lock (`Homing.ReleaseLockOnTargetHit` after `OnHit`) |
 | `Runtime/Speed.cs` | Scale current speed by n, keep travel direction. `OnTravel` start scale, `OnInterval` progressive, `OnHit` after bounce/pierce. Scale <= 0 is a no-op |
 | `Runtime/Gravity.cs` | Scale instance gravity by n. Same stages as `Speed`. Does not add `g * dt`; Burst still integrates |
-| `Runtime/BallisticAim.cs` | Fire-time helper. `TrySolve` returns a launch direction so speed + gravity pass through a point (world down, low arc default). Not a modifier and not a flight path; callers copy into `SpawnRequest.Direction` |
+| `Runtime/BallisticAim.cs` | Fire-time helper. `TrySolve` returns the launch direction speed + gravity need to pass through a point (world down, flatter/shorter-time root: extra speed → nearly straight, level min speed → ~45°). Not a modifier, not a flight path, not a Range stat; callers copy into `SpawnRequest.Direction` |
 | `Runtime/Damage.cs` | Scale instance damage by n. Same stages as `Speed`. Does not apply HP. OnHit scales do not rewrite the sampled Direct `HitInfo` |
 | `Runtime/Critical.cs` | Scale instance critical chance by n, then clamp to [0, 1]. Same stages as `Speed`. Does not roll a crit |
 | `Runtime/Mana.cs` | Scale the instance mana-cost copy by n. Same stages as `Speed`. Does not change `Recipe.ManaCost` or spend mana |
