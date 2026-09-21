@@ -12,6 +12,7 @@
 	"author": {
 		"name": "David Van de Veerdonk"
 	},
+	"license": "MIT",
 	"samples": [
 		{
 			"displayName": "Projectile Yard",
