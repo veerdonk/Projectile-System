@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Cannonball
   m_EditorClassIdentifier: Davidvdveerdonk.ComVeerdonkProjectileSystem::Davidvdveerdonk.ComVeerdonkProjectileSystem.RecipeAsset
   id: cannonball
-  speed: 20
+  speed: 32
   radius: 0.25
   lifetimeSeconds: 5
   gravity: 80

@@ -29,21 +29,21 @@ MonoBehaviour:
   onTick: []
   onInterval: []
   onHit:
-  - rid: 3954138888027504805
+  - rid: 3954138888027504839
   onExpire: []
   references:
     version: 2
     RefIds:
-    - rid: 3954138888027504805
+    - rid: 3954138888027504839
       type: {class: GroundField, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         radius: 2.25
         lifetimeSeconds: 2
         damage: 3
         status:
-          rid: 3954138888027504806
+          rid: 3954138888027504840
         intervalSeconds: 0.5
         presentationId: 
-    - rid: 3954138888027504806
+    - rid: 3954138888027504840
       type: {class: DummyStatusEffect, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data: 

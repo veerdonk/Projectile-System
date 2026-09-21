@@ -131,9 +131,9 @@ namespace Sandbox.Editor
                 })),
                 Preset("Cannonball", Upsert("Cannonball", asset =>
                 {
-                    ConfigureBase(asset, "cannonball", 20f, 5f, gravity: 80f);
+                    ConfigureBase(asset, "cannonball", 32f, 5f, gravity: 80f);
                     ClearStages(asset);
-                })),
+                }), useBallisticAim: true),
                 Preset("Cannonball Gravity(2)", Upsert("CannonballGravity", asset =>
                 {
                     ConfigureBase(asset, "cannonball-gravity", 20f, 5f, gravity: 80f);
@@ -170,12 +170,13 @@ namespace Sandbox.Editor
             return presets;
         }
 
-        static SampleLab.Preset Preset(string label, RecipeAsset asset)
+        static SampleLab.Preset Preset(string label, RecipeAsset asset, bool useBallisticAim = false)
         {
             return new SampleLab.Preset
             {
                 label = label,
-                asset = asset
+                asset = asset,
+                useBallisticAim = useBallisticAim
             };
         }
 

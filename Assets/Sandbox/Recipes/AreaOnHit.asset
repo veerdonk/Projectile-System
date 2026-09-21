@@ -29,14 +29,14 @@ MonoBehaviour:
   onTick: []
   onInterval: []
   onHit:
-  - rid: 3954138888027504804
+  - rid: 3954138888027504838
   onExpire: []
   references:
     version: 2
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 3954138888027504804
+    - rid: 3954138888027504838
       type: {class: AreaEffect, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         damage: 3

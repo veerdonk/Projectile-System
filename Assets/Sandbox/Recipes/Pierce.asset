@@ -29,12 +29,12 @@ MonoBehaviour:
   onTick: []
   onInterval: []
   onHit:
-  - rid: 3954138888027504819
+  - rid: 3954138888027504853
   onExpire: []
   references:
     version: 2
     RefIds:
-    - rid: 3954138888027504819
+    - rid: 3954138888027504853
       type: {class: Pierce, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
       data:
         count: 2

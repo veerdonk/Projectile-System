@@ -33,13 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 21.b — Play Mode modifier compose**
+**Phase 22.b — Needed-arc ballistic solve**
 
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- Play Mode demo is still `Assets/Scenes/Sandbox.unity`. Sheet Add/Remove mutates the working `Recipe` only. Catalog is `Assets/Sandbox/SampleModifierCatalog.cs` (runtime reflection). Do not call `RecipeAssetEditor` from Play Mode.
-- Default child/extra for newly added Multiply/Multicast is the Straight preset (`ToRecipe()`). Other presets are pickable on the row.
-- Adding AreaEffect with `EffectRadius = 0` sets the working copy to 3 so the splash can fire. GroundField defaults match the OnHit preset (2.25 m, 2 s, damage 3, interval 0.5 s).
-- Phase 22 is barrel pitch + ballistic preset — do not start it until asked.
+- `BallisticAim.TrySolve(origin, target, speed, gravity, out direction)` has no `highArc`. Always the flatter root (ADR-028). Sample `BallisticClearance` searches extra pitch against an 80° cap, not a second `TrySolve` root.
+- Play Mode demo is still `Assets/Scenes/Sandbox.unity`. Cannonball is ballistic; no high-arc HUD. Clicking a dummy aims at the cube. **Cannonball Gravity(2)** still flattens spawn.
+- Phase 23 is cleanup (UPM id rename, XML docs, leftovers, coverage holes, local Sonar) — do not start it until asked.
 
 ## Do not
 

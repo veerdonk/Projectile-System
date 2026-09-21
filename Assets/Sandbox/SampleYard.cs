@@ -8,6 +8,7 @@ namespace Sandbox
         public const string GroundName = "Ground";
         public const string TurretName = "Turret";
         public const string BodyName = "Body";
+        public const string GunName = "Gun";
         public const string BarrelName = "Barrel";
         public const string MuzzleName = "Muzzle";
         public const string DummyName = "DummyTarget";
@@ -108,18 +109,33 @@ namespace Sandbox
             return root.Find(TurretName);
         }
 
-        public static SandboxSpawnPoint FindMuzzle(Transform root)
+        public static Transform FindGun(Transform root)
         {
             Transform turret = FindTurret(root);
-            Transform muzzle = turret != null ? turret.Find(MuzzleName) : null;
+            return turret != null ? turret.Find(GunName) : null;
+        }
+
+        public static SandboxSpawnPoint FindMuzzle(Transform root)
+        {
+            Transform gun = FindGun(root);
+            Transform muzzle = gun != null ? gun.Find(MuzzleName) : null;
+            if (muzzle == null)
+            {
+                Transform turret = FindTurret(root);
+                muzzle = turret != null ? turret.Find(MuzzleName) : null;
+            }
+
             return muzzle != null ? muzzle.GetComponent<SandboxSpawnPoint>() : null;
         }
 
-        public static void ResetTurretYaw(Transform root)
+        public static void ResetTurretPose(Transform root)
         {
             Transform turret = FindTurret(root);
             if (turret != null)
                 turret.localRotation = Quaternion.identity;
+            Transform gun = FindGun(root);
+            if (gun != null)
+                gun.localRotation = Quaternion.identity;
         }
 
         public static void AimCamera()
@@ -144,7 +160,8 @@ namespace Sandbox
             Transform body = turret.Find(BodyName);
             if (body != null)
                 Tint(body.gameObject, TurretColor);
-            Transform barrel = turret.Find(BarrelName);
+            Transform gun = turret.Find(GunName);
+            Transform barrel = gun != null ? gun.Find(BarrelName) : turret.Find(BarrelName);
             if (barrel != null)
                 Tint(barrel.gameObject, BarrelColor);
         }
@@ -153,7 +170,7 @@ namespace Sandbox
         {
             Transform existing = root.Find(TurretName);
             if (existing != null)
-                return false;
+                return EnsureGunMount(existing);
 
             var turret = new GameObject(TurretName);
             turret.transform.SetParent(root, false);
@@ -168,20 +185,47 @@ namespace Sandbox
             StripCollider(body);
             Tint(body, TurretColor);
 
+            var gun = new GameObject(GunName);
+            gun.transform.SetParent(turret.transform, false);
+            gun.transform.localPosition = new Vector3(0f, 0.7f, 0f);
+            gun.transform.localRotation = Quaternion.identity;
+
             GameObject barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             barrel.name = BarrelName;
-            barrel.transform.SetParent(turret.transform, false);
+            barrel.transform.SetParent(gun.transform, false);
             barrel.transform.localScale = new Vector3(0.18f, 0.7f, 0.18f);
             barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            barrel.transform.localPosition = new Vector3(0f, 0.7f, 1.3f);
+            barrel.transform.localPosition = new Vector3(0f, 0f, 1.3f);
             StripCollider(barrel);
             Tint(barrel, BarrelColor);
 
             var muzzle = new GameObject(MuzzleName);
-            muzzle.transform.SetParent(turret.transform, false);
-            muzzle.transform.localPosition = new Vector3(0f, 0.7f, 2f);
+            muzzle.transform.SetParent(gun.transform, false);
+            muzzle.transform.localPosition = new Vector3(0f, 0f, 2f);
             muzzle.transform.localRotation = Quaternion.identity;
             muzzle.AddComponent<SandboxSpawnPoint>();
+            return true;
+        }
+
+        static bool EnsureGunMount(Transform turret)
+        {
+            Transform gun = turret.Find(GunName);
+            if (gun != null)
+                return false;
+
+            var gunGo = new GameObject(GunName);
+            gunGo.transform.SetParent(turret, false);
+            gunGo.transform.localPosition = new Vector3(0f, 0.7f, 0f);
+            gunGo.transform.localRotation = Quaternion.identity;
+
+            Transform barrel = turret.Find(BarrelName);
+            if (barrel != null)
+                barrel.SetParent(gunGo.transform, true);
+
+            Transform muzzle = turret.Find(MuzzleName);
+            if (muzzle != null)
+                muzzle.SetParent(gunGo.transform, true);
+
             return true;
         }
 
