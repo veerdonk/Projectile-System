@@ -33,7 +33,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Ground field** — flat lingering disk planted by `GroundField`. Has its own size, lifetime, damage, optional status, and pulse period. Stays after the projectile despawns. Not a Recipe and not an `AreaEffect` aura
 - **Presentation** — GameObject view for an instance. Selected by `Recipe.PresentationId` through `IProjectileViewFactory`. Not the hit shape
 - **Size** — projectile collision size. This **is** `Recipe.Radius`; there is no second size field
-- **Gravity** — downward acceleration in m/s² on the Recipe (default 0) and the instance. Burst adds it to velocity each tick. 0 is a straight shot
+- **Gravity** — downward acceleration in m/s² on the Recipe (default 0) and the instance. Burst adds it to velocity each tick. 0 is a straight shot. Ballistic reach is derived from Speed + Gravity (ADR-028); there is no Range stat
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
   - **Strength** for homing (how hard it turns)
@@ -360,7 +360,7 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 ### Phase 16 — Ballistic aim hits a reachable target
 
 - **Given:** spawn origin, DummyTarget position, cannonball `Speed` and `Gravity` that can reach it
-- **When:** `BallisticAim.TrySolve` is called with `highArc = false`
+- **When:** `BallisticAim.TrySolve` is called (phase 16 defaulted to the low/flatter arc)
 - **Then:** it returns true and a direction such that simulating with that Recipe meets the dummy (within test tolerance)
 
 ### Phase 16 — Unreachable target fails
@@ -483,6 +483,36 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** the user presses Reset
 - **Then:** the sheet matches Straight again (no Pierce); dummy HP is restored
 
+### Phase 22 — Ballistic preset hits DummyTarget
+
+- **Given:** Play Mode on the sample, ballistic preset selected
+- **When:** the user aims at DummyTarget and fires
+- **Then:** `TrySolve` supplies `SpawnRequest.Direction`; the shot hits; the barrel is pitched. There is no high-arc toggle
+
+### Phase 22 — Extra speed flattens the solve
+
+- **Given:** the ballistic preset aimed at DummyTarget
+- **When:** the user raises Speed on the sheet and fires again
+- **Then:** the next solve is flatter (closer to the line of sight) than the slower shot
+
+### Phase 22.b — Barely-enough speed on the level is ~45°
+
+- **Given:** origin and target at the same height, gravity > 0, speed just high enough that `TrySolve` still returns true
+- **When:** `BallisticAim.TrySolve` is called
+- **Then:** it returns true and the launch elevation is within a few degrees of 45°
+
+### Phase 22.b — Spare speed is nearly straight
+
+- **Given:** the same level geometry at several times that minimum speed
+- **When:** `TrySolve` is called
+- **Then:** it returns true; elevation is much closer to the line of sight than to 45°; simulating with that Recipe still meets the target
+
+### Phase 22.b — No high-arc parameter
+
+- **Given:** the public `TrySolve` signature after 22.b
+- **When:** a caller aims
+- **Then:** there is no `highArc` argument; unreachable shots still return false
+
 ### Phase 23 — Package id is not doubled
 
 - **Given:** the embedded UPM package after the cleanup rename
@@ -491,7 +521,7 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 ### Phase 23 — Public façade is documented
 
-- **Given:** the runtime assembly after phases 17–22
+- **Given:** the runtime assembly after phases 17–22.b
 - **When:** a consumer inspects `IProjectileWorld`, `Recipe`, `IProjectileProtection`, `IProjectileViewFactory`, `GroundField`, `RecipeAsset`, and `BallisticAim`
 - **Then:** every public type and public member has XML documentation; `Documentation/index.md` is not the Unity template
 

@@ -59,9 +59,11 @@ Always: enter Play Mode from `Assets/Scenes/Sandbox.unity`, fire once, confirm t
 | 21.b | Straight + Add Pierce and Homing | First dummy pierced; shot can steer; Straight asset unchanged after Play Mode |
 | 21.b | OnSpawn Add | Does not list Pierce |
 | 21.b | Reset after compose | Sheet matches Straight again |
+| 22 | **Ballistic** preset | Barrel pitches; shot hits DummyTarget. Raise Speed on the sheet — flatter loft. Lower Speed until unreachable — no spawn. No high-arc toggle |
+| 22.b | **Ballistic**, tweak Speed | Fast is nearly straight; slowest reachable on the level is ~45°. `TrySolve` has no `highArc` argument |
 | 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone; keyboard-slot lab HUD is gone |
 
-AreaEffect, GroundField, and Recipe gravity are sample presets. Barrel pitch / `BallisticAim` stay phase 22.
+AreaEffect, GroundField, and Recipe gravity are sample presets. Barrel pitch / `BallisticAim` are phase 22; dropping `highArc` is phase 22.b (ADR-028).
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode.
 

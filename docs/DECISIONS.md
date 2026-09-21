@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-028 — BallisticAim computes the needed elevation; no high-arc pick and no Range
+
+- **Date:** 2026-09-20
+- **Decision:** `BallisticAim.TrySolve(origin, target, speed, gravity, out direction)` returns the **one** launch direction that hits the point at that Recipe speed and gravity. Drop `highArc`. Always the shorter-time (flatter) root of the two classic solutions. Extra speed flattens that elevation toward the line of sight (a fast shot is nearly straight). On level ground, the slowest speed that still returns true leaves at about **45°** (the two roots coincide at max range ≈ `Speed² / Gravity`). Unreachable stays `false` (too far, non-positive speed, or `Gravity = 0` with a target off the horizontal ray). Games still copy `direction` into `SpawnRequest.Direction`. Flight is still the phase 14 Burst integrate. Do **not** add `Recipe.Range` or `Range(n)`. Derived ballistic reach is a consequence of Speed + Gravity, not a new stat. `LifetimeSeconds` remains the despawn clock (ADR-003).
+- **Why:** Phase 16 exposed both classic arcs and let the lab pick high vs low. That is an allow/disallow of a chosen lob, not “what loft does this cannonball need.” The flatter root already is that loft: lots of muzzle speed needs almost no pitch; barely enough speed needs the 45° max-range angle. The high root is the same hit with a longer hang time — a mortar toggle, not a needed-arc solve. An authored Range modifier would duplicate `Speed(n)` / `Gravity(n)` for aim and would still need gravity for the shape of the drop. A distance fuse (`OnExpire` at meters) is a different feature and stays unscheduled.
+- **Consequences:** Breaking change to `TrySolve` (remove the last parameter). Delete `TrySolve_HighArc_AlsoMeetsReachableSandboxDummy`. Phase 22 must not ship a high-arc HUD. Phase 22.b adds Edit Mode tests for the speed→elevation continuum. ADR-019 still holds except its high-arc clause. No second façade. Homing on the same shot still fights the drop.
+
 ## ADR-027 — Play Mode sheet can add and remove modifiers on the working copy
 
 - **Date:** 2026-09-20
@@ -21,7 +28,7 @@ Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if
 - **Date:** 2026-09-19
 - **Decision:** The UPM id and folder are `com.veerdonk.projectile-system` (one `com.` prefix). C# namespace and asmdefs follow: `Veerdonk.ProjectileSystem` (Editor / Tests suffixes unchanged). Display name stays `com.veerdonk.projectile-system`. This is a breaking rename at **0.1.0** before anyone depends on the double prefix. Docs, sandbox `using`s, and `packages-lock.json` update in the same change. Do not publish the old id.
 - **Why:** `com.davidvdveerdonk.com.veerdonk.projectile-system` is a template doubled with the author name. Unity ids are reverse-DNS; `com.veerdonk.projectile-system` matches the display name already on `package.json`. Namespace `Davidvdveerdonk.ComVeerdonkProjectileSystem` repeats the same mistake for every consumer `using`.
-- **Consequences:** `git mv` the package folder. InternalsVisibleTo and test asmdefs change with it. GitHub repo name can stay. No second façade, no new modifiers. Phase 23 runs **after** phases 17–22, so XML docs, leftover deletion, coverage, and the Sonar pass include Protection, the view factory, GroundField, RecipeAsset, and the sample-scene leftovers — not only the phase-16 façade.
+- **Consequences:** `git mv` the package folder. InternalsVisibleTo and test asmdefs change with it. GitHub repo name can stay. No second façade, no new modifiers. Phase 23 runs **after** phases 17–22.b, so XML docs, leftover deletion, coverage, and the Sonar pass include Protection, the view factory, GroundField, RecipeAsset, the sample-scene leftovers, and the needed-arc `BallisticAim` signature — not only the phase-16 façade.
 
 ## ADR-024 — Sample scene is the Play Mode demo; turret stays in Assets
 
@@ -61,7 +68,7 @@ Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if
 ## ADR-019 — Ballistic aim is a fire-time helper, not a path
 
 - **Date:** 2026-09-16
-- **Decision:** `BallisticAim.TrySolve` returns a launch direction for a given origin, target, speed, and gravity (world down). Low arc is the default; `highArc` selects the other solution. `false` means unreachable. Games copy the direction into `SpawnRequest`. The instance still flies through the phase 14 Burst integrate. Do not evaluate a closed-form parabola instead of the per-tick SphereCast. Do not add a second `IProjectileWorld` method that spawns-and-aims.
+- **Decision:** `BallisticAim.TrySolve` returns a launch direction for a given origin, target, speed, and gravity (world down). Low arc is the default; `highArc` selects the other solution. `false` means unreachable. Games copy the direction into `SpawnRequest`. The instance still flies through the phase 14 Burst integrate. Do not evaluate a closed-form parabola instead of the per-tick SphereCast. Do not add a second `IProjectileWorld` method that spawns-and-aims. **ADR-028** drops `highArc` and always uses the flatter root.
 - **Why:** Hitting a dummy with a cannonball is an aiming problem, not a new motion solver. Replacing the tick integrate with `x(t)` would skip the hit pipeline’s segment casts. A helper keeps `SpawnRequest.Direction` as the only aim input.
 - **Consequences:** One new public type (`BallisticAim`). Sandbox may call it before `Spawn`. Unreachable shots are the caller’s problem.
 
