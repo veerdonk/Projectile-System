@@ -265,44 +265,49 @@ namespace Veerdonk.ProjectileSystem
 
             Projectile projectile = EntityManager.GetComponentData<Projectile>(entity);
             var instanceId = new ProjectileId(projectile.Id);
-
             for (int r = 0; r < requests.Count; r++)
+                FlushAreaRequest(requests[r], instanceId, projectile);
+        }
+
+        void FlushAreaRequest(in AreaOverlapRequest request, ProjectileId instanceId, in Projectile projectile)
+        {
+            if (request.Radius <= 0f)
+                return;
+
+            overlapResults.Clear();
+            seenAreaTargets.Clear();
+            Bridge.HitQuery.Overlap(instanceId, request.Center, request.Radius, overlapResults);
+            for (int i = 0; i < overlapResults.Count; i++)
+                TryEmitAreaHit(overlapResults[i], request, instanceId, projectile);
+        }
+
+        void TryEmitAreaHit(
+            HitInfo areaHit,
+            in AreaOverlapRequest request,
+            ProjectileId instanceId,
+            in Projectile projectile)
+        {
+            if (areaHit.Kind != HitKind.Target || areaHit.Protection == ProtectionLevel.Strong)
+                return;
+            if (ContainsTarget(seenAreaTargets, areaHit.TargetId))
+                return;
+
+            seenAreaTargets.Add(areaHit.TargetId);
+            areaHit.InstanceId = instanceId;
+            areaHit.Source = HitSource.Area;
+            areaHit.Damage = request.Damage;
+            areaHit.CriticalChance = projectile.CriticalChance;
+            areaHit.EffectRadius = projectile.EffectRadius;
+            Bridge.Hit?.Invoke(areaHit);
+            if (request.Status == null)
+                return;
+
+            Bridge.StatusApplied?.Invoke(new StatusInfo
             {
-                AreaOverlapRequest request = requests[r];
-                if (request.Radius <= 0f)
-                    continue;
-
-                overlapResults.Clear();
-                seenAreaTargets.Clear();
-                Bridge.HitQuery.Overlap(instanceId, request.Center, request.Radius, overlapResults);
-
-                for (int i = 0; i < overlapResults.Count; i++)
-                {
-                    HitInfo areaHit = overlapResults[i];
-                    if (areaHit.Kind != HitKind.Target || areaHit.Protection == ProtectionLevel.Strong)
-                        continue;
-                    if (ContainsTarget(seenAreaTargets, areaHit.TargetId))
-                        continue;
-
-                    seenAreaTargets.Add(areaHit.TargetId);
-                    areaHit.InstanceId = instanceId;
-                    areaHit.Source = HitSource.Area;
-                    areaHit.Damage = request.Damage;
-                    areaHit.CriticalChance = projectile.CriticalChance;
-                    areaHit.EffectRadius = projectile.EffectRadius;
-                    Bridge.Hit?.Invoke(areaHit);
-
-                    if (request.Status == null)
-                        continue;
-
-                    Bridge.StatusApplied?.Invoke(new StatusInfo
-                    {
-                        InstanceId = instanceId,
-                        TargetId = areaHit.TargetId,
-                        Effect = request.Status
-                    });
-                }
-            }
+                InstanceId = instanceId,
+                TargetId = areaHit.TargetId,
+                Effect = request.Status
+            });
         }
 
         void FlushGroundFields(Entity entity)
@@ -380,28 +385,28 @@ namespace Veerdonk.ProjectileSystem
             HomingTarget ignored = projectile.HomingHasIgnoredTarget
                 ? HomingTarget.Assigned(projectile.HomingIgnoredTargetId)
                 : default;
-            Bridge.ModifierContext.Bind(
-                new ProjectileId(projectile.Id),
-                ToVector3(position.Value),
-                ToVector3(velocity.Value),
-                projectile.Speed,
-                projectile.Gravity,
-                projectile.RemainingLifetime,
-                projectile.RemainingPierce,
-                projectile.RemainingBounce,
-                projectile.Radius,
-                projectile.Damage,
-                projectile.CriticalChance,
-                projectile.ManaCost,
-                projectile.EffectRadius,
-                projectile.Spread,
-                projectile.IntervalSeconds,
-                projectile.MultiplyGenerationsLeft,
-                hasHit,
-                hit,
-                dt,
-                homing,
-                ignored);
+            var state = new ModifierBindState
+            {
+                InstanceId = new ProjectileId(projectile.Id),
+                Position = ToVector3(position.Value),
+                Velocity = ToVector3(velocity.Value),
+                Speed = projectile.Speed,
+                Gravity = projectile.Gravity,
+                RemainingLifetime = projectile.RemainingLifetime,
+                RemainingPierce = projectile.RemainingPierce,
+                RemainingBounce = projectile.RemainingBounce,
+                Radius = projectile.Radius,
+                Damage = projectile.Damage,
+                CriticalChance = projectile.CriticalChance,
+                ManaCost = projectile.ManaCost,
+                EffectRadius = projectile.EffectRadius,
+                Spread = projectile.Spread,
+                IntervalSeconds = projectile.IntervalSeconds,
+                MultiplyGenerationsLeft = projectile.MultiplyGenerationsLeft,
+                HomingTarget = homing,
+                HomingIgnoredTarget = ignored
+            };
+            Bridge.ModifierContext.Bind(state, hasHit, hit, dt);
         }
 
         static Vector3 ToVector3(float3 value)

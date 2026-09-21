@@ -21,6 +21,15 @@ namespace Veerdonk.ProjectileSystem
 
         static Vector2 Local(int index, int count, float s)
         {
+            if (count <= 10)
+                return Small(index, count, s);
+            if (index < 10)
+                return Small(index, 10, s);
+            return Extra(index - 10, count - 10, s);
+        }
+
+        static Vector2 Small(int index, int count, float s)
+        {
             if (count == 1)
                 return Vector2.zero;
             if (count == 2)
@@ -29,18 +38,13 @@ namespace Veerdonk.ProjectileSystem
                 return Triangle(index, s);
             if (count == 4)
                 return index < 3 ? Triangle(index, s) : Vector2.zero;
-            if (count <= 10)
-            {
-                if (index == 0)
-                    return Vector2.zero;
-                return OnRing(index - 1, count - 1, ChordRadius(s, count - 1));
-            }
+            if (index == 0)
+                return Vector2.zero;
+            return OnRing(index - 1, count - 1, ChordRadius(s, count - 1));
+        }
 
-            if (index < 10)
-                return Local(index, 10, s);
-
-            int extraIndex = index - 10;
-            int extraCount = count - 10;
+        static Vector2 Extra(int extraIndex, int extraCount, float s)
+        {
             const int innerCapacity = 6;
             int innerCount = extraCount < innerCapacity ? extraCount : innerCapacity;
             if (extraIndex < innerCount)
@@ -49,20 +53,21 @@ namespace Veerdonk.ProjectileSystem
             float previousOuter = ChordRadius(s, 9);
             int outsideIndex = extraIndex - innerCapacity;
             int outsideCount = extraCount - innerCapacity;
-            for (int k = 2; ; k++)
+            int ring = 2;
+            while (outsideCount > 0)
             {
-                int capacity = 6 * k;
+                int capacity = 6 * ring;
                 int onRing = outsideCount < capacity ? outsideCount : capacity;
                 if (outsideIndex < onRing)
-                {
-                    float radius = OutsideRadius(s, onRing, previousOuter);
-                    return OnRing(outsideIndex, onRing, radius);
-                }
+                    return OnRing(outsideIndex, onRing, OutsideRadius(s, onRing, previousOuter));
 
                 outsideIndex -= onRing;
                 outsideCount -= onRing;
                 previousOuter = OutsideRadius(s, onRing, previousOuter);
+                ring++;
             }
+
+            return Vector2.zero;
         }
 
         static Vector2 Triangle(int index, float s)

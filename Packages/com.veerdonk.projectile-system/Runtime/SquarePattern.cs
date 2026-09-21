@@ -27,13 +27,17 @@ namespace Veerdonk.ProjectileSystem
                 return Named(index, 9, s);
 
             int extra = index - 9;
-            for (int r = 2; ; r++)
+            int ring = 2;
+            while (extra >= 0)
             {
-                int ringCount = 8 * r;
+                int ringCount = 8 * ring;
                 if (extra < ringCount)
-                    return RingCell(r, extra) * s;
+                    return RingCell(ring, extra) * s;
                 extra -= ringCount;
+                ring++;
             }
+
+            return Vector2.zero;
         }
 
         static Vector2 Named(int index, int count, float s)
@@ -45,11 +49,7 @@ namespace Veerdonk.ProjectileSystem
                 case 2:
                     return index == 0 ? new Vector2(-0.5f * s, 0f) : new Vector2(0.5f * s, 0f);
                 case 3:
-                    if (index == 0)
-                        return new Vector2(-s, 0f);
-                    if (index == 1)
-                        return Vector2.zero;
-                    return new Vector2(s, 0f);
+                    return Die3(index, s);
                 case 4:
                     return Corner(index, s);
                 case 5:
@@ -59,20 +59,39 @@ namespace Veerdonk.ProjectileSystem
                 case 7:
                     return index < 6 ? Die6(index, s) : Vector2.zero;
                 case 8:
-                    if (index < 6)
-                        return Die6(index, s);
-                    if (index == 6)
-                        return Vector2.zero;
-                    return new Vector2(0f, s);
+                    return Die8(index, s);
                 default:
-                    if (index < 6)
-                        return Die6(index, s);
-                    if (index == 6)
-                        return Vector2.zero;
-                    if (index == 7)
-                        return new Vector2(0f, s);
-                    return new Vector2(0f, -s);
+                    return Die9(index, s);
             }
+        }
+
+        static Vector2 Die3(int index, float s)
+        {
+            if (index == 0)
+                return new Vector2(-s, 0f);
+            if (index == 1)
+                return Vector2.zero;
+            return new Vector2(s, 0f);
+        }
+
+        static Vector2 Die8(int index, float s)
+        {
+            if (index < 6)
+                return Die6(index, s);
+            if (index == 6)
+                return Vector2.zero;
+            return new Vector2(0f, s);
+        }
+
+        static Vector2 Die9(int index, float s)
+        {
+            if (index < 6)
+                return Die6(index, s);
+            if (index == 6)
+                return Vector2.zero;
+            if (index == 7)
+                return new Vector2(0f, s);
+            return new Vector2(0f, -s);
         }
 
         static Vector2 Corner(int index, float s)

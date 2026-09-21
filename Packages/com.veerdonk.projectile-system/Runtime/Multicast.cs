@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.Serialization;
 using UnityEngine;
 
 namespace Veerdonk.ProjectileSystem
@@ -9,7 +10,7 @@ namespace Veerdonk.ProjectileSystem
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnSpawn)]
-    public sealed class Multicast : IModifier
+    public sealed class Multicast : IModifier, IDeserializationCallback
     {
         [SerializeField] int count;
         [SerializeField] RecipeAsset extraAsset;
@@ -51,6 +52,12 @@ namespace Veerdonk.ProjectileSystem
 
         /// <summary>Aims every instance, including the original. Default is <see cref="RandomConePattern"/>.</summary>
         public IMulticastPattern Pattern => pattern;
+
+        void IDeserializationCallback.OnDeserialization(object sender)
+        {
+            if (pattern == null)
+                pattern = new RandomConePattern();
+        }
 
         /// <inheritdoc />
         public void Apply(ModifierContext context)

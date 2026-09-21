@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.Serialization;
 using UnityEngine;
 
 namespace Veerdonk.ProjectileSystem
@@ -12,7 +13,7 @@ namespace Veerdonk.ProjectileSystem
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnInterval | RecipeStage.OnHit | RecipeStage.OnExpire)]
-    public sealed class Multiply : IModifier
+    public sealed class Multiply : IModifier, IDeserializationCallback
     {
         const float SurfaceSkin = 0.01f;
 
@@ -68,6 +69,12 @@ namespace Veerdonk.ProjectileSystem
         {
             get => pattern;
             set => pattern = value ?? new SquarePattern();
+        }
+
+        void IDeserializationCallback.OnDeserialization(object sender)
+        {
+            if (pattern == null)
+                pattern = new SquarePattern();
         }
 
         /// <inheritdoc />

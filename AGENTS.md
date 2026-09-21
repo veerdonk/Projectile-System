@@ -38,7 +38,7 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 - Package folder is `Packages/com.veerdonk.projectile-system/`, namespace `Veerdonk.ProjectileSystem` (ADR-025).
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
 - Play Mode demo is `Assets/Scenes/Sandbox.unity`. **Projectile Lab > Rebuild** creates it from a new default camera/light scene (the old `SampleScene.unity` template is gone).
-- Local SonarQube at `http://localhost:9000` (project key `com.veerdonk.projectile-system`). Analysis needs `SONAR_TOKEN` in the environment; do not commit it. `sonar-project.properties` has host/sources only.
+- Local SonarQube: `http://localhost:9000/dashboard?id=com.veerdonk.projectile-system`. Auth is `SONAR_TOKEN` in the environment; do not commit it. `sonar-project.properties` has host/sources only. C# analysis needs `dotnet-sonarscanner` (not the generic CLI). Temporarily rename `sonar-project.properties` for begin/build/end. `Directory.Build.props` sets `SonarQubeTestProject=false` on Runtime/Editor so Unity assemblies count as MAIN code. Runtime `[assembly: AssemblyVersion]` must stay `0.0.0.0` — `0.1.0.0` changes identity enough that Burst `LifetimeJob` stops applying. Package version lives in `package.json`. Editor may use `0.1.0.0`.
 
 ## Do not
 

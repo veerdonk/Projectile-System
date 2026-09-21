@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.Serialization;
 using UnityEngine;
 
 namespace Veerdonk.ProjectileSystem
@@ -12,7 +13,7 @@ namespace Veerdonk.ProjectileSystem
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnTick)]
-    public sealed class Homing : IModifier
+    public sealed class Homing : IModifier, IDeserializationCallback
     {
         [SerializeField] float turnRateDegreesPerSecond;
         IHomingAcquisition acquisition;
@@ -37,6 +38,12 @@ namespace Veerdonk.ProjectileSystem
 
         /// <summary>Picks a lock when spawn did not assign one. Default is closest-in-travel-direction.</summary>
         public IHomingAcquisition Acquisition => acquisition;
+
+        void IDeserializationCallback.OnDeserialization(object sender)
+        {
+            if (acquisition == null)
+                acquisition = new ClosestInTravelDirectionAcquisition();
+        }
 
         internal static void ReleaseLockOnTargetHit(ref Projectile projectile, in HitInfo hit)
         {

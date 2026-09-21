@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.Serialization;
 using UnityEngine;
 
 namespace Veerdonk.ProjectileSystem
@@ -10,7 +11,7 @@ namespace Veerdonk.ProjectileSystem
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnHit)]
-    public sealed class ApplyStatus : IModifier
+    public sealed class ApplyStatus : IModifier, IDeserializationCallback
     {
         [SerializeReference] IStatusEffect effect;
 
@@ -26,6 +27,12 @@ namespace Veerdonk.ProjectileSystem
 
         /// <summary>Status requested on Target hits. Default constructor uses <see cref="DummyStatusEffect"/>.</summary>
         public IStatusEffect Effect => effect;
+
+        void IDeserializationCallback.OnDeserialization(object sender)
+        {
+            if (effect == null)
+                effect = new DummyStatusEffect();
+        }
 
         /// <inheritdoc />
         public void Apply(ModifierContext context)

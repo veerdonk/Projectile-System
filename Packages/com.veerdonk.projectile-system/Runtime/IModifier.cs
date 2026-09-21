@@ -242,45 +242,24 @@ namespace Veerdonk.ProjectileSystem
             return value;
         }
 
-        internal void Bind(
-            ProjectileId instanceId,
-            Vector3 position,
-            Vector3 velocity,
-            float speed,
-            float gravity,
-            float remainingLifetime,
-            int remainingPierce,
-            int remainingBounce,
-            float radius,
-            float damage,
-            float criticalChance,
-            float manaCost,
-            float effectRadius,
-            float spread,
-            float intervalSeconds,
-            int multiplyGenerationsLeft,
-            bool hasHit,
-            in HitInfo hit,
-            float deltaTime,
-            HomingTarget homingTarget,
-            HomingTarget homingIgnoredTarget)
+        internal void Bind(in ModifierBindState state, bool hasHit, in HitInfo hit, float deltaTime)
         {
-            MultiplyGenerationsLeft = multiplyGenerationsLeft;
-            InstanceId = instanceId;
-            Position = position;
-            Velocity = velocity;
-            Speed = speed;
-            Gravity = gravity;
-            RemainingLifetime = remainingLifetime;
-            RemainingPierce = remainingPierce;
-            RemainingBounce = remainingBounce;
-            Radius = radius;
-            Damage = damage;
-            CriticalChance = criticalChance;
-            ManaCost = manaCost;
-            EffectRadius = effectRadius;
-            Spread = spread;
-            IntervalSeconds = intervalSeconds;
+            MultiplyGenerationsLeft = state.MultiplyGenerationsLeft;
+            InstanceId = state.InstanceId;
+            Position = state.Position;
+            Velocity = state.Velocity;
+            Speed = state.Speed;
+            Gravity = state.Gravity;
+            RemainingLifetime = state.RemainingLifetime;
+            RemainingPierce = state.RemainingPierce;
+            RemainingBounce = state.RemainingBounce;
+            Radius = state.Radius;
+            Damage = state.Damage;
+            CriticalChance = state.CriticalChance;
+            ManaCost = state.ManaCost;
+            EffectRadius = state.EffectRadius;
+            Spread = state.Spread;
+            IntervalSeconds = state.IntervalSeconds;
             HasHit = hasHit;
             Hit = hit;
             CancelDespawn = false;
@@ -290,8 +269,8 @@ namespace Veerdonk.ProjectileSystem
             suppressDirectHit = false;
             suppressDirectStatus = false;
             DeltaTime = deltaTime;
-            HomingTarget = homingTarget;
-            HomingIgnoredTarget = homingIgnoredTarget;
+            HomingTarget = state.HomingTarget;
+            HomingIgnoredTarget = state.HomingIgnoredTarget;
         }
 
         internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
@@ -368,5 +347,27 @@ namespace Veerdonk.ProjectileSystem
         public float IntervalSeconds { get; }
 
         public string PresentationId { get; }
+    }
+
+    internal struct ModifierBindState
+    {
+        public ProjectileId InstanceId;
+        public Vector3 Position;
+        public Vector3 Velocity;
+        public float Speed;
+        public float Gravity;
+        public float RemainingLifetime;
+        public int RemainingPierce;
+        public int RemainingBounce;
+        public float Radius;
+        public float Damage;
+        public float CriticalChance;
+        public float ManaCost;
+        public float EffectRadius;
+        public float Spread;
+        public float IntervalSeconds;
+        public int MultiplyGenerationsLeft;
+        public HomingTarget HomingTarget;
+        public HomingTarget HomingIgnoredTarget;
     }
 }

@@ -22,3 +22,7 @@ First release of **com.veerdonk.projectile-system**.
 ### Changed
 
 - Package id and C# namespace are `com.veerdonk.projectile-system` / `Veerdonk.ProjectileSystem` (ADR-025). The doubled template id is not published.
+
+### Fixed
+
+- SonarQube Blocker/Critical/Major findings on package Runtime/Editor (assembly version, deserialization defaults, Bind arity, pattern loops, area-overlap complexity).
