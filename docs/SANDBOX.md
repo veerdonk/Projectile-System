@@ -11,7 +11,7 @@ The sandbox is the lab for proving a phase. It is **not** the package. Code that
 ## Sample layout (phase 21 / 21.b / 22)
 
 - Ground plane and a yard of dummies/walls, viewed from behind and above the turret (not the old side-on lane)
-- Turret: sphere body + cylinder barrel on a **Gun** pitch pivot, no PhysX collider. Horizontal presets spawn at the barrel tip along flattened forward. **Cannonball** uses `BallisticAim.TrySolve` toward the ground-aim point (speed 32, gravity 80) with no `highArc` argument
+- Turret: sphere body + cylinder barrel on a **Gun** pitch pivot, no PhysX collider. Horizontal presets spawn at the barrel tip along flattened forward. **Cannonball** uses `BallisticAim.TrySolve` toward the ground-aim point (speed 32, gravity 80) with no `highArc` HUD. If the flatter path hits a collider before the aim point (Splash on the way to Bounce), the sample uses the other root so the shot can loft over
 - Mouse aim: camera ray vs the ground plane (Y = 0); turret yaws. Horizontal presets pitch the barrel toward that point. Cannonball pitches to the solved loft (faster Speed is flatter). Pointer over the on-screen sheet does not aim or fire
 - Fire: click in the world, on-screen **Fire**, or Space. One driver `Tick`s. Unreachable ballistic solves do not spawn
 - Preset dropdown of `RecipeAsset`s. Play Mode edits a working `Recipe` from `ToRecipe()`; the asset on disk does not change. Switching preset or **Reset** copies again
@@ -60,7 +60,7 @@ Always: enter Play Mode from `Assets/Scenes/Sandbox.unity`, fire once, confirm t
 | 21.b | Straight + Add Pierce and Homing | First dummy pierced; shot can steer; Straight asset unchanged after Play Mode |
 | 21.b | OnSpawn Add | Does not list Pierce |
 | 21.b | Reset after compose | Sheet matches Straight again |
-| 22 | **Cannonball** | Barrel pitches to the solved loft; shot hits DummyTarget. Raise Speed — flatter. Lower Speed until unreachable — no spawn. No high-arc toggle |
+| 22 | **Cannonball** | Barrel pitches to the solved loft; shot hits DummyTarget. Aim at Bounce at speed 40 — lofts over Splash instead of hitting it. Raise Speed — flatter when the path is clear. Lower Speed until unreachable — no spawn. No high-arc toggle |
 | 22.b | **Cannonball**, tweak Speed | Fast is nearly straight; slowest reachable on the level is ~45°. `TrySolve` has no `highArc` argument |
 | 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone; keyboard-slot lab HUD is gone |
 

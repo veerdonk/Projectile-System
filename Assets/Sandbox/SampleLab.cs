@@ -189,6 +189,18 @@ namespace Sandbox
             return preset != null && preset.useBallisticAim;
         }
 
+        bool TryBallisticDirection(Vector3 origin, Vector3 target, out Vector3 direction)
+        {
+            return BallisticClearance.TrySolve(
+                origin,
+                target,
+                working.Speed,
+                working.Gravity,
+                SampleYard.StartRadius(working),
+                working.LifetimeSeconds,
+                out direction);
+        }
+
         string LastFireLabel()
         {
             switch (lastFire)
@@ -229,7 +241,7 @@ namespace Sandbox
             if (UsesBallisticAim() && working != null && muzzle != null)
             {
                 Vector3 origin = SampleYard.SpawnPosition(muzzle.Position, working);
-                if (BallisticAim.TrySolve(origin, point, working.Speed, working.Gravity, out Vector3 loft))
+                if (TryBallisticDirection(origin, point, out Vector3 loft))
                 {
                     gun.rotation = Quaternion.LookRotation(loft, Vector3.up);
                     return;
@@ -257,13 +269,7 @@ namespace Sandbox
             Vector3 direction;
             if (UsesBallisticAim())
             {
-                if (!hasGroundPoint ||
-                    !BallisticAim.TrySolve(
-                        position,
-                        lastGroundPoint,
-                        working.Speed,
-                        working.Gravity,
-                        out direction))
+                if (!hasGroundPoint || !TryBallisticDirection(position, lastGroundPoint, out direction))
                 {
                     lastFire = LastFire.Unreachable;
                     return;

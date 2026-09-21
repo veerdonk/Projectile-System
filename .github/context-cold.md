@@ -16,6 +16,22 @@
 
 Always run `sigmap ask` (or `sigmap --query`) before searching for files relevant to a task.
 
+## changes (last 10 commits — 2 seconds ago)
+```
+Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IProjectileViewFactory.cs +PrimitiveViewFactory
+Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\PrefabViewFactory.cs +PrefabViewFactory
+Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\ProjectileView.cs +ProjectileView  ~ProjectileView
+Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Runtime\ViewFactoryPlayModeTests.cs +ViewFactoryPlayModeTests  +TestDamageable
+```
+
+## Assets
+
+### Assets\Sandbox\SandboxProjectileProtection.cs
+```
+class SandboxProjectileProtection  :7-17
+  Configure(ProtectionLevel protectionLevel) → void  :13-13
+```
+
 ## Packages
 
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\CHANGELOG.md
@@ -36,6 +52,12 @@ h2 Requirements
 h2 Known limitations
 h2 Package contents
 h2 Document revision history
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\BallisticAim.cs
+```
+class BallisticAim  :11-156
+  TrySolve(Vector3 origin, Vector3 target, float speed, float gravity, out Vector3 direction, bool highArc = false) → bool  :19-25
 ```
 
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\ChainBudget.cs
@@ -95,6 +117,18 @@ class MultiplyPatternPlane  :16-39
   FromLocal(Vector3 forward, Vector2 local) → Vector3  :35-35
 ```
 
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IProjectileProtection.cs
+```
+interface IProjectileProtection  :7-10
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IProjectileViewFactory.cs
+```
+interface IProjectileViewFactory  :9-12
+class PrimitiveViewFactory  :17-35
+  Create(Recipe recipe, Transform poolParent) → ProjectileView  :19-19
+```
+
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IProjectileWorld.cs
 ```
 interface IProjectileWorld  :9-34
@@ -108,6 +142,31 @@ struct ExpireInfo  :95-98
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IStatusReceiver.cs
 ```
 interface IStatusReceiver  :7-10
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\PrefabViewFactory.cs
+```
+class PrefabViewFactory  :12-44
+  Create(Recipe recipe, Transform poolParent) → ProjectileView  :25-25
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\ProjectilePool.cs
+```
+class ProjectilePool  :8-175
+  Prewarm(int recipeIndex, Recipe recipe, int count) → void  :50-50
+  Rent(int recipeIndex, Recipe recipe, out ProjectileView view) → Entity  :68-68
+  Return(int recipeIndex, Entity entity) → void  :95-95
+  TryGetView(Entity entity, out ProjectileView view) → bool  :111-111
+  Dispose() → void  :116-116
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\ProjectileView.cs
+```
+class ProjectileView  :9-46
+  Bind(Vector3 position, float radius) → void  :19-19
+  SetRadius(float radius) → void  :26-26
+  SetPose(Vector3 position, Vector3 velocity) → void  :35-35
+  Release() → void  :42-42
 ```
 
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Recipe.cs
@@ -141,6 +200,17 @@ class AreaEffectTests  :7-288
   EffectRadius0_HitsNobody() → void  :170-170
   WorldOverlap_IsIgnored_TargetInSphereIsHit() → void  :204-204
   AreaStatus_PerTarget_SuppressesDirectStatus() → void  :242-242
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\BallisticAimTests.cs
+```
+class BallisticAimTests  :6-156
+  TrySolve_ReachableSandboxDummy_PathMeetsTarget() → void  :16-16
+  TrySolve_HighArc_AlsoMeetsReachableSandboxDummy() → void  :30-30
+  TrySolve_TooFar_ReturnsFalse() → void  :52-52
+  TrySolve_Gravity0_HighTarget_ReturnsFalse() → void  :65-65
+  TrySolve_Gravity0_TargetOnTheRay_ReturnsHorizontalDirection() → void  :78-78
+  TrySolve_NonPositiveSpeed_ReturnsFalse() → void  :92-92
 ```
 
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\BounceTests.cs
@@ -320,6 +390,17 @@ class PoolCountTests  :6-33
   AvailableCount_UnchangedAfterRentAndReturn() → void  :9-9
 ```
 
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\ProtectionTests.cs
+```
+class ProtectionTests  :7-264
+  Basic_Bounce1_Reflects_RaisesProtectedHit_NoStatusApplied() → void  :10-10
+  Basic_Pierce1_Continues_ThenUnprotectedTargetIsUnchanged() → void  :54-54
+  Basic_Pierce1_ConsumesOnWorldHit() → void  :100-100
+  Strong_EatsBouncingShot_NoHit_NoOnHitOrOnExpireChildren() → void  :133-133
+  UnprotectedTarget_StillRaisesHitAndStatus() → void  :182-182
+  AreaOverlap_SkipsStrong_IncludesBasicWithProtection() → void  :217-217
+```
+
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\SimulationTestHelper.cs
 ```
 class SimulationTestHelper  :7-74
@@ -347,4 +428,14 @@ class SpeedTests  :6-200
   Pierce1_ThenSpeed05_OnHit_ScalesAndStaysLive() → void  :107-107
   Speed_OnInterval_RunsWhenMultiplyGenerationsAreSpent() → void  :138-138
   Speed_NonPositiveScale_IsNoOp() → void  :179-179
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Runtime\ViewFactoryPlayModeTests.cs
+```
+class ViewFactoryPlayModeTests  :9-275
+  CubePresentation_RentsCubeView_HitsTarget() → IEnumerator  :12-12
+  SpherePresentation_RentsSphereView_HitsTarget() → IEnumerator  :18-18
+  ReturnToPool_ReusesSameViewGameObject() → IEnumerator  :24-24
+  UnknownPresentationId_FallsBackToSphere() → IEnumerator  :94-94
+class TestDamageable  :271-274
 ```
