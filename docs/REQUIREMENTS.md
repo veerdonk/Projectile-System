@@ -66,11 +66,11 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - 3D projectiles only
 - Unity 6 LTS (project is `6000.6.0f1`)
-- Ship as an embedded UPM package with a sandbox lab
+- Ship as an embedded UPM package with a Play Mode sample (through 23: host `Assets/` lab; phase 24: `Samples~/Yard/`)
 - GameObject adapters around hybrid ECS simulation (Entities for instance state, PhysX hits, GameObject views; see [DECISIONS.md](DECISIONS.md) ADR-005)
 - Composition via the six stage lists
 - Object pooling required
-- Sandbox scene for development and Play Mode proof only
+- Sandbox / sample scene for development and Play Mode proof only (not Runtime)
 
 ## Non-goals (v1)
 
@@ -90,16 +90,17 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - Spawn, simulate, compose (stage lists), pool
 - Hit pipeline and events
 - Hybrid ECS simulation (`com.unity.entities`; see [ECS.md](ECS.md))
-- Later: developer tooling for Recipes (phase 20 inspector)
+- Recipe inspector (phase 20)
+- Play Mode **sample** under `Samples~/Yard/` (phase 24 / ADR-029) — imported into the consumer project, not compiled until then
 
-**Game / sandbox (`Assets/`)**
+**Game / sample (not Runtime)**
 
-- Cameras, lighting, URP
+- Cameras, lighting, URP (host project)
 - Input handling, turret, sample HUD (preset dropdown, recipe sheet with Add/Remove from phase 21.b, fire, reset)
 - Dummy targets (HP, `IDamageable`, `IStatusReceiver`, optional `IProjectileProtection`)
 - Player or enemy objects if you add them later
 
-If a type needs `Player`, `Enemy`, or camera code, it does not belong in the package.
+If a type needs `Player`, `Enemy`, or camera code, it does not belong in **Runtime**. The UPM sample may contain those as an example.
 
 ## Scenarios
 
@@ -531,9 +532,21 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** the quality pass finishes
 - **Then:** the project `com.veerdonk.projectile-system` has no remaining Blocker or Critical issues on package product code
 
+### Phase 24 — Consumers can import the yard
+
+- **Given:** Package Manager listing `com.veerdonk.projectile-system`
+- **When:** the user imports sample **Projectile Yard** and enters Play Mode on `Yard.unity`
+- **Then:** the turret, presets, and dummy line are present; firing Pierce pierces the first two dummies as in phase 21
+
+### Phase 24 — Sample is not Runtime
+
+- **Given:** a project that added the package but has not imported the sample
+- **When:** the consumer inspects the Runtime assembly
+- **Then:** there is no `SampleLab`, dummy HP, or turret type; `SampleLab` compiles only after Import
+
 ## Product constraints
 
 - Sandbox uses URP
 - Collision queries use 3D PhysX
-- Input System is sandbox-only
+- Input System is sample-only (not a Runtime / package.json dependency)
 - Runtime package stays render-pipeline agnostic (no URP-only shaders or camera code in core)

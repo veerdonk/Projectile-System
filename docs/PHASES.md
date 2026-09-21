@@ -555,6 +555,29 @@ Housekeeping after **phases 1–22.b are in code**. Rename the UPM id, document 
 
 **Stop.**
 
+## Phase 24 — Package sample (Projectile Yard)
+
+Move the Play Mode turret yard into the UPM package so a consumer who added `com.veerdonk.projectile-system` can **Import sample** and see Spawn / Tick / Hit without cloning this repo. ADR-029. Do not put HP, camera, or input on the runtime façade.
+
+**In scope**
+
+- `Packages/com.veerdonk.projectile-system/Samples~/Yard/`: scene, `RecipeAsset` presets, cube/sphere view prefabs, sample scripts (lab, yard, sheet, dummies, protection, ground aim, ballistic clearance), Rebuild + preset-asset Editor scripts. Tilde folder so the yard is hidden until Import
+- `package.json` `samples` entry: display name **Projectile Yard**, path `Samples~/Yard`. Short description: import, open the scene, Play Mode
+- Asmdefs `Veerdonk.ProjectileSystem.Samples` (runtime sample) and `Veerdonk.ProjectileSystem.Samples.Editor`. Reference `Veerdonk.ProjectileSystem` only. Do **not** fold sample types into the Runtime/Editor product assemblies
+- Namespace `Veerdonk.ProjectileSystem.Samples` / `.Samples.Editor`. Drop host `Sandbox` / `Sandbox.Editor`
+- **Projectile Lab > Rebuild** writes `Samples~/Yard/Scenes/Yard.unity` (not `Assets/Scenes/Sandbox.unity`) and copies/imports that tree into `Assets/Samples/com.veerdonk.projectile-system/<package.json version>/Yard/` so this development project can Play Mode without clicking Package Manager. gitignore `Assets/Samples/`
+- Delete `Assets/Sandbox/` and `Assets/Scenes/Sandbox.unity` once the sample folder has them. Do not leave a second copy of the yard in `Assets/` except the gitignored Import copy
+- Keep sample behaviour: turret, mouse aim, presets, sheet Add/Remove, Reset, Cannonball `BallisticAim`, dummy HP from `Hit`. Do not add Runtime types or a second façade
+- Input System may stay on the **sample** asmdef. Do **not** add `com.unity.inputsystem` or URP to package `dependencies`. If a stock template cannot compile the imported sample, switch Fire/Aim to `UnityEngine.Input` in this phase rather than adding a Runtime dependency. No URP-only shaders in the sample
+- Sample Editor tests (`GroundAim`, `BallisticClearance`, modifier catalog) move with the sample. Package `Tests/` stay product tests
+- Docs: [SANDBOX.md](SANDBOX.md) Play Mode path, [ARCHITECTURE.md](ARCHITECTURE.md) folder map, [REQUIREMENTS.md](REQUIREMENTS.md) package vs game, package `README.md` / `Documentation/index.md` Import steps, [MCP.md](MCP.md) scene path, [AGENTS.md](../AGENTS.md) map. Sonar `sonar.sources` stays Runtime + Editor (exclude `Samples~`)
+
+**Out of scope:** OpenUPM / registry publish; LICENSE / making the GitHub repo public; putting turret/input/HP on `IProjectileWorld`; hold-to-fire; WASD; orbit camera; save-to-asset; Addressables; Unity Physics; Entities Graphics
+
+**Proof:** Package Manager on this project shows sample **Projectile Yard**. Import (or Rebuild) → open `Yard.unity` → Play Mode, pick Pierce, fire — first two dummies live through (same as phase 21). A git-URL install of the package does not compile `SampleLab` until the user imports the sample. Runtime assembly has no `SampleLab` / dummy HP types.
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
@@ -564,4 +587,4 @@ Housekeeping after **phases 1–22.b are in code**. Rename the UPM id, document 
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Hold-to-fire; save Play Mode tweaks to `RecipeAsset`
 - Authored `Range` / `Range(n)` / an OnExpire-at-distance fuse (ballistic reach stays Speed + Gravity, ADR-028)
-- Convert remaining sandbox C# Recipes; package `Samples/` vs `Assets/` split
+- Convert remaining sandbox C# Recipes

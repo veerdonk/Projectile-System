@@ -1,11 +1,11 @@
 # Sandbox
 
-The sandbox is the lab for proving a phase. It is **not** the package. Code that needs a camera, input, or dummy HP stays under `Assets/`.
+The sandbox is the lab for proving a phase. Through phase 23 it lives under `Assets/`. **Phase 24** moves it into the package sample `Samples~/Yard/` (Import from Package Manager). Dummy HP, camera, and input still stay out of Runtime.
 
 ## Current project
 
 - Editor: Unity 6 LTS `6000.6.0f1`
-- Default Play Mode scene: `Assets/Scenes/Sandbox.unity` (phase 21 sample). **Projectile Lab > Rebuild** creates that scene from a new default camera/light setup
+- Default Play Mode scene today: `Assets/Scenes/Sandbox.unity` (phase 21 sample). **Phase 24:** Import **Projectile Yard**, then `Yard.unity` (Rebuild writes `Samples~/Yard/Scenes/Yard.unity` and copies into gitignored `Assets/Samples/...`). **Projectile Lab > Rebuild** creates that scene from a new default camera/light setup
 - Package: `Packages/com.veerdonk.projectile-system` (`Veerdonk.ProjectileSystem`)
 
 ## Sample layout (phase 21 / 21.b / 22)
@@ -25,7 +25,7 @@ If the yard is missing in Edit Mode, use **Projectile Lab > Rebuild**. Agents sh
 
 ## How to prove a phase
 
-Always: enter Play Mode from `Assets/Scenes/Sandbox.unity`, fire once, confirm the phase’s scenario in [REQUIREMENTS.md](REQUIREMENTS.md), then exit Play Mode.
+Always: enter Play Mode from the sample scene (`Assets/Scenes/Sandbox.unity` until phase 24; then imported `Yard.unity`), fire once, confirm the phase’s scenario in [REQUIREMENTS.md](REQUIREMENTS.md), then exit Play Mode.
 
 | Phase | What to fire | What you should see |
 | --- | --- | --- |
@@ -63,14 +63,15 @@ Always: enter Play Mode from `Assets/Scenes/Sandbox.unity`, fire once, confirm t
 | 22 | **Cannonball** | Click DummyTarget (including its top) — barrel aims at the cube, not the floor behind. Fire hits. Aim at Bounce at speed 40 — lofts just over Splash. Raise Speed — flatter when the path is clear. Lower Speed until unreachable — no spawn. No high-arc toggle |
 | 22.b | **Cannonball**, tweak Speed | Fast is nearly straight; slowest reachable on the level is ~45°. `TrySolve` has no `highArc` argument |
 | 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone; keyboard-slot lab HUD is gone |
+| 24 | Package Manager → Import **Projectile Yard** | `Yard.unity` Play Mode; Pierce still pierces the first two dummies. Runtime has no `SampleLab` |
 
 AreaEffect, GroundField, Recipe gravity, barrel pitch, and needed-arc `BallisticAim` (Cannonball) are sample presets.
 
-Open `Assets/Scenes/Sandbox.unity` before Play Mode.
+Open the Play Mode scene before Play Mode (`Assets/Scenes/Sandbox.unity` until phase 24; then the imported `Yard.unity`).
 
-If a proof needs a new sandbox object (second dummy, wall), add it in the sandbox, not in the package.
+If a proof needs a new yard object (second dummy, wall), add it in the **sample**, not in Runtime.
 
-## What not to put in the sandbox
+## What not to put in the sandbox / sample
 
 - A second projectile implementation
 - Copies of simulation types
