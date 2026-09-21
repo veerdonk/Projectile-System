@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd308f6fee07fc54391b4678452531b0, type: 3}
   m_Name: PierceHoming
-  m_EditorClassIdentifier: Davidvdveerdonk.ComVeerdonkProjectileSystem::Davidvdveerdonk.ComVeerdonkProjectileSystem.RecipeAsset
+  m_EditorClassIdentifier: Veerdonk.ProjectileSystem::Veerdonk.ProjectileSystem.RecipeAsset
   id: pierce-homing
   speed: 20
   radius: 0.25
@@ -36,10 +36,10 @@ MonoBehaviour:
     version: 2
     RefIds:
     - rid: 3954138888027504849
-      type: {class: Homing, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
+      type: {class: Homing, ns: Veerdonk.ProjectileSystem, asm: Veerdonk.ProjectileSystem}
       data:
         turnRateDegreesPerSecond: 300
     - rid: 3954138888027504850
-      type: {class: Pierce, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
+      type: {class: Pierce, ns: Veerdonk.ProjectileSystem, asm: Veerdonk.ProjectileSystem}
       data:
         count: 1

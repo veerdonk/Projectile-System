@@ -1,0 +1,19 @@
+{
+    "name": "Veerdonk.ProjectileSystem",
+    "rootNamespace": "Veerdonk.ProjectileSystem",
+    "references": [
+        "Unity.Entities",
+        "Unity.Burst",
+        "Unity.Collections"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "generateDocumentation": true
+}

@@ -1,5 +1,5 @@
 using System;
-using Davidvdveerdonk.ComVeerdonkProjectileSystem;
+using Veerdonk.ProjectileSystem;
 using UnityEngine;
 
 namespace Sandbox

@@ -116,3 +116,6 @@ InitTestScene*.unity*
 # SigMap local caches and per-session index
 .sigmap-cache.json
 .context/
+
+# SonarScanner for .NET working directory
+.sonarqube/

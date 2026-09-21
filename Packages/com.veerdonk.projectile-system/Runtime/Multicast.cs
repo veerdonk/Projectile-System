@@ -1,0 +1,97 @@
+using System;
+using System.Runtime.Serialization;
+using UnityEngine;
+
+namespace Veerdonk.ProjectileSystem
+{
+    /// <summary>
+    /// OnSpawn: total instances is <see cref="Count"/> — the original plus <see cref="Count"/> - 1 extras of an explicit
+    /// sibling Recipe. <see cref="Pattern"/> aims all of them, the original included. Extras never multicast again.
+    /// </summary>
+    [Serializable]
+    [ModifierStage(RecipeStage.OnSpawn)]
+    public sealed class Multicast : IModifier, IDeserializationCallback
+    {
+        [SerializeField] int count;
+        [SerializeField] RecipeAsset extraAsset;
+
+        Recipe extraRecipe;
+        IMulticastPattern pattern;
+
+        public Multicast()
+        {
+            pattern = new RandomConePattern();
+        }
+
+        public Multicast(int count, Recipe extraRecipe, IMulticastPattern pattern = null)
+        {
+            this.count = count;
+            this.extraRecipe = extraRecipe ?? throw new ArgumentNullException(nameof(extraRecipe));
+            this.pattern = pattern ?? new RandomConePattern();
+        }
+
+        public Multicast(int count, RecipeAsset extraAsset, IMulticastPattern pattern = null)
+            : this(count, new Recipe(), pattern)
+        {
+            this.extraAsset = extraAsset ?? throw new ArgumentNullException(nameof(extraAsset));
+            extraRecipe = null;
+        }
+
+        /// <summary>Total instances including the original. 1 or less is a no-op.</summary>
+        public int Count
+        {
+            get => count;
+            set => count = value;
+        }
+
+        /// <summary>Runtime sibling used by tests and <see cref="RecipeAsset.ToRecipe"/>.</summary>
+        public Recipe ExtraRecipe => extraRecipe;
+
+        /// <summary>Authored extra asset. Resolved by <see cref="RecipeAsset.ToRecipe"/>.</summary>
+        public RecipeAsset ExtraAsset => extraAsset;
+
+        /// <summary>Aims every instance, including the original. Default is <see cref="RandomConePattern"/>.</summary>
+        public IMulticastPattern Pattern => pattern;
+
+        void IDeserializationCallback.OnDeserialization(object sender)
+        {
+            if (pattern == null)
+                pattern = new RandomConePattern();
+        }
+
+        /// <inheritdoc />
+        public void Apply(ModifierContext context)
+        {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+
+            int total = Count;
+            if (total <= 1)
+                return;
+
+            Vector3 forward = context.Velocity;
+            float speed = forward.magnitude;
+            if (speed > 1e-6f)
+                forward /= speed;
+            else
+            {
+                forward = Vector3.forward;
+                speed = context.Speed;
+            }
+
+            for (int i = 0; i < total; i++)
+            {
+                Vector3 direction = Aim(Pattern.GetDirection(context, forward, i, total), forward);
+                if (i == 0)
+                    context.Velocity = direction * speed;
+                else
+                    context.RequestMulticastExtra(ExtraRecipe, context.Position, direction);
+            }
+        }
+
+        static Vector3 Aim(Vector3 direction, Vector3 fallback)
+        {
+            return direction.sqrMagnitude > 1e-12f ? direction.normalized : fallback;
+        }
+    }
+}

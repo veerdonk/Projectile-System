@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Veerdonk.ProjectileSystem' Or '$(MSBuildProjectName)' == 'Veerdonk.ProjectileSystem.Editor'">
+    <SonarQubeTestProject>false</SonarQubeTestProject>
+  </PropertyGroup>
+</Project>

@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd308f6fee07fc54391b4678452531b0, type: 3}
   m_Name: MultiplyOnHit
-  m_EditorClassIdentifier: Davidvdveerdonk.ComVeerdonkProjectileSystem::Davidvdveerdonk.ComVeerdonkProjectileSystem.RecipeAsset
+  m_EditorClassIdentifier: Veerdonk.ProjectileSystem::Veerdonk.ProjectileSystem.RecipeAsset
   id: multiply-hit
   speed: 20
   radius: 0.25
@@ -35,7 +35,7 @@ MonoBehaviour:
     version: 2
     RefIds:
     - rid: 3954138888027504862
-      type: {class: Multiply, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
+      type: {class: Multiply, ns: Veerdonk.ProjectileSystem, asm: Veerdonk.ProjectileSystem}
       data:
         count: 3
         childAsset: {fileID: 11400000, guid: ef7e3b63a51848e4894626cb711f2559, type: 2}
@@ -43,5 +43,5 @@ MonoBehaviour:
         pattern:
           rid: 3954138888027504863
     - rid: 3954138888027504863
-      type: {class: SquarePattern, ns: Davidvdveerdonk.ComVeerdonkProjectileSystem, asm: Davidvdveerdonk.ComVeerdonkProjectileSystem}
+      type: {class: SquarePattern, ns: Veerdonk.ProjectileSystem, asm: Veerdonk.ProjectileSystem}
       data: 

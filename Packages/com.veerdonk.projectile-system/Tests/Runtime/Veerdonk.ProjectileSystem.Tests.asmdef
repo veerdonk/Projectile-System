@@ -1,0 +1,11 @@
+{
+    "name": "Veerdonk.ProjectileSystem.Tests",
+    "references": [
+        "Veerdonk.ProjectileSystem"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": []
+}

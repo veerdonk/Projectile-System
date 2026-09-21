@@ -11,7 +11,6 @@ namespace Sandbox.Editor
     public static class SampleSceneBuilder
     {
         public const string ScenePath = "Assets/Scenes/Sandbox.unity";
-        const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
 
         [MenuItem("Projectile Lab/Rebuild")]
         public static void Rebuild()
@@ -34,18 +33,15 @@ namespace Sandbox.Editor
 
         static void Build()
         {
-            if (!AssetDatabase.LoadAssetAtPath<SceneAsset>(SampleScenePath))
-                throw new System.InvalidOperationException($"Missing {SampleScenePath}");
-
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null)
                 AssetDatabase.DeleteAsset(ScenePath);
 
-            if (!AssetDatabase.CopyAsset(SampleScenePath, ScenePath))
-                throw new System.InvalidOperationException($"Could not copy {SampleScenePath} to {ScenePath}");
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            if (!EditorSceneManager.SaveScene(scene, ScenePath))
+                throw new System.InvalidOperationException($"Could not save {ScenePath}");
 
             AssetDatabase.Refresh();
-
-            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             SampleLab.Preset[] presets = SamplePresetAssets.CreateOrUpdate();
 
             GameObject existingLab = GameObject.Find("SampleLab");

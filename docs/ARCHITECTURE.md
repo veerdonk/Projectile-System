@@ -224,19 +224,18 @@ Sandbox fire button / sample turret calls `Spawn`. A single sandbox driver calls
 ## Folder map
 
 ```text
-Packages/com.davidvdveerdonk.com.veerdonk.projectile-system/
-  Runtime/     façade, recipes, modifiers, pooling, PhysX query  (asmdef)
+Packages/com.veerdonk.projectile-system/
+  Runtime/     façade, recipes, modifiers, pooling, PhysX query  (asmdef `Veerdonk.ProjectileSystem`)
   Runtime/Ecs/ internal components, RecipeStore, systems
   Editor/      RecipeAsset inspector (ADR-023); more tooling later
   Tests/Runtime
   Tests/Editor
-  Samples/     optional package samples; prefer Assets sandbox for the lab
-Assets/        sandbox only (scenes, dummy targets, fire UI)
+Assets/        sandbox only (scenes, dummy targets, turret, sample UI)
 docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Phase 23 (ADR-025) runs after 17–22.b: it renames the package folder to `Packages/com.veerdonk.projectile-system/` and the namespace to `Veerdonk.ProjectileSystem`, and documents / tests / Sonar-scans the public API including Protection, the view factory, GroundField, `RecipeAsset`, and the needed-arc `BallisticAim` signature.
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 22.b includes Protection, the view factories, GroundField, `RecipeAsset`, and the needed-arc `BallisticAim` signature.
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 
