@@ -33,14 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 22 — Sample barrel pitch and ballistic preset**
+**Phase 22.b — Needed-arc ballistic solve**
 
 - Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- Play Mode demo is still `Assets/Scenes/Sandbox.unity`. **Projectile Lab > Rebuild** writes the Gun pitch pivot and `useBallisticAim` on Cannonball.
-- Cannonball is the ballistic preset: speed 32, gravity 80, `BallisticAim.TrySolve` toward the last **collider or ground** aim point, no high-arc HUD. The barrel pitches to that loft while aiming. If PhysX says the flatter arc hits a different collider first, `BallisticClearance` binary-searches the minimum extra pitch that still hits the aimed cube (not the classic high root). **Cannonball Gravity(2)** still flattens spawn.
-- Last-fire HUD is `solved` / `unreachable` only while Cannonball is selected. No high-arc toggle. Unreachable solves do not spawn.
-- Clicking a dummy uses `Physics.Raycast` (cube top). Ground-plane fallback is only when the ray misses colliders.
-- Phase 22.b drops `highArc` from the package API (ADR-028) — do not start it until asked. Phase 23 stays after 22.b.
+- `BallisticAim.TrySolve(origin, target, speed, gravity, out direction)` has no `highArc`. Always the flatter root (ADR-028). Sample `BallisticClearance` searches extra pitch against an 80° cap, not a second `TrySolve` root.
+- Play Mode demo is still `Assets/Scenes/Sandbox.unity`. Cannonball is ballistic; no high-arc HUD. Clicking a dummy aims at the cube. **Cannonball Gravity(2)** still flattens spawn.
+- Phase 23 is cleanup (UPM id rename, XML docs, leftovers, coverage holes, local Sonar) — do not start it until asked.
 
 ## Do not
 

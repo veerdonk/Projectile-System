@@ -64,7 +64,7 @@ Always: enter Play Mode from `Assets/Scenes/Sandbox.unity`, fire once, confirm t
 | 22.b | **Cannonball**, tweak Speed | Fast is nearly straight; slowest reachable on the level is ~45°. `TrySolve` has no `highArc` argument |
 | 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone; keyboard-slot lab HUD is gone |
 
-AreaEffect, GroundField, Recipe gravity, barrel pitch, and `BallisticAim` (Cannonball) are sample presets. Dropping `highArc` from the package API is phase 22.b (ADR-028).
+AreaEffect, GroundField, Recipe gravity, barrel pitch, and needed-arc `BallisticAim` (Cannonball) are sample presets.
 
 Open `Assets/Scenes/Sandbox.unity` before Play Mode.
 

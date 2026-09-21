@@ -14,7 +14,7 @@ namespace Sandbox.Editor.Tests
         [Test]
         public void TrySolve_ClearPath_UsesFlatterRoot()
         {
-            Assert.IsTrue(BallisticAim.TrySolve(Origin, BounceGround, Speed, Gravity, out Vector3 low, highArc: false));
+            Assert.IsTrue(BallisticAim.TrySolve(Origin, BounceGround, Speed, Gravity, out Vector3 low));
             Assert.IsTrue(BallisticClearance.TrySolve(
                 Origin,
                 BounceGround,
@@ -26,15 +26,15 @@ namespace Sandbox.Editor.Tests
         }
 
         [Test]
-        public void TrySolve_BlockedFlatterPath_UsesMinimumPitchNotHighRoot()
+        public void TrySolve_BlockedFlatterPath_UsesMinimumPitchNotSteepCap()
         {
-            Assert.IsTrue(BallisticAim.TrySolve(Origin, BounceGround, Speed, Gravity, out Vector3 low, highArc: false));
-            Assert.IsTrue(BallisticAim.TrySolve(Origin, BounceGround, Speed, Gravity, out Vector3 high, highArc: true));
-            Assert.Greater(high.y, low.y);
+            Assert.IsTrue(BallisticAim.TrySolve(Origin, BounceGround, Speed, Gravity, out Vector3 low));
+            Vector3 steep = BallisticClearance.DirectionFromPitch(BounceGround - Origin, 80f * Mathf.Deg2Rad);
+            Assert.Greater(BallisticClearance.Pitch(steep), BallisticClearance.Pitch(low));
 
             float lowPitch = BallisticClearance.Pitch(low);
-            float highPitch = BallisticClearance.Pitch(high);
-            float clearPitch = Mathf.Lerp(lowPitch, highPitch, 0.12f);
+            float steepPitch = BallisticClearance.Pitch(steep);
+            float clearPitch = Mathf.Lerp(lowPitch, steepPitch, 0.12f);
 
             Assert.IsTrue(BallisticClearance.TrySolve(
                 Origin,
@@ -48,7 +48,7 @@ namespace Sandbox.Editor.Tests
 
             float chosenPitch = BallisticClearance.Pitch(chosen);
             Assert.Greater(chosenPitch, lowPitch);
-            Assert.Less(chosenPitch, Mathf.Lerp(lowPitch, highPitch, 0.4f));
+            Assert.Less(chosenPitch, Mathf.Lerp(lowPitch, steepPitch, 0.4f));
             Assert.Less(Mathf.Abs(chosenPitch - clearPitch), 0.08f);
         }
 

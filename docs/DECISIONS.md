@@ -68,7 +68,7 @@ Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if
 ## ADR-019 — Ballistic aim is a fire-time helper, not a path
 
 - **Date:** 2026-09-16
-- **Decision:** `BallisticAim.TrySolve` returns a launch direction for a given origin, target, speed, and gravity (world down). Low arc is the default; `highArc` selects the other solution. `false` means unreachable. Games copy the direction into `SpawnRequest`. The instance still flies through the phase 14 Burst integrate. Do not evaluate a closed-form parabola instead of the per-tick SphereCast. Do not add a second `IProjectileWorld` method that spawns-and-aims. **ADR-028** drops `highArc` and always uses the flatter root.
+- **Decision:** `BallisticAim.TrySolve` returns a launch direction for a given origin, target, speed, and gravity (world down). `false` means unreachable. Games copy the direction into `SpawnRequest`. The instance still flies through the phase 14 Burst integrate. Do not evaluate a closed-form parabola instead of the per-tick SphereCast. Do not add a second `IProjectileWorld` method that spawns-and-aims. **Superseded in part by ADR-028:** there is no `highArc` parameter; `TrySolve` always returns the flatter (shorter-time) root.
 - **Why:** Hitting a dummy with a cannonball is an aiming problem, not a new motion solver. Replacing the tick integrate with `x(t)` would skip the hit pipeline’s segment casts. A helper keeps `SpawnRequest.Direction` as the only aim input.
 - **Consequences:** One new public type (`BallisticAim`). Sandbox may call it before `Spawn`. Unreachable shots are the caller’s problem.
 

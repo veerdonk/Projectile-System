@@ -16,12 +16,11 @@
 
 Always run `sigmap ask` (or `sigmap --query`) before searching for files relevant to a task.
 
-## changes (last 10 commits — 2 seconds ago)
+## changes (last 10 commits — 6 minutes ago)
 ```
-Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IGroundFieldViewFactory.cs +PrimitiveGroundFieldViewFactory
-Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\PrefabGroundFieldViewFactory.cs +PrefabGroundFieldViewFactory
-Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\GroundFieldTests.cs +GroundFieldTests  +CountingGroundFieldViewFactory
-Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Runtime\GroundFieldViewPlayModeTests.cs +GroundFieldViewPlayModeTests
+Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Editor\RecipeAssetEditor.cs +RecipeAssetEditor
+Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\RecipeAsset.cs +RecipeAsset
+Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\RecipeStage.cs +ModifierStageAttribute
 ```
 
 ## Assets
@@ -54,10 +53,25 @@ h2 Package contents
 h2 Document revision history
 ```
 
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Editor\RecipeAssetEditor.cs
+```
+class RecipeAssetEditor  :11-343
+  ModifiersFor(RecipeStage stage) → Type[]  :33-33
+  Patterns() → Type[]  :49-49
+  StatusEffects() → Type[]  :54-54
+  OnInspectorGUI() → void  :96-96
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\ApplyStatus.cs
+```
+class ApplyStatus  :13-38
+  Apply(ModifierContext context) → void  :29-29
+```
+
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\BallisticAim.cs
 ```
-class BallisticAim  :11-156
-  TrySolve(Vector3 origin, Vector3 target, float speed, float gravity, out Vector3 direction, bool highArc = false) → bool  :19-25
+class BallisticAim  :12-129
+  TrySolve(Vector3 origin, Vector3 target, float speed, float gravity, out Vector3 direction) → bool  :20-25
 ```
 
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\ChainBudget.cs
@@ -66,6 +80,12 @@ struct ChainBudget  :8-27
   Inherit(int left) → ChainBudget  :13-13
   Start(int recipeGenerations) → int  :18-18
   Resolve(int recipeGenerations) → int  :23-23
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\CirclePattern.cs
+```
+class CirclePattern  :11-96
+  GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count) → Vector3  :13-13
 ```
 
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Ecs\ProjectileComponents.cs
@@ -184,6 +204,12 @@ struct HomingTarget  :83-92
 struct ExpireInfo  :95-98
 ```
 
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IStatusEffect.cs
+```
+interface IStatusEffect  :6-9
+class DummyStatusEffect  :13-18
+```
+
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\IStatusReceiver.cs
 ```
 interface IStatusReceiver  :7-10
@@ -249,9 +275,33 @@ class ProjectileWorld  :10-676
   Dispose() → void  :429-429
 ```
 
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\RandomCirclePattern.cs
+```
+class RandomCirclePattern  :14-77
+  GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count) → Vector3  :22-22
+```
+
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\Recipe.cs
 ```
 class Recipe  :6-68
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\RecipeAsset.cs
+```
+class RecipeAsset  :8-277
+  ToRecipe() → Recipe  :138-138
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\RecipeStage.cs
+```
+enum RecipeStage  :6-14
+class ModifierStageAttribute  :17-25
+```
+
+### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Runtime\SquarePattern.cs
+```
+class SquarePattern  :10-161
+  GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count) → Vector3  :12-12
 ```
 
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Samples\Example\SampleExample.cs
@@ -284,13 +334,15 @@ class AreaEffectTests  :7-288
 
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\BallisticAimTests.cs
 ```
-class BallisticAimTests  :6-156
+class BallisticAimTests  :6-198
   TrySolve_ReachableSandboxDummy_PathMeetsTarget() → void  :16-16
-  TrySolve_HighArc_AlsoMeetsReachableSandboxDummy() → void  :30-30
-  TrySolve_TooFar_ReturnsFalse() → void  :52-52
-  TrySolve_Gravity0_HighTarget_ReturnsFalse() → void  :65-65
-  TrySolve_Gravity0_TargetOnTheRay_ReturnsHorizontalDirection() → void  :78-78
-  TrySolve_NonPositiveSpeed_ReturnsFalse() → void  :92-92
+  TrySolve_MinSpeedLevelTarget_ElevationNear45() → void  :30-30
+  TrySolve_FastLevelTarget_ElevationNearLineOfSight() → void  :47-47
+  TrySolve_TooSlow_LevelTarget_ReturnsFalse() → void  :66-66
+  TrySolve_TooFar_ReturnsFalse() → void  :80-80
+  TrySolve_Gravity0_HighTarget_ReturnsFalse() → void  :93-93
+  TrySolve_Gravity0_TargetOnTheRay_ReturnsHorizontalDirection() → void  :106-106
+  TrySolve_NonPositiveSpeed_ReturnsFalse() → void  :120-120
 ```
 
 ### Packages\com.davidvdveerdonk.com.veerdonk.projectile-system\Tests\Editor\BounceTests.cs

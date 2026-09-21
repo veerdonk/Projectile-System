@@ -4,7 +4,8 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 {
     /// <summary>
     /// Fire-time launch direction so a given speed and gravity pass through a point.
-    /// Uses world down (0,-1,0). Low arc is the default of the two classic solutions.
+    /// Uses world down (0,-1,0). Always the shorter-time (flatter) root: extra speed
+    /// flattens toward the line of sight; a level shot at minimum speed leaves at about 45°.
     /// Does not simulate; copy the direction into <see cref="SpawnRequest.Direction"/>.
     /// Flight still uses the phase 14 Burst integrate.
     /// </summary>
@@ -21,8 +22,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Vector3 target,
             float speed,
             float gravity,
-            out Vector3 direction,
-            bool highArc = false)
+            out Vector3 direction)
         {
             direction = default;
             if (speed <= Epsilon)
@@ -36,7 +36,7 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             if (gravity <= 0f)
                 return TrySolveStraight(delta, out direction);
 
-            return TrySolveArcs(delta, speed, gravity, highArc, out direction);
+            return TrySolveArcs(delta, speed, gravity, out direction);
         }
 
         static bool TrySolveStraight(Vector3 delta, out Vector3 direction)
@@ -57,7 +57,6 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             Vector3 delta,
             float speed,
             float gravity,
-            bool highArc,
             out Vector3 direction)
         {
             direction = default;
@@ -84,44 +83,23 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
             double u1 = (-b - sqrtDisc) * inv2A;
             double u2 = (-b + sqrtDisc) * inv2A;
 
-            double tLow = 0.0;
-            double tHigh = 0.0;
+            double t = 0.0;
             int count = 0;
             if (TryPositiveTime(u1, out double t1))
             {
-                tLow = t1;
-                tHigh = t1;
+                t = t1;
                 count = 1;
             }
 
-            if (TryPositiveTime(u2, out double t2) && !TimesEqual(t2, tLow))
+            if (TryPositiveTime(u2, out double t2) && (count == 0 || t2 < t))
             {
-                if (count == 0)
-                {
-                    tLow = t2;
-                    tHigh = t2;
-                    count = 1;
-                }
-                else
-                {
-                    if (t2 < tLow)
-                    {
-                        tHigh = tLow;
-                        tLow = t2;
-                    }
-                    else
-                    {
-                        tHigh = t2;
-                    }
-
-                    count = 2;
-                }
+                t = t2;
+                count = 1;
             }
 
             if (count == 0)
                 return false;
 
-            double t = highArc ? tHigh : tLow;
             Vector3 launch = new Vector3(
                 delta.x,
                 delta.y + 0.5f * gravity * (float)(t * t),
@@ -147,11 +125,6 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem
 
             t = System.Math.Sqrt(u);
             return t > Epsilon;
-        }
-
-        static bool TimesEqual(double a, double b)
-        {
-            return System.Math.Abs(a - b) <= 1e-8;
         }
     }
 }

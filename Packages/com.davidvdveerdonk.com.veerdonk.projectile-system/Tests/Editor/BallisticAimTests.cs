@@ -27,25 +27,53 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
         }
 
         [Test]
-        public void TrySolve_HighArc_AlsoMeetsReachableSandboxDummy()
+        public void TrySolve_MinSpeedLevelTarget_ElevationNear45()
         {
+            float range = DummyTargetPosition.z - SpawnPosition.z;
+            float minSpeed = Mathf.Sqrt(AimedGravity * range);
+            float speed = FindLowestReachableSpeed(minSpeed * 0.9f, minSpeed * 1.1f);
             Assert.IsTrue(BallisticAim.TrySolve(
                 SpawnPosition,
                 DummyTargetPosition,
-                AimedSpeed,
+                speed,
                 AimedGravity,
-                out Vector3 low,
-                highArc: false));
-            Assert.IsTrue(BallisticAim.TrySolve(
-                SpawnPosition,
-                DummyTargetPosition,
-                AimedSpeed,
-                AimedGravity,
-                out Vector3 high,
-                highArc: true));
+                out Vector3 direction));
 
-            Assert.Greater(high.y, low.y);
-            AssertPathMeetsTarget(high, AimedSpeed, AimedGravity, DummyTargetPosition);
+            float elevation = Mathf.Asin(Mathf.Clamp(direction.normalized.y, -1f, 1f)) * Mathf.Rad2Deg;
+            Assert.AreEqual(45f, elevation, 5f);
+        }
+
+        [Test]
+        public void TrySolve_FastLevelTarget_ElevationNearLineOfSight()
+        {
+            float range = DummyTargetPosition.z - SpawnPosition.z;
+            float minSpeed = Mathf.Sqrt(AimedGravity * range);
+            float speed = minSpeed * 4f;
+            Assert.IsTrue(BallisticAim.TrySolve(
+                SpawnPosition,
+                DummyTargetPosition,
+                speed,
+                AimedGravity,
+                out Vector3 direction));
+
+            float elevation = Mathf.Asin(Mathf.Clamp(direction.normalized.y, -1f, 1f)) * Mathf.Rad2Deg;
+            Assert.Less(elevation, 10f);
+            Assert.Less(elevation, 22.5f);
+            AssertPathMeetsTarget(direction, speed, AimedGravity, DummyTargetPosition);
+        }
+
+        [Test]
+        public void TrySolve_TooSlow_LevelTarget_ReturnsFalse()
+        {
+            float range = DummyTargetPosition.z - SpawnPosition.z;
+            float minSpeed = Mathf.Sqrt(AimedGravity * range);
+            Assert.IsFalse(BallisticAim.TrySolve(
+                SpawnPosition,
+                DummyTargetPosition,
+                minSpeed * 0.5f,
+                AimedGravity,
+                out Vector3 direction));
+            Assert.AreEqual(Vector3.zero, direction);
         }
 
         [Test]
@@ -141,6 +169,20 @@ namespace Davidvdveerdonk.ComVeerdonkProjectileSystem.Editor.Tests
 
                 Assert.LessOrEqual(closest, MeetTolerance);
             }
+        }
+
+        static float FindLowestReachableSpeed(float lo, float hi)
+        {
+            for (int i = 0; i < 24; i++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                if (BallisticAim.TrySolve(SpawnPosition, DummyTargetPosition, mid, AimedGravity, out _))
+                    hi = mid;
+                else
+                    lo = mid;
+            }
+
+            return hi;
         }
 
         static float DistanceToSegment(Vector3 a, Vector3 b, Vector3 point)

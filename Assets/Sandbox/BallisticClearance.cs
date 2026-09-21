@@ -49,7 +49,7 @@ namespace Sandbox
             out Vector3 direction)
         {
             direction = default;
-            if (!BallisticAim.TrySolve(origin, target, speed, gravity, out Vector3 low, highArc: false))
+            if (!BallisticAim.TrySolve(origin, target, speed, gravity, out Vector3 low))
                 return false;
 
             if (trace == null || trace(low) == PathOutcome.Clear)
@@ -58,18 +58,9 @@ namespace Sandbox
                 return true;
             }
 
-            Vector3 high = default;
-            bool hasHigh = BallisticAim.TrySolve(origin, target, speed, gravity, out high, highArc: true) &&
-                           (high - low).sqrMagnitude > 1e-6f;
-
-            if (TryMinimumLoft(origin, target, low, hasHigh ? high : low, trace, out direction))
+            Vector3 cap = DirectionFromPitch(target - origin, 80f * Mathf.Deg2Rad);
+            if (TryMinimumLoft(origin, target, low, cap, trace, out direction))
                 return true;
-
-            if (hasHigh && trace(high) == PathOutcome.Clear)
-            {
-                direction = high;
-                return true;
-            }
 
             direction = low;
             return true;
