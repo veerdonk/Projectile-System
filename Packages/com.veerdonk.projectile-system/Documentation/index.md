@@ -41,9 +41,15 @@ Internal ECS types under `Runtime/Ecs/` are not a consumer API.
 
 ## Installing
 
-Embedded in this project under `Packages/com.veerdonk.projectile-system/`. For another project, add the folder as a UPM package. Requires Unity 6 LTS (`6000.6`) and `com.unity.entities`.
+Requires Unity 6 LTS (`6000.6`) and `com.unity.entities`. MIT license.
 
-The Play Mode sample lives in the host project (`Assets/Scenes/Sandbox.unity`), not in this package.
+**Add package from git URL** (Package Manager → +):
+
+```text
+https://github.com/veerdonk/Projectile-System.git?path=/Packages/com.veerdonk.projectile-system
+```
+
+Or copy this folder into the other project’s `Packages/`. This repository already embeds the package. Play Mode demo: `Assets/Scenes/Sandbox.unity`. Full steps: [README.md](../README.md).
 
 ## Requirements
 
