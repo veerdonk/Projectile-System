@@ -145,8 +145,8 @@ interface IProjectileWorld
     void Tick(float dt);
     void SetHomingCandidate(TargetId id, Vector3 position);
     void RemoveHomingCandidate(TargetId id);
-    void SetHitTarget(TargetId id, Vector3 position, float radius, ProtectionLevel protection = None);
-    // ADR-030; protection default None until phase 26 / ADR-031. radius<=0 removes
+    void SetHitTarget(TargetId id, Vector3 position, float radius);
+    // ADR-030. radius<=0 removes. Phase 26 adds ProtectionLevel (ADR-031).
     void RemoveHitTarget(TargetId id);
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
@@ -240,7 +240,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 22.b includes Protection, the view factories, GroundField, `RecipeAsset`, and the needed-arc `BallisticAim` signature.
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.1 includes Protection, the view factories, GroundField, `RecipeAsset`, the needed-arc `BallisticAim` signature, and `SetHitTarget` / `RemoveHitTarget` (ADR-030).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 

@@ -20,6 +20,16 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Drops a previously published homing pose. Locked instances that used it fly straight.</summary>
         void RemoveHomingCandidate(TargetId id);
 
+        /// <summary>
+        /// Publishes a sphere that Direct casts, <c>AreaEffect</c>, and <c>GroundField</c> treat as
+        /// <see cref="HitKind.Target"/>. Call again to move or resize. <paramref name="radius"/> &lt;= 0 removes it.
+        /// Separate from <see cref="SetHomingCandidate"/>.
+        /// </summary>
+        void SetHitTarget(TargetId id, Vector3 position, float radius);
+
+        /// <summary>Drops a previously published hit volume.</summary>
+        void RemoveHitTarget(TargetId id);
+
         /// <summary>Raised for each hit produced by the query pipeline.</summary>
         event Action<HitInfo> Hit;
 

@@ -21,8 +21,9 @@ This file is not the pairing spec for the package repo.
 ## Hits and game objects
 
 - Mark damageable colliders with `IDamageable`. Optional shields: `IProjectileProtection` (`Basic` / `Strong`).
+- ECS enemies with no collider: `SetHitTarget(id, position, radius)` / `RemoveHitTarget(id)`. `radius <= 0` removes. Those spheres are `HitKind.Target` for the direct cast, `AreaEffect`, and `GroundField`. They are not homing locks.
 - Apply HP in the game on `Hit`. Skip HP when `HitInfo.Protection != None` if you use protection.
-- Homing: `SetHomingCandidate` / `RemoveHomingCandidate` with live poses.
+- Homing: `SetHomingCandidate` / `RemoveHomingCandidate` with live poses. Do not use `SetHitTarget` for a lock that should not be hittable.
 - Cannonballs: `BallisticAim.TrySolve` → copy `direction` onto `SpawnRequest.Direction`. Unreachable is `false`. No high-arc pick.
 - Views: pass `IProjectileViewFactory` / `IGroundFieldViewFactory` if you need meshes other than the primitive sphere / disk. Hits stay a kinematic sphere / XZ disk.
 

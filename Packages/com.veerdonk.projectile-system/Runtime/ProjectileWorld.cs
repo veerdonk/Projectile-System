@@ -13,6 +13,7 @@ namespace Veerdonk.ProjectileSystem
         const int MaxPrewarmPerRecipe = 512;
 
         readonly IHitQuery hitQuery;
+        readonly HitTargetCatalog hitTargets = new HitTargetCatalog();
         readonly RecipeStore recipes = new RecipeStore();
         readonly System.Collections.Generic.List<SpawnRequest> pendingSpawns = new System.Collections.Generic.List<SpawnRequest>();
         readonly HomingCatalog homingCatalog = new HomingCatalog();
@@ -63,6 +64,7 @@ namespace Veerdonk.ProjectileSystem
             IGroundFieldViewFactory groundFieldViewFactory = null)
         {
             this.hitQuery = hitQuery ?? throw new ArgumentNullException(nameof(hitQuery));
+            this.hitQuery.HitTargets = hitTargets;
             modifierContext = new ModifierContext(pendingSpawns, homingCatalog, seed);
             groundFields = new GroundFieldSet(
                 this.hitQuery,
@@ -185,6 +187,20 @@ namespace Veerdonk.ProjectileSystem
         {
             ThrowIfDisposed();
             homingCatalog.Remove(id);
+        }
+
+        /// <inheritdoc />
+        public void SetHitTarget(TargetId id, Vector3 position, float radius)
+        {
+            ThrowIfDisposed();
+            hitTargets.Set(id, position, radius);
+        }
+
+        /// <inheritdoc />
+        public void RemoveHitTarget(TargetId id)
+        {
+            ThrowIfDisposed();
+            hitTargets.Remove(id);
         }
 
         internal bool TryGetState(ProjectileId id, out Vector3 position, out Vector3 velocity, out Recipe recipe)

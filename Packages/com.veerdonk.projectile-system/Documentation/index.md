@@ -19,11 +19,11 @@ A `Recipe` is base stats plus six ordered `IModifier` lists. List order is apply
 
 Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectile > Recipe`) and call `ToRecipe()` before `Spawn`.
 
-## Public types (through 22.b)
+## Public types
 
-**Façade:** `IProjectileWorld`, `ProjectileWorld`, `Recipe`, `SpawnRequest`, `HitInfo`, `HitKind`, `HitSource`, `ProtectionLevel`, `StatusInfo`, `ExpireInfo`, `ProjectileId`, `TargetId`, `HomingTarget`
+**Façade:** `IProjectileWorld` (`Spawn`, `Tick`, `SetHitTarget`, `RemoveHitTarget`, `SetHomingCandidate`, `RemoveHomingCandidate`), `ProjectileWorld`, `Recipe`, `SpawnRequest`, `HitInfo`, `HitKind`, `HitSource`, `ProtectionLevel`, `StatusInfo`, `ExpireInfo`, `ProjectileId`, `TargetId`, `HomingTarget`
 
-**Hits and protection:** `IDamageable`, `IProjectileProtection`, `IHitQuery.Overlap` / `OverlapDisk` (PhysX implementation is internal; Edit Mode tests use a scripted query)
+**Hits and protection:** `IDamageable` on colliders. `SetHitTarget(id, position, radius)` publishes a sphere with no collider (`HitKind.Target`, `Protection = None`); `radius <= 0` or `RemoveHitTarget` drops it. Direct casts, `AreaEffect`, and `GroundField` all read that catalog. It is not a homing pose. `IProjectileProtection`. Hit queries stay inside the package.
 
 **Modifiers:** `Pierce`, `Bounce`, `Multiply`, `Multicast`, `Homing`, `Interval`, `Speed`, `Damage`, `Critical`, `Mana`, `Size`, `Spread`, `EffectRadius`, `Gravity`, `ApplyStatus`, `AreaEffect`, `GroundField`
 

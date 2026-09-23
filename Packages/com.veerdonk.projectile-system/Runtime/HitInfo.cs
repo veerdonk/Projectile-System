@@ -6,7 +6,7 @@ namespace Veerdonk.ProjectileSystem
     /// <summary>Classification of a hit from the query pipeline.</summary>
     public enum HitKind
     {
-        /// <summary>Collider marked <see cref="IDamageable"/>.</summary>
+        /// <summary>Collider marked <see cref="IDamageable"/>, or a published hit volume.</summary>
         Target,
         /// <summary>Anything else the SphereCast hit (walls, unmarked colliders).</summary>
         World
@@ -74,7 +74,7 @@ namespace Veerdonk.ProjectileSystem
         public Vector3 Point;
         /// <summary>Surface normal at the contact. Bounce reflects around this.</summary>
         public Vector3 Normal;
-        /// <summary>From <see cref="IDamageable"/> when <see cref="Kind"/> is Target.</summary>
+        /// <summary>From <see cref="IDamageable"/> or <see cref="IProjectileWorld.SetHitTarget"/> when <see cref="Kind"/> is Target.</summary>
         public TargetId TargetId;
         /// <summary>Instance damage at sample time (Direct) or modifier damage (Area).</summary>
         public float Damage;

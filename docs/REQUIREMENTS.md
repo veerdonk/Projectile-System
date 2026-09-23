@@ -558,7 +558,7 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 
 ### Phase 25 — Pierce consumes published Targets
 
-- **Given:** `Pierce(1)` and two published volumes in a line, then a third
+- **Given:** `Pierce(2)` and two published volumes in a line, then a third (`Pierce(n)` absorbs n Target hits)
 - **When:** the instance travels through all three
 - **Then:** the first two raise Target `Hit` and the instance continues; the third raises `Hit` and despawns
 

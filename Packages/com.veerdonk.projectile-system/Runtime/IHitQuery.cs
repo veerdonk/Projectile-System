@@ -8,6 +8,8 @@ namespace Veerdonk.ProjectileSystem
     /// </summary>
     interface IHitQuery
     {
+        HitTargetCatalog HitTargets { get; set; }
+
         /// <summary>SphereCast along a move segment. False means no hit.</summary>
         bool TryCast(ProjectileId instanceId, Vector3 origin, Vector3 direction, float distance, float radius, out HitInfo hit);
 
