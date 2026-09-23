@@ -22,7 +22,7 @@ How this package uses DOTS. Not a Unity ECS tutorial. Read this if you already k
 
 | Left out | Why |
 | --- | --- |
-| Unity Physics | Dummy, wall, and Play Mode hits stay PhysX colliders + `IDamageable`. |
+| Unity Physics | Dummy, wall, and Play Mode hits stay PhysX colliders + `IDamageable`. Published hit volumes (ADR-030) are an extra Target source, not Unity Physics. |
 | Entities Graphics | Visible spheres stay `ProjectileView` GameObjects. Tests can run with views off. |
 | Baking / SubScenes | `RecipeAsset` is a ScriptableObject that builds a `Recipe`. Not ECS baker / SubScene authoring. |
 | Default ECS world / Player Loop | Tests need an isolated `World`. Sandbox already ticks from one `Update`. |
@@ -100,7 +100,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/IStatusReceiver.cs` | Game/sandbox apply contract. Package never calls it; sandbox maps `StatusApplied` → `Apply` |
 | `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget` |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views from `IProjectileViewFactory` |
-| `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap; ignore last collider so pierce/bounce can leave the surface. `Overlap` returns `IDamageable` Targets only. `OverlapDisk` is a world-up cylinder then an XZ filter |
+| `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap plus published hit volumes (ADR-030). Ignore last collider / TargetId so pierce/bounce can leave the surface. `Overlap` / `OverlapDisk` return `IDamageable` colliders and published Targets |
 | `Runtime/IProjectileViewFactory.cs` | `Create(recipe, poolParent)` plus default `PrimitiveViewFactory` (sphere scaled to `2 * Radius`) |
 | `Runtime/PrefabViewFactory.cs` | Map `PresentationId` → prefab; does not rescale; unknown ids fall back to the primitive factory |
 | `Runtime/ProjectileView.cs` | Public presentation adapter (`Bind` / `SetPose` / `Release`). Prefab views keep authored scale; primitive views follow `Radius` |

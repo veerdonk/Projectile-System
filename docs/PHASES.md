@@ -578,6 +578,27 @@ Move the Play Mode turret yard into the UPM package so a consumer who added `com
 
 **Stop.**
 
+## Phase 25 — Published hit targets
+
+Games publish living enemies as hit volumes (`TargetId`, position, radius) so a shot can raise `HitKind.Target` with **no PhysX collider and no `IDamageable`**. Direct cast, `AreaEffect`, `GroundField`, `Pierce`, and `Bounce` all use that catalog. ADR-030. Package still does not apply HP. Do not expose `IHitQuery`.
+
+**In scope**
+
+- `IProjectileWorld.SetHitTarget(TargetId id, Vector3 position, float radius)` / `RemoveHitTarget(TargetId id)`. Set again to move or resize. `radius <= 0` does not publish (removes that id if present). Separate from `SetHomingCandidate` (no radius, homing-only)
+- Direct: nearest contact among PhysX SphereCast/overlap **and** swept instance sphere vs each published sphere. Published hit → `Kind = Target`, that `TargetId`, `Protection = None`, radial `Normal`. Unmarked collider → World. `IDamageable` collider → Target as today
+- `AreaEffect` overlap: existing `IDamageable` Targets **plus** published volumes whose spheres overlap `EffectRadius`. `GroundField` disk: existing XZ filter **plus** published volumes whose XZ circle overlaps the disk (Y ignored; radii add). Skip Strong colliders as today; published volumes are never Strong
+- `Pierce(n)` consumes published Target hits like collider Targets. While the instance still overlaps that volume, do not re-hit the same `TargetId` (same idea as last-collider ignore)
+- `Bounce(n)` reflects a published Target around `HitInfo.Normal` and still raises Direct `Hit` (ADR-010)
+- `IHitQuery` stays internal. `ScriptedHitQuery` and `PhysicsHitQuery` both read the world catalog. No Unity Physics, no companion colliders, no second façade
+- Edit Mode tests: straight Recipe vs a published sphere (no GameObject collider) raises Target `Hit` with that id; a PhysX wall without `IDamageable` is still World; Pierce(1) through two published volumes then dies on the third; Bounce(1) off a published volume reflects and `Hit` fires; AreaEffect OnHit includes a published volume outside the contact collider; GroundField pulse includes a published volume in the XZ disk and misses one outside; `radius <= 0` never hits; `RemoveHitTarget` then Tick does not hit. Existing collider tests stay green
+- Docs: [ARCHITECTURE.md](ARCHITECTURE.md) sketch, [ECS.md](ECS.md) query map, package `AGENTS.md` / `README.md` / `Documentation/index.md`, [SANDBOX.md](SANDBOX.md). Bump `package.json` version to **0.1.1**. Do not create a git tag
+
+**Out of scope:** merging hit and homing catalogs; published `IProjectileProtection`; exposing `IHitQuery`; converting the yard to ECS entities; applying HP; Unity Physics; Entities Graphics; OpenUPM
+
+**Proof:** Edit Mode published-sphere straight shot raises Target `Hit`. Pierce, Bounce, AreaEffect, and GroundField tests above are green. Yard Pierce line still uses collider dummies.
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

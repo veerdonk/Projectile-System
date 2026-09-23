@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-030 — Games publish hit volumes; colliders are not required for Target
+
+- **Date:** 2026-09-23
+- **Decision:** `IProjectileWorld` gains `SetHitTarget(TargetId id, Vector3 position, float radius)` and `RemoveHitTarget(TargetId id)`. Call `Set` again to move or resize. `radius <= 0` does not publish (and removes an existing id). The existing Direct cast, `AreaEffect` overlap, and `GroundField` disk all test these volumes as `HitKind.Target` with that `TargetId`. `Protection` is `None` (no published shield). PhysX is unchanged: `IDamageable` colliders are still Target; unmarked colliders are still World. Direct picks the **nearest** contact among PhysX and published spheres (instance `Radius` + target radius along the move segment). Area: a published target is hit when distance between centers ≤ `EffectRadius` + target radius. GroundField: XZ distance from field center to published position ≤ field radius + target radius (Y ignored). Pierce consumes `HitKind.Target` from either source; after a published pierce, ignore that `TargetId` for the instance while it still overlaps the volume (same role as the last-collider ignore). Bounce reflects published Target hits around `HitInfo.Normal` (radial on the sphere) and still raises `Hit` (ADR-010). `IHitQuery` stays internal. Homing stays `SetHomingCandidate` (no radius); do not merge the catalogs in this phase. The package still does not apply HP. Do not add Unity Physics or per-enemy MonoBehaviours.
+- **Why:** Games with ECS enemies (position + radius, no PhysX, no `IDamageable`) cannot mark Target today. Exposing `IHitQuery` would make the game a second hit simulator. Dummy colliders would force a MonoBehaviour the game does not have. A published catalog is the same shape as homing poses, for hits. Area, ground, pierce, and bounce must read it or those modifiers stay collider-only and the greybox shot is a special case.
+- **Consequences:** ADR-004 still holds for collider markers; this is a second Target source. `ScriptedHitQuery` / `PhysicsHitQuery` both see the world catalog. Edit Mode tests do not need Play Mode. Yard dummies stay `IDamageable` colliders. Bump `package.json` to **0.1.1** so a game can pin a named version; the human creates the git tag. No second façade.
+
 ## ADR-029 — Play Mode demo is a UPM sample, not Runtime and not Assets-only
 
 - **Date:** 2026-09-21
@@ -180,7 +187,7 @@ Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if
 ## ADR-004 — IDamageable is a Target marker, not HP
 
 - **Date:** 2026-09-14
-- **Decision:** The runtime package defines `IDamageable` with an opaque `TargetId` only. A PhysX hit whose collider has `IDamageable` is `HitKind.Target`; all other colliders are `HitKind.World`. The world does not call damage methods or change HP. Sandbox (or the game) implements `IDamageable` and applies HP from `IProjectileWorld.Hit`.
+- **Decision:** The runtime package defines `IDamageable` with an opaque `TargetId` only. A PhysX hit whose collider has `IDamageable` is `HitKind.Target`; all other colliders are `HitKind.World`. The world does not call damage methods or change HP. Sandbox (or the game) implements `IDamageable` and applies HP from `IProjectileWorld.Hit`. **ADR-030** also classifies published hit volumes as Target (no collider required).
 - **Why:** Games need a package-level way to mark Target colliders without layer-mask setup. HP still does not belong in the package.
 - **Consequences:** `PhysicsHitQuery` uses `GetComponentInParent<IDamageable>()`. The v1 non-goal is HP application, not the marker interface.
 

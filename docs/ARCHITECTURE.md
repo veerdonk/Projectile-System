@@ -86,13 +86,13 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Views:** the pool asks `IProjectileViewFactory` for a GameObject view from `Recipe.PresentationId` ([DECISIONS.md](DECISIONS.md) ADR-021). Default is a sphere primitive. Hits stay SphereCast of `Radius`; the mesh is not the collider. Ground-field disks use a separate `IGroundFieldViewFactory` (ADR-026); default is a thin cylinder. A game prefab is not rescaled.
 
-**Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016). Area damage is on the modifier. Interval is an aura on the live instance, pulsed on `OnInterval`, not a ground field. Direct contact can be suppressed. The original shot is not an implied splash.
+**Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016). Area damage is on the modifier. Interval is an aura on the live instance, pulsed on `OnInterval`, not a ground field. Direct contact can be suppressed. Overlap includes `IDamageable` colliders **and** published hit volumes (ADR-030).
 
-**Ground field:** `GroundField` on `OnHit` / `OnExpire` / `OnTravel` plants a lingering horizontal disk ([DECISIONS.md](DECISIONS.md) ADR-022). Size, lifetime, damage, optional status, and pulse period are on the modifier. The disk is not a Recipe and has no stage lists. `IHitQuery.OverlapDisk` tests XZ distance; pulses reuse Area `Hit` / `StatusApplied`. Views come from `IGroundFieldViewFactory` (ADR-026). Occupancy enter/exit is later.
+**Ground field:** `GroundField` on `OnHit` / `OnExpire` / `OnTravel` plants a lingering horizontal disk ([DECISIONS.md](DECISIONS.md) ADR-022). Size, lifetime, damage, optional status, and pulse period are on the modifier. The disk is not a Recipe and has no stage lists. `IHitQuery.OverlapDisk` tests XZ distance (colliders and published volumes, ADR-030); pulses reuse Area `Hit` / `StatusApplied`. Views come from `IGroundFieldViewFactory` (ADR-026). Occupancy enter/exit is later.
 
 ## Hit pipeline
 
-Kinematic movement casts along the step (SphereCast / overlap). Each contact produces:
+Kinematic movement casts along the step (PhysX SphereCast / overlap **and** published hit volumes, ADR-030). Each contact produces:
 
 ```csharp
 enum HitKind { Target, World }
@@ -116,7 +116,7 @@ struct HitInfo
 }
 ```
 
-- `Target` — dummy (or later enemy). Default: raise Direct `Hit` after `OnHit` unless suppressed, despawn unless `Pierce` or `Bounce` cancels despawn. Bounce still raises Direct `Hit` so dummy HP drops. `ApplyStatus` may also request a status; that is raised as `StatusApplied` **after** the `OnHit` list, not on `Hit`. `AreaEffect` may add Area Hits after that. `GroundField` may plant a disk at `Hit.Point` (Y snapped to the ground plane)
+- `Target` — `IDamageable` collider **or** a published hit volume (ADR-030). Default: raise Direct `Hit` after `OnHit` unless suppressed, despawn unless `Pierce` or `Bounce` cancels despawn. Bounce still raises Direct `Hit` so dummy HP drops. `ApplyStatus` may also request a status; that is raised as `StatusApplied` **after** the `OnHit` list, not on `Hit`. `AreaEffect` may add Area Hits after that. `GroundField` may plant a disk at `Hit.Point` (Y snapped to the ground plane)
 - `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`. `ApplyStatus` ignores World. `AreaEffect` on a World hit still overlaps nearby Targets. `GroundField` on a World hit still plants at `Hit.Point` (Y snapped to the ground plane)
 - `Protection = Basic` — `OnHit` still runs (pierce and bounce consume; pierce also applies when Kind is World). `AreaEffect` still runs. `GroundField` still plants. No `ApplyStatus` for this contact. Direct `Hit` is raised with `Protection = Basic` (game/sandbox skip HP)
 - `Protection = Strong` — despawn with no Direct `Hit`, no `OnHit`, no `OnExpire`. `Expired` still fires. No field is planted
@@ -145,6 +145,8 @@ interface IProjectileWorld
     void Tick(float dt);
     void SetHomingCandidate(TargetId id, Vector3 position);
     void RemoveHomingCandidate(TargetId id);
+    void SetHitTarget(TargetId id, Vector3 position, float radius); // ADR-030; radius<=0 removes
+    void RemoveHitTarget(TargetId id);
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
     event Action<StatusInfo> StatusApplied; // after OnHit / area / ground-field flush (ADR-011, ADR-016, ADR-022)
@@ -157,7 +159,8 @@ struct StatusInfo
     IStatusEffect Effect;
 }
 
-interface IDamageable { TargetId TargetId { get; } } // HitKind.Target; package does not apply HP
+interface IDamageable { TargetId TargetId { get; } } // HitKind.Target on colliders; package does not apply HP
+// Published volumes (ADR-030) are also Target, with no collider.
 
 interface IProjectileProtection { ProtectionLevel Level { get; } } // Basic / Strong; ADR-020
 
@@ -252,7 +255,7 @@ New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a
 
 - Live instances are entities with blittable components; `Tick` updates a package-owned `World`
 - Burst: lifetime and kinematic candidate position only
-- Hits: 3D PhysX via `IHitQuery` (not Unity Physics)
+- Hits: 3D PhysX via `IHitQuery` **and** published hit volumes (ADR-030; not Unity Physics)
 - Views: GameObject `ProjectileView` (not Entities Graphics)
 - Recipe / `IModifier` stay managed; entity holds `RecipeIndex`
 - Do **not** add Unity Physics, Entities Graphics, baking, or Player Loop bootstrap without an ADR

@@ -16,7 +16,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Stage list** — one of the six ordered modifier lists on a Recipe (`OnSpawn`, `OnTravel`, `OnTick`, `OnInterval`, `OnHit`, `OnExpire`). See [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Child recipe** — a full Recipe passed into a spawn modifier. Children do **not** inherit the parent’s lists unless that modifier says so
 - **Hit** — a collision result from the hit pipeline, not Unity’s `OnCollision*` messages
-- **Hit kind** — `Target` (damageable sandbox object) or `World` (wall / environment). Other projectiles are ignored until an ADR says otherwise
+- **Hit kind** — `Target` (`IDamageable` collider or a published hit volume) or `World` (wall / unmarked collider). Other projectiles are ignored until an ADR says otherwise
 - **Protection** — collider marker (`IProjectileProtection`) that changes how a hit is processed: Basic (OnHit/area still run, no status, game skips HP) or Strong (eat the projectile). Not a health bar. See [DECISIONS.md](DECISIONS.md) ADR-020
 - **Target** — the object described by a `Target` hit
 - **Homing target** — the object an instance is steering toward (may differ from what it eventually hits)
@@ -97,7 +97,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - Cameras, lighting, URP (host project)
 - Input handling, turret, sample HUD (preset dropdown, recipe sheet with Add/Remove from phase 21.b, fire, reset)
-- Dummy targets (HP, `IDamageable`, `IStatusReceiver`, optional `IProjectileProtection`)
+- Dummy targets (HP, `IDamageable`, `IStatusReceiver`, optional `IProjectileProtection`). Games without colliders publish hit volumes (phase 25 / ADR-030)
 - Player or enemy objects if you add them later
 
 If a type needs `Player`, `Enemy`, or camera code, it does not belong in **Runtime**. The UPM sample may contain those as an example.
@@ -544,9 +544,39 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** the consumer inspects the Runtime assembly
 - **Then:** there is no `SampleLab`, dummy HP, or turret type; `SampleLab` compiles only after Import
 
+### Phase 25 — Published volume is Target without a collider
+
+- **Given:** `SetHitTarget` for id 7 at a point with radius 0.5; a straight Recipe aimed through that point; no PhysX collider there
+- **When:** the instance is ticked until it reaches the volume
+- **Then:** Direct `Hit` has `Kind = Target` and `TargetId` 7; the package does not change HP
+
+### Phase 25 — Unmarked collider is still World
+
+- **Given:** a PhysX wall with no `IDamageable` and no published volume
+- **When:** a straight shot hits the wall
+- **Then:** `Kind = World`
+
+### Phase 25 — Pierce consumes published Targets
+
+- **Given:** `Pierce(1)` and two published volumes in a line, then a third
+- **When:** the instance travels through all three
+- **Then:** the first two raise Target `Hit` and the instance continues; the third raises `Hit` and despawns
+
+### Phase 25 — Bounce reflects a published Target
+
+- **Given:** `Bounce(1)` and one published volume, then empty space
+- **When:** the instance contacts that volume
+- **Then:** Direct `Hit` fires (`Kind = Target`); velocity reflects around the contact normal; the instance stays live
+
+### Phase 25 — AreaEffect and GroundField include published volumes
+
+- **Given:** a published volume inside `EffectRadius` / inside a GroundField XZ disk, and one outside
+- **When:** OnHit `AreaEffect` runs, then a `GroundField` pulse
+- **Then:** the inside volume receives Area `Hit` with that `TargetId`; the outside volume does not
+
 ## Product constraints
 
 - Sandbox uses URP
-- Collision queries use 3D PhysX
+- Collision queries use 3D PhysX plus published hit volumes (ADR-030)
 - Input System is sample-only (not a Runtime / package.json dependency)
 - Runtime package stays render-pipeline agnostic (no URP-only shaders or camera code in core)
