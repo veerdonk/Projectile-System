@@ -311,7 +311,7 @@ Disk in the same plane, radius `= spread` (count does not grow the disk). `n = 1
 - Edit Mode tests: OnHit splash hits a nearby scripted Target; area-only suppresses the Direct Hit; OnTravel splash at spawn; OnInterval aura hits a Target beside the flight path on the first interval and again on the second; `EffectRadius = 0` hits nobody; World overlap is ignored; area status raises `StatusApplied` per Target
 - Sandbox: OnHit splash with two dummies in radius; area-only (contact dummy takes area damage, not Recipe damage); OnTravel burst if a dummy is at the muzzle; aura flying the lane ticks anyone inside `EffectRadius`
 
-**Out of scope:** lingering ground fields (phase 19); occupancy enter/exit; `OnTick` aura; `OnExpire` area; scaling area damage with `Damage(n)`; rolling crit; applying HP/DoT in the package; editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** lingering ground fields (phase 19); occupancy enter/exit (**phase 26**); `OnTick` aura (**phase 26**); `OnExpire` area; scaling area damage with `Damage(n)`; rolling crit; applying HP/DoT in the package; editor tooling; Unity Physics; Entities Graphics
 
 **Proof:** fire OnHit AreaEffect — DummyTarget and a nearby dummy both lose area damage. Fire area-only — contact dummy loses area damage only. Fire OnTravel AreaEffect — dummy at muzzle is hit immediately. Fire interval aura — dummy beside the lane loses HP each interval while the shot is in range, then stops when it has passed.
 
@@ -425,7 +425,7 @@ The pool stops hard-coding `CreatePrimitive(Sphere)`. It asks an `IProjectileVie
 - Edit Mode tests: OnHit plant pulses a scripted Target in the disk immediately and again at the interval; a Target outside XZ (including one that a sphere of that radius would cover) is missed; after `lifetimeSeconds` there are no further Hits; status raises `StatusApplied` per pulse; OnExpire plants at expire position; OnTravel plants at spawn; Strong skipped; `radius = 0` plants nothing
 - Sandbox: OnHit GroundField at DummyTarget — a disk stays on the lane, DummyTarget and the nearby splash dummy lose field damage each interval, a dummy outside the disk does not; after lifetime the disk is gone. OnExpire Recipe leaves a disk where the shot died. Optional status Recipe shows `dummy` on anyone standing in the disk
 
-**Out of scope:** occupancy enter/exit; `OnTick` auras; chaining fields from fields; scaling field radius/damage with `EffectRadius(n)` / `Damage(n)`; ground raycast / terrain snap; Addressables; rolling crit; applying HP/DoT in the package; editor tooling; Unity Physics; Entities Graphics
+**Out of scope:** occupancy enter/exit (**phase 26**); `OnTick` auras (**phase 26**); chaining fields from fields; scaling field radius/damage with `EffectRadius(n)` / `Damage(n)`; ground raycast / terrain snap; Addressables; rolling crit; applying HP/DoT in the package; editor tooling; Unity Physics; Entities Graphics
 
 **Proof:** fire OnHit GroundField — a flat disk appears at the dummy; HP ticks while the dummy stands in it; the disk vanishes when its lifetime ends. Fire a lifetime-only shot with GroundField on OnExpire — the disk is where the shot died, not at the dummy. A dummy beside the disk (inside a sphere of that radius, outside the circle) is not hit.
 
@@ -593,9 +593,29 @@ Games publish living enemies as hit volumes (`TargetId`, position, radius) so a 
 - Edit Mode tests: straight Recipe vs a published sphere (no GameObject collider) raises Target `Hit` with that id; a PhysX wall without `IDamageable` is still World; Pierce(1) through two published volumes then dies on the third; Bounce(1) off a published volume reflects and `Hit` fires; AreaEffect OnHit includes a published volume outside the contact collider; GroundField pulse includes a published volume in the XZ disk and misses one outside; `radius <= 0` never hits; `RemoveHitTarget` then Tick does not hit. Existing collider tests stay green
 - Docs: [ARCHITECTURE.md](ARCHITECTURE.md) sketch, [ECS.md](ECS.md) query map, package `AGENTS.md` / `README.md` / `Documentation/index.md`, [SANDBOX.md](SANDBOX.md). Bump `package.json` version to **0.1.1**. Do not create a git tag
 
-**Out of scope:** merging hit and homing catalogs; published `IProjectileProtection`; exposing `IHitQuery`; converting the yard to ECS entities; applying HP; Unity Physics; Entities Graphics; OpenUPM
+**Out of scope:** merging hit and homing catalogs into one method; published `IProjectileProtection` (**phase 26**); Homing reading the hit catalog (**phase 26**); ApplyStatus proofs on volumes (**phase 26**); OnTick auras and occupancy (**phase 26**); exposing `IHitQuery`; converting the yard to ECS entities; applying HP; Unity Physics; Entities Graphics; OpenUPM
 
 **Proof:** Edit Mode published-sphere straight shot raises Target `Hit`. Pierce, Bounce, AreaEffect, and GroundField tests above are green. Yard Pierce line still uses collider dummies.
+
+**Stop.** Homing, ApplyStatus, published protection, OnTick auras, and occupancy are **phase 26**. Do not start it in the same session.
+
+## Phase 26 — Published targets: Homing, status, protection, auras, occupancy
+
+Finish Target-gated behaviour on the phase-25 catalog so an ECS enemy published once can be homed, statused, shielded, and tracked in auras/fields. Greybox does not need this. ADR-031. Depends on phase 25.
+
+**In scope**
+
+- **Homing:** acquisition and lock steering read published hit-target positions as well as `SetHomingCandidate`. Same id in both catalogs is one candidate. `SetHomingCandidate` remains for a pose that is not hittable. A published Target hit still drops the lock and ignores that id while it stays in front (ADR-010)
+- **ApplyStatus:** Direct published Target raises `StatusApplied`; World still does not; Pierce through two published volumes raises twice. AreaEffect / GroundField status include published volumes. Basic published protection suppresses ApplyStatus for that contact
+- **Protection:** `SetHitTarget(id, position, radius, ProtectionLevel protection = None)`. Basic and Strong match collider ADR-020, including Area/Ground/occupancy skip Strong and Pierce consuming Basic
+- **OnTick aura:** `AreaEffect` on `OnTick` overlaps every `Tick` (same sphere as OnInterval). Default occupancy false → a Hit each Tick while inside
+- **Occupancy:** `occupancy` (default false) on `AreaEffect` and `GroundField`. True: `HitSource.OccupancyEnter` (Area Hit + status once) when a Target (`IDamageable` or published) becomes inside; `HitSource.OccupancyExit` (Damage 0, no status) when they leave; no pulse/tick Hits from that modifier while they stay. False: today’s interval / OnTick pulses
+- Edit Mode tests for each bullet. `IHitQuery` stays internal. Yard collider protection/status presets stay as they are
+- Docs: sketch, `HitSource`, package `AGENTS.md`. Bump `package.json` to **0.1.2**. Do not create a git tag
+
+**Out of scope:** deleting `SetHomingCandidate`; exposing `IHitQuery`; converting the yard to ECS; applying HP/DoT; Unity Physics; Entities Graphics; projectile-vs-projectile
+
+**Proof:** Homing acquires a volume published only via `SetHitTarget`. ApplyStatus fires on that Direct hit. Strong published volume eats the shot with no `Hit`. Occupancy enter once, silent while standing, exit Hit; OnTick AreaEffect without occupancy Hits every Tick.
 
 **Stop.**
 
@@ -603,7 +623,6 @@ Games publish living enemies as hit volumes (`TargetId`, position, radius) so a 
 
 - Unity Physics and/or Entities Graphics adapters
 - Multiply patterns: line, arc, cross, triangle; a pattern editor that authors an `IMultiplyPattern`
-- Occupancy enter/exit; `OnTick` auras
 - GroundField plant pose: v1 snaps Y to the world ground plane (`0`). Revisit spawn process and positioning (terrain / ground raycast, sloped floors, a chosen ground height) without changing the disk overlap or pulse contract
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Hold-to-fire; save Play Mode tweaks to `RecipeAsset`

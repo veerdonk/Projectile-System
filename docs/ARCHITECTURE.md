@@ -13,7 +13,7 @@ Do not add a second composition model. Stage lists are the only one ([DECISIONS.
 | Definition | ScriptableObjects / serializable data | `RecipeAsset` authors a `Recipe`: base stats + six ordered modifier lists ([DECISIONS.md](DECISIONS.md) ADR-023) |
 | Simulation | Internal `IComponentData` in an isolated Entities `World` | Position, velocity, remaining lifetime, pierce/bounce remaining, interval clocks, combat stats that can change in flight. No `UnityEngine.Object` fields |
 | Movement | Swappable solver | Kinematic first (Burst integrate); optional Rigidbody later |
-| Hits | Query + callback pipeline | PhysX SphereCast / overlap; `HitInfo` events, not `OnCollisionEnter` |
+| Hits | Query + callback pipeline | PhysX SphereCast / overlap plus published hit volumes (ADR-030); `HitInfo` events, not `OnCollisionEnter` |
 | Presentation | Views bound to instance id | Mesh, trail, VFX GameObjects; may be disabled in tests |
 | Pooling | Package runtime | Rent / return by Recipe id: enable/disable entities; recycle views |
 
@@ -25,7 +25,7 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 | --- | --- | --- |
 | `OnSpawn` | Once when the instance is created | `Multicast(n)`, `Interval(n)` |
 | `OnTravel` | Once after spawn, before the first move | `Speed(n)`, `Damage(n)`, `Critical(n)`, `Mana(n)`, `Spread(n)`, `EffectRadius(n)`, `Size(n)`, `Gravity(n)`, `AreaEffect`, `GroundField` |
-| `OnTick` | Every `ProjectileWorld.Tick` | `Homing(n)` |
+| `OnTick` | Every `ProjectileWorld.Tick` | `Homing(n)`, `AreaEffect` (phase 26) |
 | `OnInterval` | Each time the instance’s interval elapses during flight | `Multiply(n)`, scale modifiers, `AreaEffect` (aura) |
 | `OnHit` | On each hit from the pipeline | `Pierce`, `Bounce`, `Multiply` spawn, scale modifiers, `ApplyStatus`, `AreaEffect`, `GroundField` |
 | `OnExpire` | When the instance is ending | `Multiply` on death, `GroundField` |
@@ -86,9 +86,9 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Views:** the pool asks `IProjectileViewFactory` for a GameObject view from `Recipe.PresentationId` ([DECISIONS.md](DECISIONS.md) ADR-021). Default is a sphere primitive. Hits stay SphereCast of `Radius`; the mesh is not the collider. Ground-field disks use a separate `IGroundFieldViewFactory` (ADR-026); default is a thin cylinder. A game prefab is not rescaled.
 
-**Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016). Area damage is on the modifier. Interval is an aura on the live instance, pulsed on `OnInterval`, not a ground field. Direct contact can be suppressed. Overlap includes `IDamageable` colliders **and** published hit volumes (ADR-030).
+**Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016). Area damage is on the modifier. Interval is an aura on the live instance, pulsed on `OnInterval`, not a ground field. Direct contact can be suppressed. Overlap includes `IDamageable` colliders **and** published hit volumes (ADR-030). Phase 26 (ADR-031): also `OnTick` (every Tick); optional `occupancy` for enter/exit instead of pulses.
 
-**Ground field:** `GroundField` on `OnHit` / `OnExpire` / `OnTravel` plants a lingering horizontal disk ([DECISIONS.md](DECISIONS.md) ADR-022). Size, lifetime, damage, optional status, and pulse period are on the modifier. The disk is not a Recipe and has no stage lists. `IHitQuery.OverlapDisk` tests XZ distance (colliders and published volumes, ADR-030); pulses reuse Area `Hit` / `StatusApplied`. Views come from `IGroundFieldViewFactory` (ADR-026). Occupancy enter/exit is later.
+**Ground field:** `GroundField` on `OnHit` / `OnExpire` / `OnTravel` plants a lingering horizontal disk ([DECISIONS.md](DECISIONS.md) ADR-022). Size, lifetime, damage, optional status, and pulse period are on the modifier. The disk is not a Recipe and has no stage lists. `IHitQuery.OverlapDisk` tests XZ distance (colliders and published volumes, ADR-030); pulses reuse Area `Hit` / `StatusApplied`. Views come from `IGroundFieldViewFactory` (ADR-026). Occupancy enter/exit is **phase 26** (ADR-031).
 
 ## Hit pipeline
 
@@ -97,7 +97,7 @@ Kinematic movement casts along the step (PhysX SphereCast / overlap **and** publ
 ```csharp
 enum HitKind { Target, World }
 
-enum HitSource { Direct, Area }
+enum HitSource { Direct, Area, OccupancyEnter, OccupancyExit } // Occupancy* = phase 26 / ADR-031
 
 enum ProtectionLevel { None, Basic, Strong }
 
@@ -105,7 +105,7 @@ struct HitInfo
 {
     ProjectileId InstanceId;
     HitKind Kind;
-    HitSource Source;       // Direct = contact cast; Area = AreaEffect or GroundField overlap (ADR-016, ADR-022)
+    HitSource Source;       // Direct = contact; Area = pulse overlap; OccupancyEnter/Exit = phase 26 (ADR-031)
     ProtectionLevel Protection; // None, Basic, or Strong (ADR-020)
     Vector3 Point;
     Vector3 Normal;
@@ -145,7 +145,8 @@ interface IProjectileWorld
     void Tick(float dt);
     void SetHomingCandidate(TargetId id, Vector3 position);
     void RemoveHomingCandidate(TargetId id);
-    void SetHitTarget(TargetId id, Vector3 position, float radius); // ADR-030; radius<=0 removes
+    void SetHitTarget(TargetId id, Vector3 position, float radius, ProtectionLevel protection = None);
+    // ADR-030; protection default None until phase 26 / ADR-031. radius<=0 removes
     void RemoveHitTarget(TargetId id);
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
@@ -222,7 +223,7 @@ Sandbox fire button / sample turret calls `Spawn`. A single sandbox driver calls
 - Simulation components have no `MonoBehaviour`, `GameObject`, or other `UnityEngine.Object` fields
 - The simulation `World` is package-owned, not `DefaultGameObjectInjectionWorld`, and is not ticked from the Player Loop
 - No `FindObjectOfType` (or equivalent global search) in the runtime package
-- Deterministic given the same Recipe, spawn pose, `dt` sequence, seed, and homing candidate catalog (interval spread may use a seed on the world)
+- Deterministic given the same Recipe, spawn pose, `dt` sequence, seed, homing candidate catalog, and published hit catalog (interval spread may use a seed on the world)
 
 ## Folder map
 

@@ -40,7 +40,7 @@ SampleLab.Update
             2. ProjectileSimulationSystem  managed:
                  snapshot entities whose lifetime <= 0; expire them (OnExpire, return to pool)
                  snapshot remaining live entities **once**
-                 OnTick modifiers (same list); Homing acquires if unassigned (skips last Target hit while it stays ahead), then steers at n degrees/second
+                 OnTick modifiers (same list); Homing acquires if unassigned (skips last Target hit while it stays ahead), then steers at n degrees/second. Phase 26: acquisition also reads published hit-target poses; AreaEffect on OnTick overlaps after Homing (occupancy or pulse, ADR-031)
                  OnInterval: if the instance's interval elapsed this tick, run the whole list in order (more than once if `dt` skips a beat). `Multiply` is skipped when this instance's multiply generations are spent; `Speed` / `Damage` / `Critical` / `Mana` / `Size` / `Spread` / `EffectRadius` / `Gravity` still run. `AreaEffect` overlaps at the instance position after each crossing (before integrate)
                  Burst integrate: if Gravity > 0, velocity += (0,-1,0) * gravity * dt; then candidate = pos + vel * dt (Gravity <= 0 leaves velocity unchanged)
                  move/hit on the same list; skip if a hit already disabled the entity
@@ -54,7 +54,7 @@ SampleLab.Update
                  Multiply children spawn slightly off the surface along that normal and inherit the parent's ignored collider so they do not immediately overlap-hit the same dummy
                  else: Position = Candidate, sync ProjectileView
        → flush RequestSpawn queue (child Recipes)
-       → tick live ground fields (ADR-022): decrement lifetime; OverlapDisk on plant and each interval; Area Hit / StatusApplied; disable view when lifetime ends
+       → tick live ground fields (ADR-022): decrement lifetime; OverlapDisk on plant and each interval (or occupancy enter/exit, phase 26); Area Hit / StatusApplied; disable view when lifetime ends
 ```
 
 Spawn (`OnSpawn` / `OnTravel`) runs in `ProjectileWorld` when an entity is rented, not inside the Burst job. `AreaEffect` on `OnTravel` flushes its overlap there, before the first move. `Multicast` runs there too: it re-aims the rented entity through the modifier context and queues its extras, which `Spawn` flushes before it returns, so all `n` instances exist before the next `Tick`. Those queued requests carry a multicast budget: `Recipe.MulticastGenerations` (0 by default) counted down one per generation, so the extra's `OnSpawn` list normally runs with `Multicast` skipped. Remaining pierce/bounce are copied from `OnHit` `Pierce` / `Bounce` modifiers onto the `Projectile` row at rent. Combat stats (`Damage`, `CriticalChance`, `ManaCost`, `EffectRadius`) copy from the Recipe at rent; `Spread` copies from the last `Multiply` on `OnInterval` / `OnHit` / `OnExpire`; `Gravity` copies from `Recipe.Gravity` (default 0). `OnTravel` `Damage` / `Critical` / `Mana` / `Size` / `Spread` / `EffectRadius` / `Gravity` (and `Speed`) scale that copy before the first move. `Size` writes `Radius`; SphereCast and the GameObject view follow it. `ElapsedSeconds` starts at 0 and is incremented in the Burst lifetime job; `OnInterval` uses that clock, not a second remaining-lifetime field. The period it is measured against is `Projectile.IntervalSeconds`, written at spawn by `Interval` on `OnSpawn` and 0 (never fires) without one.
@@ -92,13 +92,13 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/EffectRadius.cs` | Scale instance effect radius by n. Same stages as `Speed`. Does not run an overlap query |
 | `Runtime/Interval.cs` | `OnSpawn`: seconds between `OnInterval` runs, onto `Projectile.IntervalSeconds`. One period per instance drives the whole list |
 | `Runtime/ApplyStatus.cs` | `OnHit` Target: request an `IStatusEffect`. Each request on the list is flushed as Direct `StatusApplied` after the list, in order, unless suppressed. World hits do nothing |
-| `Runtime/AreaEffect.cs` | Overlap Targets in instance `EffectRadius`. Own damage/status. OnHit at the contact point, OnTravel at spawn, OnInterval aura on the flying instance. Queues on `ModifierContext`; does not call Physics |
-| `Runtime/GroundField.cs` | Plants a lingering horizontal disk on OnHit / OnExpire / OnTravel. Own radius, lifetime, damage, optional status, pulse period. Owned by `ProjectileWorld`, ticked from the same `Tick`. Not a Recipe |
+| `Runtime/AreaEffect.cs` | Overlap Targets in instance `EffectRadius`. Own damage/status. OnHit at the contact point, OnTravel at spawn, OnInterval aura on the flying instance. Phase 26: OnTick and optional occupancy. Queues on `ModifierContext`; does not call Physics |
+| `Runtime/GroundField.cs` | Plants a lingering horizontal disk on OnHit / OnExpire / OnTravel. Own radius, lifetime, damage, optional status, pulse period. Owned by `ProjectileWorld`, ticked from the same `Tick`. Not a Recipe. Phase 26: optional occupancy |
 | `Runtime/IGroundFieldViewFactory.cs` | `Create(radius, poolParent)` plus default `PrimitiveGroundFieldViewFactory` (thin cylinder scaled to `2 * radius` on XZ) |
 | `Runtime/PrefabGroundFieldViewFactory.cs` | Map `GroundField.PresentationId` → prefab; does not rescale; unknown ids fall back to the primitive |
 | `Runtime/IStatusEffect.cs` | Effect contract plus v1 `DummyStatusEffect` (`Id` `"dummy"`). Package does not tick DoT |
 | `Runtime/IStatusReceiver.cs` | Game/sandbox apply contract. Package never calls it; sandbox maps `StatusApplied` → `Apply` |
-| `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget` |
+| `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; phase 26 also reads hit-target positions. `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget` |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views from `IProjectileViewFactory` |
 | `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap plus published hit volumes (ADR-030). Ignore last collider / TargetId so pierce/bounce can leave the surface. `Overlap` / `OverlapDisk` return `IDamageable` colliders and published Targets |
 | `Runtime/IProjectileViewFactory.cs` | `Create(recipe, poolParent)` plus default `PrimitiveViewFactory` (sphere scaled to `2 * Radius`) |

@@ -65,6 +65,7 @@ Always: enter Play Mode from the imported `Yard.unity`, fire once, confirm the p
 | 23 | Package Manager | Id is `com.veerdonk.projectile-system`; template Example sample is gone; keyboard-slot lab HUD is gone |
 | 24 | Package Manager → Import **Projectile Yard** | `Yard.unity` Play Mode; Pierce still pierces the first two dummies. Runtime has no `SampleLab` |
 | 25 | Edit Mode published volumes | Straight shot vs a sphere with no collider raises Target `Hit`. Pierce / Bounce / AreaEffect / GroundField tests in [REQUIREMENTS.md](REQUIREMENTS.md). Yard collider dummies unchanged |
+| 26 | Edit Mode published volumes | Homing acquires from `SetHitTarget` only. ApplyStatus on a published Target. Basic/Strong published protection. OnTick AreaEffect Hits each Tick; occupancy enter once then exit. Yard collider presets unchanged |
 
 AreaEffect, GroundField, Recipe gravity, barrel pitch, and needed-arc `BallisticAim` (Cannonball) are sample presets.
 
