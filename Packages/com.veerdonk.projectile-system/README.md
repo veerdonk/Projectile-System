@@ -18,7 +18,7 @@ Requires **Unity 6 LTS `6000.6`** (this project is `6000.6.0f1`). Package Manage
 https://github.com/veerdonk/Projectile-System.git?path=/Packages/com.veerdonk.projectile-system
 ```
 
-To pin a release later, append `#` and the tag name (for example `#v0.1.0`) after you create that tag.
+To pin a release, append `#` and the tag (for example `#v0.1.1`). Merges to `main` that introduce a new `package.json` version create tag `v{version}` and a GitHub Release (notes from `CHANGELOG.md` plus merged PRs).
 
 The GitHub repo must be public, or the other person needs access.
 

@@ -1,0 +1,70 @@
+name: Release package
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-package
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Read package version
+        id: pkg
+        run: |
+          version=$(jq -r .version Packages/com.veerdonk.projectile-system/package.json)
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.+-].+)?$ ]]; then
+            echo "Invalid package.json version: $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if tag exists
+        id: check
+        run: |
+          tag="${{ steps.pkg.outputs.tag }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null; then
+            echo "Tag ${tag} already exists; skipping release."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.pkg.outputs.tag }}"
+          version="${{ steps.pkg.outputs.version }}"
+          changelog=Packages/com.veerdonk.projectile-system/CHANGELOG.md
+          notes=$(mktemp)
+          if [[ -f "$changelog" ]]; then
+            awk -v ver="$version" '
+              $0 ~ "^## \\[" ver "\\]" { grab=1; print; next }
+              grab && /^## / { exit }
+              grab { print }
+            ' "$changelog" > "$notes"
+          fi
+          previous=$(git tag -l 'v*' --sort=-v:refname | awk -v t="$tag" '$0 != t { print; exit }')
+          args=(release create "$tag" --title "$tag" --target "${{ github.sha }}" --generate-notes)
+          if [[ -n "$previous" ]]; then
+            args+=(--notes-start-tag "$previous")
+          fi
+          if [[ -s "$notes" ]]; then
+            args+=(--notes "$(cat "$notes")")
+          fi
+          gh "${args[@]}"
