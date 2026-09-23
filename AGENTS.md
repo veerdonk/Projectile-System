@@ -40,7 +40,7 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 - Direct ignore is the last published `TargetId` while the instance still overlaps that sphere (skin 0.02), same slot idea as the last collider. Area and GroundField do not use that ignore.
 - Nearest contact wins between a scripted/PhysX hit and a published sweep. Ties keep the collider hit.
 - After the version bump, **Projectile Lab > Rebuild** writes the imported yard under `Assets/Samples/.../0.1.1/Projectile Yard/`. Yard dummies stay colliders.
-- Sample path / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage line endings / Sonar notes from phase 24 still apply. Do not create a git tag; the human tags 0.1.1.
+- Sample path / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage line endings / Sonar notes from phase 24 still apply. Do not create a git tag in a phase session. `.github/workflows/release-package.yml` on `main` creates `v{package.json version}` and a GitHub Release when that tag is missing (CHANGELOG section plus generated PR notes). First merge of the workflow will tag **v0.1.1**.
 
 ## Do not
 

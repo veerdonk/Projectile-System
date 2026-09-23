@@ -591,7 +591,7 @@ Games publish living enemies as hit volumes (`TargetId`, position, radius) so a 
 - `Bounce(n)` reflects a published Target around `HitInfo.Normal` and still raises Direct `Hit` (ADR-010)
 - `IHitQuery` stays internal. `ScriptedHitQuery` and `PhysicsHitQuery` both read the world catalog. No Unity Physics, no companion colliders, no second façade
 - Edit Mode tests: straight Recipe vs a published sphere (no GameObject collider) raises Target `Hit` with that id; a PhysX wall without `IDamageable` is still World; Pierce(2) through two published volumes then dies on the third (`Pierce(n)` absorbs n Target hits, same as phase 2); Bounce(1) off a published volume reflects and `Hit` fires; AreaEffect OnHit includes a published volume outside the contact collider; GroundField pulse includes a published volume in the XZ disk and misses one outside; `radius <= 0` never hits; `RemoveHitTarget` then Tick does not hit. Existing collider tests stay green
-- Docs: [ARCHITECTURE.md](ARCHITECTURE.md) sketch, [ECS.md](ECS.md) query map, package `AGENTS.md` / `README.md` / `Documentation/index.md`, [SANDBOX.md](SANDBOX.md). Bump `package.json` version to **0.1.1**. Do not create a git tag
+- Docs: [ARCHITECTURE.md](ARCHITECTURE.md) sketch, [ECS.md](ECS.md) query map, package `AGENTS.md` / `README.md` / `Documentation/index.md`, [SANDBOX.md](SANDBOX.md). Bump `package.json` version to **0.1.1**. Do not create a git tag in the phase session; `.github/workflows/release-package.yml` tags `v{version}` and opens a GitHub Release after the bump reaches `main`
 
 **Out of scope:** merging hit and homing catalogs into one method; published `IProjectileProtection` (**phase 26**); Homing reading the hit catalog (**phase 26**); ApplyStatus proofs on volumes (**phase 26**); OnTick auras and occupancy (**phase 26**); exposing `IHitQuery`; converting the yard to ECS entities; applying HP; Unity Physics; Entities Graphics; OpenUPM
 
@@ -611,7 +611,7 @@ Finish Target-gated behaviour on the phase-25 catalog so an ECS enemy published 
 - **OnTick aura:** `AreaEffect` on `OnTick` overlaps every `Tick` (same sphere as OnInterval). Default occupancy false → a Hit each Tick while inside
 - **Occupancy:** `occupancy` (default false) on `AreaEffect` and `GroundField`. True: `HitSource.OccupancyEnter` (Area Hit + status once) when a Target (`IDamageable` or published) becomes inside; `HitSource.OccupancyExit` (Damage 0, no status) when they leave; no pulse/tick Hits from that modifier while they stay. False: today’s interval / OnTick pulses
 - Edit Mode tests for each bullet. `IHitQuery` stays internal. Yard collider protection/status presets stay as they are
-- Docs: sketch, `HitSource`, package `AGENTS.md`. Bump `package.json` to **0.1.2**. Do not create a git tag
+- Docs: sketch, `HitSource`, package `AGENTS.md`. Bump `package.json` to **0.1.2**. Do not create a git tag in the phase session; the `main` release workflow tags `v0.1.2` after merge
 
 **Out of scope:** deleting `SetHomingCandidate`; exposing `IHitQuery`; converting the yard to ECS; applying HP/DoT; Unity Physics; Entities Graphics; projectile-vs-projectile
 
