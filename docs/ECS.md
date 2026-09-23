@@ -44,7 +44,7 @@ SampleLab.Update
                  OnInterval: if the instance's interval elapsed this tick, run the whole list in order (more than once if `dt` skips a beat). `Multiply` is skipped when this instance's multiply generations are spent; `Speed` / `Damage` / `Critical` / `Mana` / `Size` / `Spread` / `EffectRadius` / `Gravity` still run. `AreaEffect` overlaps at the instance position after each crossing (before integrate)
                  Burst integrate: if Gravity > 0, velocity += (0,-1,0) * gravity * dt; then candidate = pos + vel * dt (Gravity <= 0 leaves velocity unchanged)
                  move/hit on the same list; skip if a hit already disabled the entity
-                 IHitQuery.TryCast (ScriptedHitQuery in Edit Mode, PhysicsHitQuery in Play Mode)
+                 IHitQuery.TryCast (ScriptedHitQuery in Edit Mode, PhysicsHitQuery in Play Mode), nearest of PhysX and published hit spheres (ADR-030)
                  sample the instance combat stats (damage, crit chance, effect radius) onto that HitInfo; Source = Direct
                  on hit: OnHit, then Direct Hit unless AreaEffect suppressed it, then Direct StatusApplied unless suppressed
                  then IHitQuery.Overlap for each queued AreaEffect; Area Hit / StatusApplied per Target (World colliders ignored)
@@ -100,6 +100,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/IStatusReceiver.cs` | Game/sandbox apply contract. Package never calls it; sandbox maps `StatusApplied` → `Apply` |
 | `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds published poses; phase 26 also reads hit-target positions. `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget` |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views from `IProjectileViewFactory` |
+| `Runtime/HitTargetCatalog.cs` | Published spheres from `SetHitTarget` / `RemoveHitTarget`. Direct sweep, area sphere, and ground disk all read it. Not homing |
 | `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap plus published hit volumes (ADR-030). Ignore last collider / TargetId so pierce/bounce can leave the surface. `Overlap` / `OverlapDisk` return `IDamageable` colliders and published Targets |
 | `Runtime/IProjectileViewFactory.cs` | `Create(recipe, poolParent)` plus default `PrimitiveViewFactory` (sphere scaled to `2 * Radius`) |
 | `Runtime/PrefabViewFactory.cs` | Map `PresentationId` → prefab; does not rescale; unknown ids fall back to the primitive factory |

@@ -12,8 +12,11 @@ namespace Veerdonk.ProjectileSystem
         readonly RaycastHit[] castBuffer = new RaycastHit[BufferSize];
         readonly Dictionary<ProjectileId, Collider> ignoreColliderByInstance = new Dictionary<ProjectileId, Collider>();
 
+        public HitTargetCatalog HitTargets { get; set; }
+
         public bool TryCast(ProjectileId instanceId, Vector3 origin, Vector3 direction, float distance, float radius, out HitInfo hit)
         {
+            HitTargets?.ReleaseIfSeparated(instanceId, origin, radius);
             ignoreColliderByInstance.TryGetValue(instanceId, out Collider ignore);
 
             int overlapCount = Physics.OverlapSphereNonAlloc(
@@ -24,42 +27,51 @@ namespace Veerdonk.ProjectileSystem
                 QueryTriggerInteraction.Ignore);
 
             Vector3 incoming = direction.sqrMagnitude > 1e-12f ? direction.normalized : Vector3.forward;
+            HitInfo publishedHit = default;
+            float publishedTravel = 0f;
+            float publishedClose = 0f;
+            bool published = HitTargets != null && HitTargets.TrySweep(
+                instanceId,
+                origin,
+                incoming,
+                distance,
+                radius,
+                out publishedHit,
+                out publishedTravel,
+                out publishedClose);
 
-            if (TryPickOverlap(instanceId, origin, incoming, overlapCount, ignore, out hit, out Collider hitCollider))
+            if (TryPickOverlap(instanceId, origin, incoming, overlapCount, ignore, out hit, out Collider hitCollider, out float overlapClose)
+                && (!published || publishedTravel > 1e-4f || overlapClose <= publishedClose))
             {
                 ignoreColliderByInstance[instanceId] = hitCollider;
                 return true;
             }
 
             if (distance <= 1e-8f || direction.sqrMagnitude <= 1e-12f)
-            {
-                RememberOrClearIgnore(instanceId, ignore, origin, radius, castCount: 0);
-                hit = default;
-                return false;
-            }
+                return TakePublishedOrMiss(instanceId, origin, radius, ignore, castCount: 0, published, publishedHit, ref hit);
 
-            Vector3 dir = incoming;
             int castCount = Physics.SphereCastNonAlloc(
                 origin,
                 radius,
-                dir,
+                incoming,
                 castBuffer,
                 distance,
                 ~0,
                 QueryTriggerInteraction.Ignore);
 
-            if (TryPickCast(instanceId, origin, dir, castCount, ignore, out hit, out hitCollider))
+            if (TryPickCast(instanceId, origin, incoming, castCount, ignore, out hit, out hitCollider, out float castTravel)
+                && (!published || castTravel <= publishedTravel))
             {
                 ignoreColliderByInstance[instanceId] = hitCollider;
                 return true;
             }
 
-            RememberOrClearIgnore(instanceId, ignore, origin, radius, castCount);
-            return false;
+            return TakePublishedOrMiss(instanceId, origin, radius, ignore, castCount, published, publishedHit, ref hit);
         }
 
         public void CopyIgnore(ProjectileId from, ProjectileId to)
         {
+            HitTargets?.CopyIgnore(from, to);
             if (from == to)
                 return;
             if (!ignoreColliderByInstance.TryGetValue(from, out Collider collider) || collider == null)
@@ -110,6 +122,8 @@ namespace Veerdonk.ProjectileSystem
                     Normal = normal
                 });
             }
+
+            HitTargets?.AppendSphere(instanceId, center, radius, results);
         }
 
         public void OverlapDisk(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
@@ -166,6 +180,31 @@ namespace Veerdonk.ProjectileSystem
                     Normal = normal
                 });
             }
+
+            HitTargets?.AppendDisk(instanceId, center, radius, results);
+        }
+
+        bool TakePublishedOrMiss(
+            ProjectileId instanceId,
+            Vector3 origin,
+            float radius,
+            Collider ignore,
+            int castCount,
+            bool published,
+            HitInfo publishedHit,
+            ref HitInfo hit)
+        {
+            if (!published)
+            {
+                RememberOrClearIgnore(instanceId, ignore, origin, radius, castCount);
+                hit = default;
+                return false;
+            }
+
+            HitTargets.NoteHit(instanceId, publishedHit.TargetId);
+            RememberOrClearIgnore(instanceId, ignore, origin, radius, castCount);
+            hit = publishedHit;
+            return true;
         }
 
         bool TryPickOverlap(
@@ -175,11 +214,12 @@ namespace Veerdonk.ProjectileSystem
             int count,
             Collider ignore,
             out HitInfo hit,
-            out Collider hitCollider)
+            out Collider hitCollider,
+            out float closeness)
         {
             hit = default;
             hitCollider = null;
-            float best = float.PositiveInfinity;
+            closeness = float.PositiveInfinity;
             bool found = false;
 
             for (int i = 0; i < count; i++)
@@ -190,10 +230,10 @@ namespace Veerdonk.ProjectileSystem
 
                 Vector3 point = collider.ClosestPoint(origin);
                 float distSq = (point - origin).sqrMagnitude;
-                if (distSq >= best)
+                if (distSq >= closeness)
                     continue;
 
-                best = distSq;
+                closeness = distSq;
                 hit = BuildHit(instanceId, collider, origin, incoming, point, origin - point);
                 hitCollider = collider;
                 found = true;
@@ -209,11 +249,12 @@ namespace Veerdonk.ProjectileSystem
             int count,
             Collider ignore,
             out HitInfo hit,
-            out Collider hitCollider)
+            out Collider hitCollider,
+            out float travel)
         {
             hit = default;
             hitCollider = null;
-            float best = float.PositiveInfinity;
+            travel = float.PositiveInfinity;
             bool found = false;
 
             for (int i = 0; i < count; i++)
@@ -223,10 +264,10 @@ namespace Veerdonk.ProjectileSystem
                 if (collider == null || !collider.enabled || collider == ignore)
                     continue;
 
-                if (rayHit.distance >= best)
+                if (rayHit.distance >= travel)
                     continue;
 
-                best = rayHit.distance;
+                travel = rayHit.distance;
                 hit = BuildHit(instanceId, collider, origin, incoming, rayHit.point, rayHit.normal);
                 hitCollider = collider;
                 found = true;

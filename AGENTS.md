@@ -33,12 +33,14 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phases 25–26 scheduled (not implemented)**
+**Phase 25 — published hit volumes**
 
-- Implement **25 first** (ADR-030, `package.json` 0.1.1): `SetHitTarget` / `RemoveHitTarget`, Direct / AreaEffect / GroundField / Pierce / Bounce. Homing still `SetHomingCandidate` only. Protection on volumes is None. No occupancy, no OnTick AreaEffect.
-- **26** (ADR-031, 0.1.2) depends on 25: Homing reads hit-target poses; optional `ProtectionLevel` on `SetHitTarget`; ApplyStatus proofs; `AreaEffect` on `OnTick`; `occupancy` on AreaEffect and GroundField (`HitSource.OccupancyEnter` / `OccupancyExit`). Do not delete `SetHomingCandidate`. Do not merge catalogs into one method.
-- Yard stays collider dummies. Greybox game can pin 0.1.1 after 25; homing/status/shields/auras wait for 0.1.2.
-- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage line endings / Sonar notes from phase 24 still apply.
+- `SetHitTarget(id, position, radius)` is three arguments. Phase 26 adds `ProtectionLevel`. Do not honor shields, homing, ApplyStatus, OnTick auras, or occupancy on this catalog yet.
+- `Pierce(n)` still absorbs `n` Target hits. Dying on the third published volume is `Pierce(2)`, same as `PierceTests` and the yard Pierce preset. The phase bullet says `Pierce(1)`; that count would die on the second volume.
+- Direct ignore is the last published `TargetId` while the instance still overlaps that sphere (skin 0.02), same slot idea as the last collider. Area and GroundField do not use that ignore.
+- Nearest contact wins between a scripted/PhysX hit and a published sweep. Ties keep the collider hit.
+- After the version bump, **Projectile Lab > Rebuild** writes the imported yard under `Assets/Samples/.../0.1.1/Projectile Yard/`. Yard dummies stay colliders.
+- Sample path / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage line endings / Sonar notes from phase 24 still apply. Do not create a git tag; the human tags 0.1.1.
 
 ## Do not
 

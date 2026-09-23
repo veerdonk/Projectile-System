@@ -10,6 +10,13 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         bool hasQueued;
         bool filterInstance;
         ProjectileId queuedInstance;
+        HitTargetCatalog hitTargets;
+
+        HitTargetCatalog IHitQuery.HitTargets
+        {
+            get => hitTargets;
+            set => hitTargets = value;
+        }
 
         public void Queue(
             HitKind kind,
@@ -69,13 +76,33 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
 
         public bool TryCast(ProjectileId instanceId, Vector3 origin, Vector3 direction, float distance, float radius, out HitInfo hit)
         {
-            if (!hasQueued)
+            hitTargets?.ReleaseIfSeparated(instanceId, origin, radius);
+            bool queuedForThis = hasQueued && (!filterInstance || queuedInstance == instanceId);
+            HitInfo publishedHit = default;
+            float publishedTravel = 0f;
+            bool published = false;
+            if (hitTargets != null)
             {
-                hit = default;
-                return false;
+                published = hitTargets.TrySweep(
+                    instanceId,
+                    origin,
+                    direction,
+                    distance,
+                    radius,
+                    out publishedHit,
+                    out publishedTravel,
+                    out _);
             }
 
-            if (filterInstance && queuedInstance != instanceId)
+            if (published && (!queuedForThis || publishedTravel < QueuedTravel(origin, direction, queued.Value.Point)))
+            {
+                hit = publishedHit;
+                hit.InstanceId = instanceId;
+                hitTargets.NoteHit(instanceId, hit.TargetId);
+                return true;
+            }
+
+            if (!queuedForThis)
             {
                 hit = default;
                 return false;
@@ -87,6 +114,13 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             queued = null;
             filterInstance = false;
             return true;
+        }
+
+        static float QueuedTravel(Vector3 origin, Vector3 direction, Vector3 point)
+        {
+            if (direction.sqrMagnitude <= 1e-12f)
+                return 0f;
+            return Vector3.Dot(point - origin, direction.normalized);
         }
 
         public void Overlap(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
@@ -116,6 +150,8 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                     Normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up
                 });
             }
+
+            hitTargets?.AppendSphere(instanceId, center, radius, results);
         }
 
         public void OverlapDisk(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
@@ -147,10 +183,13 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                     Normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up
                 });
             }
+
+            hitTargets?.AppendDisk(instanceId, center, radius, results);
         }
 
         public void CopyIgnore(ProjectileId from, ProjectileId to)
         {
+            hitTargets?.CopyIgnore(from, to);
         }
 
         struct OverlapBody

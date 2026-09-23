@@ -36,7 +36,7 @@ The package is already embedded. Open the project in Unity 6 LTS. Import sample 
 2. Author a `Recipe` in code, or **Create > Projectile > Recipe** and call `ToRecipe()`.
 3. `Spawn(new SpawnRequest { Recipe, Position, Direction })`.
 4. `Tick(dt)` once per frame from one driver.
-5. Listen to `Hit` to apply HP in your game. Put `IDamageable` on colliders that should count as targets.
+5. Listen to `Hit` to apply HP in your game. Put `IDamageable` on colliders that should count as targets. A target with no collider is `SetHitTarget(id, position, radius)` (`RemoveHitTarget` to drop it; `radius <= 0` removes). That catalog is separate from Homing.
 6. `Dispose()` when the scene unloads (the world owns an Entities `World`).
 
 ```csharp
