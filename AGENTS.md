@@ -33,14 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 24 — Projectile Yard sample**
+**Phases 25–26 scheduled (not implemented)**
 
-- Source of truth is `Packages/com.veerdonk.projectile-system/Samples~/Yard/` (namespace `Veerdonk.ProjectileSystem.Samples`). `Samples~` does not compile until Import or Rebuild copies it to `Assets/Samples/` (gitignored).
-- **Projectile Lab > Rebuild** resolves the import folder with `Sample.FindByPackage`. On Unity 6000.6 that folder is `Assets/Samples/com.veerdonk.projectile-system/<version>/Projectile Yard/` (the sample display name, not `Yard`). It writes `Scenes/Yard.unity` there and copies that scene file back into `Samples~/Yard/Scenes/`.
-- Sample asmdef references `Unity.InputSystem` and `UnityEngine.UI`. They are not `package.json` dependencies. This project’s Active Input Handling is Input System only, so Fire/Aim stay on `UnityEngine.InputSystem` (legacy `UnityEngine.Input` throws).
-- Runtime `[assembly: AssemblyVersion]` must stay `0.0.0.0`. Package version lives in `package.json`.
-- Running tests through MCP still rewrites `ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json` with different line endings. There is no content change; `git checkout --` it rather than committing it.
-- Local SonarQube: `http://localhost:9000/dashboard?id=com.veerdonk.projectile-system`. Auth is `SONAR_TOKEN` in the environment; do not commit it. `sonar.sources` stays Runtime + Editor and excludes `Samples~`.
+- Implement **25 first** (ADR-030, `package.json` 0.1.1): `SetHitTarget` / `RemoveHitTarget`, Direct / AreaEffect / GroundField / Pierce / Bounce. Homing still `SetHomingCandidate` only. Protection on volumes is None. No occupancy, no OnTick AreaEffect.
+- **26** (ADR-031, 0.1.2) depends on 25: Homing reads hit-target poses; optional `ProtectionLevel` on `SetHitTarget`; ApplyStatus proofs; `AreaEffect` on `OnTick`; `occupancy` on AreaEffect and GroundField (`HitSource.OccupancyEnter` / `OccupancyExit`). Do not delete `SetHomingCandidate`. Do not merge catalogs into one method.
+- Yard stays collider dummies. Greybox game can pin 0.1.1 after 25; homing/status/shields/auras wait for 0.1.2.
+- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage line endings / Sonar notes from phase 24 still apply.
 
 ## Do not
 
