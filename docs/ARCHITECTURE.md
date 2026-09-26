@@ -88,9 +88,9 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Views:** the pool asks `IProjectileViewFactory` for a GameObject view from `Recipe.PresentationId` ([DECISIONS.md](DECISIONS.md) ADR-021). Default is a sphere primitive. Hits stay SphereCast of `Radius`; the mesh is not the collider. Ground-field disks use a separate `IGroundFieldViewFactory` (ADR-026); default is a thin cylinder. A game prefab is not rescaled.
 
-**Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016). Area damage is on the modifier. Interval is an aura on the live instance, pulsed on `OnInterval`, not a ground field. Direct contact can be suppressed. Overlap includes `IDamageable` colliders **and** published hit volumes (ADR-030). Phase 26 (ADR-031): also `OnTick` (every Tick); optional `occupancy` for enter/exit instead of pulses.
+**Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` / `OnTick` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016, ADR-031). Area damage is on the modifier. Interval and OnTick are auras on the live instance (OnTick overlaps every Tick). Direct contact can be suppressed. Overlap includes `IDamageable` colliders **and** published hit volumes (ADR-030). `occupancy` (default false) replaces pulses with `HitSource.OccupancyEnter` / `OccupancyExit` (ADR-031).
 
-**Ground field:** `GroundField` on `OnHit` / `OnExpire` / `OnTravel` plants a lingering horizontal disk ([DECISIONS.md](DECISIONS.md) ADR-022). Size, lifetime, damage, optional status, and pulse period are on the modifier. The disk is not a Recipe and has no stage lists. `IHitQuery.OverlapDisk` tests XZ distance (colliders and published volumes, ADR-030); pulses reuse Area `Hit` / `StatusApplied`. Views come from `IGroundFieldViewFactory` (ADR-026). Occupancy enter/exit is **phase 26** (ADR-031).
+**Ground field:** `GroundField` on `OnHit` / `OnExpire` / `OnTravel` plants a lingering horizontal disk ([DECISIONS.md](DECISIONS.md) ADR-022). Size, lifetime, damage, optional status, and pulse period are on the modifier. The disk is not a Recipe and has no stage lists. `IHitQuery.OverlapDisk` tests XZ distance (colliders and published volumes, ADR-030); pulses reuse Area `Hit` / `StatusApplied`. `occupancy` (default false) replaces those pulses with enter/exit (ADR-031). Views come from `IGroundFieldViewFactory` (ADR-026).
 
 ## Hit pipeline
 
@@ -99,7 +99,7 @@ Kinematic movement casts along the step (PhysX SphereCast / overlap **and** publ
 ```csharp
 enum HitKind { Target, World }
 
-enum HitSource { Direct, Area, OccupancyEnter, OccupancyExit } // Occupancy* = phase 26 / ADR-031
+enum HitSource { Direct, Area, OccupancyEnter, OccupancyExit } // ADR-031
 
 enum ProtectionLevel { None, Basic, Strong }
 
@@ -107,7 +107,7 @@ struct HitInfo
 {
     ProjectileId InstanceId;
     HitKind Kind;
-    HitSource Source;       // Direct = contact; Area = pulse overlap; OccupancyEnter/Exit = phase 26 (ADR-031)
+    HitSource Source;       // Direct = contact; Area = pulse; OccupancyEnter/Exit = ADR-031
     ProtectionLevel Protection; // None, Basic, or Strong (ADR-020)
     Vector3 Point;
     Vector3 Normal;
@@ -147,8 +147,8 @@ interface IProjectileWorld
     void Tick(float dt);
     void SetHomingCandidate(TargetId id, Vector3 position);
     void RemoveHomingCandidate(TargetId id);
-    void SetHitTarget(TargetId id, Vector3 position, float radius);
-    // ADR-030. radius<=0 removes. Phase 26 adds ProtectionLevel (ADR-031).
+    void SetHitTarget(TargetId id, Vector3 position, float radius, ProtectionLevel protection = None);
+    // ADR-030 / ADR-031. radius<=0 removes. Homing reads this pose. Same id as SetHomingCandidate is one candidate.
     void RemoveHitTarget(TargetId id);
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
@@ -263,7 +263,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.1 includes Protection, the view factories, GroundField, `RecipeAsset`, the needed-arc `BallisticAim` signature, and `SetHitTarget` / `RemoveHitTarget` (ADR-030).
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.3 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, and `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 

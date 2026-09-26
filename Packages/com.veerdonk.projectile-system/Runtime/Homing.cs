@@ -7,7 +7,9 @@ namespace Veerdonk.ProjectileSystem
     /// <summary>
     /// OnTick: steer toward a homing target. <see cref="TurnRateDegreesPerSecond"/> is the maximum turn in
     /// degrees per second — Homing(100) turns at 100°/s, Homing(10) at 10°/s. If spawn did not assign a target,
-    /// <see cref="Acquisition"/> picks one. A Target hit drops the lock and ignores that TargetId while it stays
+    /// <see cref="Acquisition"/> picks one. Candidates are <see cref="IProjectileWorld.SetHomingCandidate"/> poses
+    /// and published hit-target positions. The same <see cref="TargetId"/> in both catalogs is one candidate, and
+    /// the hit-target position wins. A Target hit drops the lock and ignores that TargetId while it stays
     /// in front of travel, so a pierce shot does not re-lock the dummy it is still overlapping. Other candidates
     /// may lock on a later tick.
     /// </summary>
@@ -78,7 +80,7 @@ namespace Veerdonk.ProjectileSystem
                 context.HomingTarget = target;
             }
 
-            if (!context.HomingCatalog.TryGetPosition(target, out Vector3 targetPosition))
+            if (!context.TryGetSteeringPosition(target, out Vector3 targetPosition))
                 return;
 
             Vector3 toTarget = targetPosition - context.Position;
@@ -110,7 +112,7 @@ namespace Veerdonk.ProjectileSystem
             if (!ignored.IsAssigned)
                 return;
 
-            if (!context.HomingCatalog.TryGetPosition(ignored, out Vector3 position))
+            if (!context.TryGetSteeringPosition(ignored, out Vector3 position))
             {
                 context.HomingIgnoredTarget = default;
                 return;

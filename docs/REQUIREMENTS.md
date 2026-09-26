@@ -11,14 +11,14 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Projectile** — the concept of a spell, bullet, missile, or shot (not a live object)
 - **Recipe** — authored definition: base stats (speed, radius, lifetime, gravity, presentation id, combat/cast numbers) plus six modifier lists. Unity authors a `RecipeAsset`; `Spawn` still takes `Recipe` ([DECISIONS.md](DECISIONS.md) ADR-023)
 - **Recipe asset** — ScriptableObject that creates and edits a Recipe in the Inspector. Six stage lists; Add menus are filtered by `[ModifierStage]`. `ToRecipe()` builds the runtime `Recipe`
-- **Modifier kit** — ScriptableObject of extra modifiers plus the stage list each belongs to. Applied onto a cloned base Recipe at fire time (`Compose` / `ApplyTo`). No Speed / Lifetime / Presentation of its own. See [DECISIONS.md](DECISIONS.md) ADR-032
+- **Modifier kit** — ScriptableObject of extra modifiers plus the stage list each belongs to. Applied onto a cloned base Recipe at fire time (`Compose` / `ApplyTo`). No Speed / Lifetime / Presentation of its own. Each composition needs a unique `Recipe.Id`. An OnInterval extra does nothing unless `Interval` is already on the base or on an OnSpawn layer; kits do not insert one. See [DECISIONS.md](DECISIONS.md) ADR-032
 - **Instance** — one live simulated projectile
 - **Modifier** — a named behavior with a magnitude, written `Name(magnitude)` (see below)
 - **Stage list** — one of the six ordered modifier lists on a Recipe (`OnSpawn`, `OnTravel`, `OnTick`, `OnInterval`, `OnHit`, `OnExpire`). See [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Child recipe** — a full Recipe passed into a spawn modifier. Children do **not** inherit the parent’s lists unless that modifier says so
 - **Hit** — a collision result from the hit pipeline, not Unity’s `OnCollision*` messages
 - **Hit kind** — `Target` (`IDamageable` collider or a published hit volume) or `World` (wall / unmarked collider). Other projectiles are ignored until an ADR says otherwise
-- **Protection** — collider marker (`IProjectileProtection`) or a published hit-volume shield (phase 26 / ADR-031) that changes how a hit is processed: Basic (OnHit/area still run, no status, game skips HP) or Strong (eat the projectile). Not a health bar. See [DECISIONS.md](DECISIONS.md) ADR-020
+- **Protection** — collider marker (`IProjectileProtection`) or `ProtectionLevel` on `SetHitTarget` (ADR-031) that changes how a hit is processed: Basic (OnHit/area still run, no status, game skips HP) or Strong (eat the projectile). Not a health bar. See [DECISIONS.md](DECISIONS.md) ADR-020
 - **Target** — the object described by a `Target` hit
 - **Homing target** — the object an instance is steering toward (may differ from what it eventually hits)
 - **Effect** — presentation or gameplay reaction associated with a modifier or event (VFX, audio). Damage is a sandbox effect, not package logic
@@ -46,7 +46,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - **Pierce(n)** — `OnHit` + `Target`: pass through `n` targets; despawn on hit `n+1`
 - **Bounce(n)** — `OnHit`: reflect off `n` `World` or `Target` hits; despawn on hit `n+1`. `Hit` still fires on `Target`, so dummy HP still drops
-- **Homing(n)** — `OnTick`: steer toward a homing target; higher `n` turns faster. A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel. Phase 26: published hit volumes count as candidates (ADR-031); `SetHomingCandidate` remains for a pose that is not hittable
+- **Homing(n)** — `OnTick`: steer toward a homing target; higher `n` turns faster. A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel. Published hit volumes count as candidates (ADR-031); the same id in `SetHomingCandidate` is one candidate and the hit-target position wins. `SetHomingCandidate` remains for a pose that is not hittable
 - **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
 - **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`). Optional `Spread` is meters between adjacent pips. Layout comes from an `IMultiplyPattern` (default `SquarePattern`)
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
@@ -58,8 +58,8 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **EffectRadius(n)** — scale instance effect radius by `n`. Same stages as `Speed(n)`. Phase 13 uses the result as the `AreaEffect` overlap radius
 - **Size(n)** — scale `Radius` by `n`. Same stages as `Speed(n)`. There is no separate size field
 - **ApplyStatus** — `OnHit` + `Target`: request one or more `IStatusEffect`s on the hit Target. The package does not simulate the effects (see [DECISIONS.md](DECISIONS.md) ADR-011)
-- **AreaEffect** — overlap Targets in instance `EffectRadius` and raise Area `Hit` / `StatusApplied`. Own damage on the modifier. `OnHit` (splash at the hit point), `OnTravel` (burst at spawn), `OnInterval` (aura on the flying instance). Flags choose whether the projectile’s own contact damage/status still apply. See [DECISIONS.md](DECISIONS.md) ADR-016. Phase 26: `OnTick` (every Tick) and optional `occupancy` enter/exit (ADR-031)
-- **GroundField** — plant a lingering horizontal disk (`OnHit` at the hit point, `OnExpire` at the instance, `OnTravel` at spawn). Own radius, lifetime, damage, optional status, and pulse period on the modifier. Same `Hit` / `StatusApplied` events as `AreaEffect`. See [DECISIONS.md](DECISIONS.md) ADR-022. Phase 26: optional `occupancy` enter/exit instead of pulses (ADR-031)
+- **AreaEffect** — overlap Targets in instance `EffectRadius` and raise Area `Hit` / `StatusApplied`. Own damage on the modifier. `OnHit` (splash at the hit point), `OnTravel` (burst at spawn), `OnInterval` and `OnTick` (aura on the flying instance; OnTick overlaps every Tick). Flags choose whether the projectile’s own contact damage/status still apply. See [DECISIONS.md](DECISIONS.md) ADR-016. `occupancy` (default false) uses enter/exit instead of pulses (ADR-031)
+- **GroundField** — plant a lingering horizontal disk (`OnHit` at the hit point, `OnExpire` at the instance, `OnTravel` at spawn). Own radius, lifetime, damage, optional status, and pulse period on the modifier. Same `Hit` / `StatusApplied` events as `AreaEffect`. See [DECISIONS.md](DECISIONS.md) ADR-022. `occupancy` (default false) uses enter/exit instead of pulses (ADR-031)
 - **Gravity(n)** — scale instance gravity by `n`. Same stages as `Speed(n)`. Burst still applies gravity; this modifier does not add `g * dt` itself
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
 

@@ -34,6 +34,22 @@ namespace Veerdonk.ProjectileSystem
             random = Unity.Mathematics.Random.CreateFromIndex(seed);
         }
 
+        internal HitTargetCatalog HitTargets { get; set; }
+
+        internal bool TryGetSteeringPosition(in HomingTarget target, out Vector3 position)
+        {
+            if (!target.IsAssigned)
+            {
+                position = default;
+                return false;
+            }
+
+            if (HitTargets != null && HitTargets.TryGetPosition(target.Id, out position))
+                return true;
+
+            return HomingCatalog.TryGetPosition(target, out position);
+        }
+
         /// <summary>Live instance this stage is running for.</summary>
         public ProjectileId InstanceId { get; internal set; }
 
@@ -131,9 +147,9 @@ namespace Veerdonk.ProjectileSystem
         /// Queues an overlap sphere at <paramref name="center"/> using the current
         /// <see cref="EffectRadius"/>. Flushed after the stage as Area hits.
         /// </summary>
-        public void RequestAreaOverlap(Vector3 center, float damage, IStatusEffect status)
+        public void RequestAreaOverlap(Vector3 center, float damage, IStatusEffect status, bool occupancy = false)
         {
-            requestedAreas.Add(new AreaOverlapRequest(center, EffectRadius, damage, status));
+            requestedAreas.Add(new AreaOverlapRequest(center, EffectRadius, damage, status, occupancy));
         }
 
         /// <summary>
@@ -147,7 +163,8 @@ namespace Veerdonk.ProjectileSystem
             float damage,
             IStatusEffect status,
             float intervalSeconds,
-            string presentationId = null)
+            string presentationId = null,
+            bool occupancy = false)
         {
             requestedGroundFields.Add(
                 new GroundFieldPlantRequest(
@@ -157,7 +174,8 @@ namespace Veerdonk.ProjectileSystem
                     damage,
                     status,
                     intervalSeconds,
-                    presentationId));
+                    presentationId,
+                    occupancy));
         }
 
         /// <summary>Skip the Direct contact <see cref="IProjectileWorld.Hit"/> after this OnHit list.</summary>
@@ -297,12 +315,13 @@ namespace Veerdonk.ProjectileSystem
 
     readonly struct AreaOverlapRequest
     {
-        public AreaOverlapRequest(Vector3 center, float radius, float damage, IStatusEffect status)
+        public AreaOverlapRequest(Vector3 center, float radius, float damage, IStatusEffect status, bool occupancy = false)
         {
             Center = center;
             Radius = radius;
             Damage = damage;
             Status = status;
+            Occupancy = occupancy;
         }
 
         public Vector3 Center { get; }
@@ -312,6 +331,8 @@ namespace Veerdonk.ProjectileSystem
         public float Damage { get; }
 
         public IStatusEffect Status { get; }
+
+        public bool Occupancy { get; }
     }
 
     readonly struct GroundFieldPlantRequest
@@ -323,7 +344,8 @@ namespace Veerdonk.ProjectileSystem
             float damage,
             IStatusEffect status,
             float intervalSeconds,
-            string presentationId)
+            string presentationId,
+            bool occupancy = false)
         {
             Center = center;
             Radius = radius;
@@ -332,6 +354,7 @@ namespace Veerdonk.ProjectileSystem
             Status = status;
             IntervalSeconds = intervalSeconds;
             PresentationId = presentationId;
+            Occupancy = occupancy;
         }
 
         public Vector3 Center { get; }
@@ -347,6 +370,8 @@ namespace Veerdonk.ProjectileSystem
         public float IntervalSeconds { get; }
 
         public string PresentationId { get; }
+
+        public bool Occupancy { get; }
     }
 
     internal struct ModifierBindState

@@ -5,6 +5,21 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-09-26
+
+### Added
+
+- `ModifierKit` (`Create > Projectile > Modifier Kit`) and `ModifierKitLayer`. A kit is extra modifiers plus the stage list each belongs to. It has no speed, lifetime, or presentation.
+- `Recipe.Clone`, `Recipe.Append`, and `Recipe.Compose(basis, id, kits)`. Compose clones the base, sets a new `Recipe.Id`, and appends kits in order. Reusing an id on `Spawn` still replaces the stored Recipe. OnInterval extras do nothing unless `Interval` is already on the base or on an OnSpawn layer; kits do not insert one.
+
+## [0.1.2] - 2026-09-26
+
+### Added
+
+- `SetHitTarget` takes an optional `ProtectionLevel`. `Basic` matches a Basic collider (OnHit runs, no `ApplyStatus`). `Strong` eats the shot and is skipped by area, ground fields, and occupancy.
+- Homing acquires and steers toward published hit-target positions. The same id in `SetHomingCandidate` is one candidate; the hit-target position wins. `SetHomingCandidate` remains for a pose that is not hittable.
+- `AreaEffect` may run on `OnTick` (an overlap every Tick). `occupancy` on `AreaEffect` and `GroundField` raises `HitSource.OccupancyEnter` once (and status, if authored) and `HitSource.OccupancyExit` (damage 0, no status) on leave.
+
 ## [0.1.1] - 2026-09-23
 
 ### Added

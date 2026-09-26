@@ -12,17 +12,22 @@ namespace Veerdonk.ProjectileSystem
         World
     }
 
-    /// <summary>How a <see cref="HitInfo"/> was produced. Direct is the movement cast; Area is an AreaEffect or GroundField overlap.</summary>
+    /// <summary>How a <see cref="HitInfo"/> was produced. Direct is the movement cast; Area is an AreaEffect or GroundField pulse; OccupancyEnter/Exit are occupancy tracking.</summary>
     public enum HitSource
     {
         /// <summary>Movement SphereCast contact.</summary>
         Direct,
-        /// <summary>AreaEffect sphere or GroundField disk overlap.</summary>
-        Area
+        /// <summary>AreaEffect sphere or GroundField disk pulse.</summary>
+        Area,
+        /// <summary>Target entered an occupancy <see cref="AreaEffect"/> or <see cref="GroundField"/>. Status is raised when authored.</summary>
+        OccupancyEnter,
+        /// <summary>Target left an occupancy <see cref="AreaEffect"/> or <see cref="GroundField"/>. Damage is 0 and no status is raised.</summary>
+        OccupancyExit
     }
 
     /// <summary>
-    /// Collider marker level from <see cref="IProjectileProtection"/>. None is an unmarked collider.
+    /// Collider marker level from <see cref="IProjectileProtection"/>, or the level passed to
+    /// <see cref="IProjectileWorld.SetHitTarget"/>. None is an unmarked collider or volume.
     /// Basic still runs OnHit; Strong eats the instance.
     /// </summary>
     public enum ProtectionLevel
@@ -66,8 +71,8 @@ namespace Veerdonk.ProjectileSystem
         public ProjectileId InstanceId;
         /// <summary>Target vs World classification.</summary>
         public HitKind Kind;
-        /// <summary>Direct cast vs area overlap.</summary>
-        public HitSource Source;
+    /// <summary>Direct cast, area pulse, or occupancy enter/exit.</summary>
+    public HitSource Source;
         /// <summary>From <see cref="IProjectileProtection"/>, else None.</summary>
         public ProtectionLevel Protection;
         /// <summary>World-space contact or overlap point.</summary>

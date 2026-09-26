@@ -66,6 +66,7 @@ namespace Veerdonk.ProjectileSystem
             this.hitQuery = hitQuery ?? throw new ArgumentNullException(nameof(hitQuery));
             this.hitQuery.HitTargets = hitTargets;
             modifierContext = new ModifierContext(pendingSpawns, homingCatalog, seed);
+            modifierContext.HitTargets = hitTargets;
             groundFields = new GroundFieldSet(
                 this.hitQuery,
                 createViews,
@@ -190,10 +191,10 @@ namespace Veerdonk.ProjectileSystem
         }
 
         /// <inheritdoc />
-        public void SetHitTarget(TargetId id, Vector3 position, float radius)
+        public void SetHitTarget(TargetId id, Vector3 position, float radius, ProtectionLevel protection = ProtectionLevel.None)
         {
             ThrowIfDisposed();
-            hitTargets.Set(id, position, radius);
+            hitTargets.Set(id, position, radius, protection);
         }
 
         /// <inheritdoc />

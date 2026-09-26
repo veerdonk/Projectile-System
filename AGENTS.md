@@ -33,10 +33,10 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phases 26–27 scheduled (implement 26 first)**
+**Phase 27 — modifier kits**
 
-- **26** (ADR-031, `package.json` 0.1.2): Homing reads hit-target poses; optional `ProtectionLevel` on `SetHitTarget`; ApplyStatus proofs; `AreaEffect` on `OnTick`; `occupancy` on AreaEffect and GroundField. Do not delete `SetHomingCandidate`.
-- **27** (ADR-032, 0.1.3): `ModifierKit` Inspector + `Recipe.Clone` / `Append` / `Compose`. Unique `Recipe.Id` per composition (`RecipeStore` replaces on reuse). Do not auto-insert `Interval`. Share `ToRecipe` modifier clone. Consumer README / AGENTS.md / `Documentation/index.md` / CHANGELOG are in scope for 27.
+- `Recipe.Compose(basis, id, kits)` clones with `RecipeAsset.CloneModifierList` (the `ToRecipe` path, including AreaEffect / GroundField occupancy). `ApplyTo` does not change `Recipe.Id`. Empty layers are skipped before stage checks; a layer that has modifiers and a combined stage throws.
+- OnInterval kit layers do not insert `Interval`. Example asset: `Samples~/Yard/Recipes/PierceKit.asset` (Pierce(2) on OnHit). Rebuild also upserts that kit into the imported yard. Straight.asset is unchanged. Do not add a turret path for kits.
 - Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage line endings / Sonar notes from phase 24 still apply. Do not create a git tag in a phase session; `.github/workflows/release-package.yml` tags `v{version}` on `main`.
 
 ## Do not
