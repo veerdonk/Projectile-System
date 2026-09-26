@@ -33,11 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 27 — modifier kits**
+**Phase 28 scheduled (aim-point first Homing lock)**
 
-- `Recipe.Compose(basis, id, kits)` clones with `RecipeAsset.CloneModifierList` (the `ToRecipe` path, including AreaEffect / GroundField occupancy). `ApplyTo` does not change `Recipe.Id`. Empty layers are skipped before stage checks; a layer that has modifiers and a combined stage throws.
-- OnInterval kit layers do not insert `Interval`. Example asset: `Samples~/Yard/Recipes/PierceKit.asset` (Pierce(2) on OnHit). Rebuild also upserts that kit into the imported yard. Straight.asset is unchanged. Do not add a turret path for kits.
-- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage line endings / Sonar notes from phase 24 still apply. Do not create a git tag in a phase session; `.github/workflows/release-package.yml` tags `v{version}` on `main`.
+- ADR-033: `SpawnRequest.HomingAcquirePointSet` / `HomingAcquirePoint`. Package does not read mouse. Yard copies `lastAimPoint` on Fire when `hasGroundPoint`.
+- First lock = closest catalog candidate to that point (no travel-dot). Assigned `HomingTarget` still wins. After a Target hit, retarget stays `ClosestInTravelDirectionAcquisition`.
+- Do not follow the cursor in flight. Do not expose `HomingCatalog`. Bump to **0.1.4**; no git tag in the phase session.
+- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. `.github/workflows/release-package.yml` tags `v{version}` on `main`.
 
 ## Do not
 

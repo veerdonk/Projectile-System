@@ -640,6 +640,26 @@ Games designate a Recipe as the projectile base and append one modifier or a com
 
 **Proof:** Edit Mode compose tests above are green. Create menu offers **Projectile > Modifier Kit**. Package README / AGENTS.md show `Compose` / `ApplyTo`. Yard Straight asset is unchanged.
 
+**Stop.** Aim-point first Homing lock is **phase 28**. Do not start it in the same session.
+
+## Phase 28 — First Homing lock is closest to the aim point
+
+The first homing target should be the published candidate closest to the world point the player aimed at when the shot was fired (yard: mouse ray). Travel-direction lock is what feels off. ADR-033. Package still does not read the mouse.
+
+**In scope**
+
+- `SpawnRequest.HomingAcquirePointSet` / `HomingAcquirePoint`. When set and `HomingTarget` is unassigned, Homing’s **first** acquire is nearest catalog candidate to that point (hit targets + `SetHomingCandidate`, same id is one candidate, hit pose wins). 3D sqrDistance; **no** in-front / positive-dot filter. Ties keep the first considered. Assigned `HomingTarget` still skips acquire
+- `ClosestToPointAcquisition` (`IHomingAcquisition`). Homing uses it until the first lock succeeds, then the modifier’s `IHomingAcquisition` (default `ClosestInTravelDirectionAcquisition`) for later empty locks (ADR-010 after a Target hit). Do not keep steering toward the fire-time point after that, and do not sample the cursor in flight
+- Copy the point onto the instance at spawn (blittable). Multicast extras inherit it from that `SpawnRequest`. `false` / unset keeps today’s travel-direction first lock
+- Runtime does **not** reference Input System, `Camera`, or mouse. Games copy a world point
+- Yard: `SampleLab.Fire` sets the acquire point from `lastAimPoint` when `hasGroundPoint` (the same ray as turret aim). Homing and Pierce+Homing presets use it. Do not add a new preset
+- Edit Mode tests: two candidates; travel would pick A (in front, nearer the muzzle) but the acquire point is nearer B → first lock is B. No acquire point → A. Assigned `HomingTarget` still wins. After a scripted Target hit on B, the next lock is travel-direction (A if in front), not B’s old point. Closest-to-point may lock a candidate beside/behind travel. Existing Homing tests that omit the point stay green
+- Docs: [ARCHITECTURE.md](ARCHITECTURE.md) `SpawnRequest`, [REQUIREMENTS.md](REQUIREMENTS.md), [SANDBOX.md](SANDBOX.md) Homing proof, package `AGENTS.md` / `README.md` / `Documentation/index.md`, `CHANGELOG` **0.1.4**. XML on the new fields and `ClosestToPointAcquisition`. Bump `package.json` to **0.1.4**. Do not create a git tag in the phase session
+
+**Out of scope:** cursor-follow / retarget to current mouse; exposing `HomingCatalog`; factions; changing turn rate; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
+
+**Proof:** Edit Mode aim-point vs travel tests above. Play Mode Homing: click DummyBounce (off-lane) and fire — the shot turns toward DummyBounce first, not DummyTarget. Pierce+Homing: click the first dummy in the line, pierce it, then travel-acquire DummyBounce as today.
+
 **Stop.**
 
 ## Later (not scheduled)
