@@ -5,6 +5,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-09-26
+
+### Added
+
+- `SpawnRequest.HomingAcquirePointSet` and `HomingAcquirePoint`. When set, and `HomingTarget` is unassigned, Homing’s first lock is the catalog candidate closest to that world point (`ClosestToPointAcquisition`, no travel-direction filter). After that lock, or when spawn already assigned a target, later empty locks stay closest-in-travel-direction. The package does not read the mouse. Multicast extras inherit the point.
+
 ## [0.1.3] - 2026-09-26
 
 ### Added

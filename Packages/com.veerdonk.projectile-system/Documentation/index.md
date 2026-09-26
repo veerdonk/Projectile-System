@@ -33,6 +33,8 @@ Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectil
 
 **Aim:** `BallisticAim.TrySolve` — flatter (needed) arc only. Copy the direction onto `SpawnRequest.Direction`. Unreachable returns false.
 
+**Homing acquire:** `IHomingAcquisition`, `ClosestInTravelDirectionAcquisition` (default, and every lock after the first), `ClosestToPointAcquisition` (first lock when `SpawnRequest.HomingAcquirePointSet` / `HomingAcquirePoint`). Publish poses with `SetHomingCandidate`. The package does not read the mouse.
+
 **Views:** `IProjectileViewFactory`, `PrimitiveViewFactory`, `PrefabViewFactory`, `IGroundFieldViewFactory`, `PrimitiveGroundFieldViewFactory`, `PrefabGroundFieldViewFactory`, `ProjectileView`
 
 **Authoring:** `RecipeAsset`, `ModifierKit`, `ModifierKitLayer`, `Recipe.Clone`, `Recipe.Append`, `Recipe.Compose`, `RecipeStage`, `ModifierStageAttribute`

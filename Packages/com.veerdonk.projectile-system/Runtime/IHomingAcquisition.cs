@@ -86,7 +86,9 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>
         /// Returns true and a target when this instance should lock. Returning false leaves the instance
         /// unassigned so a later tick can try again. Homing calls this whenever the lock is empty, including after
-        /// a Target hit. Skip <see cref="ModifierContext.HomingIgnoredTarget"/> while it is set.
+        /// a Target hit, except the first lock when <see cref="SpawnRequest.HomingAcquirePointSet"/> is true
+        /// (that pick is <see cref="ClosestToPointAcquisition"/>). Skip <see cref="ModifierContext.HomingIgnoredTarget"/>
+        /// while it is set.
         /// </summary>
         bool TryAcquire(ModifierContext context, out HomingTarget target);
     }
@@ -165,6 +167,85 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             float sqrDistance = toTarget.sqrMagnitude;
+            if (best.Found && sqrDistance >= best.SqrDistance)
+                return;
+
+            best.SqrDistance = sqrDistance;
+            best.Id = id;
+            best.Found = true;
+        }
+
+        struct Candidate
+        {
+            public TargetId Id;
+            public float SqrDistance;
+            public bool Found;
+        }
+    }
+
+    /// <summary>
+    /// Locks the catalog candidate closest to <see cref="ModifierContext.HomingAcquirePoint"/>.
+    /// Distance is 3D squared magnitude. There is no travel-direction filter. Ties keep the first candidate
+    /// considered (hit targets, then homing poses). The same id in both catalogs is one candidate, and the
+    /// hit-target position wins.
+    /// </summary>
+    public sealed class ClosestToPointAcquisition : IHomingAcquisition
+    {
+        /// <inheritdoc />
+        public bool TryAcquire(ModifierContext context, out HomingTarget target)
+        {
+            if (context == null || !context.HomingAcquirePointSet)
+            {
+                target = default;
+                return false;
+            }
+
+            Vector3 point = context.HomingAcquirePoint;
+            var best = new Candidate();
+            HitTargetCatalog hitTargets = context.HitTargets;
+            if (hitTargets != null)
+            {
+                int hitCount = hitTargets.Count;
+                for (int i = 0; i < hitCount; i++)
+                {
+                    if (!hitTargets.TryGet(i, out TargetId id, out Vector3 position))
+                        continue;
+                    Consider(context, id, position, point, ref best);
+                }
+            }
+
+            HomingCatalog catalog = context.HomingCatalog;
+            int count = catalog.Count;
+            for (int i = 0; i < count; i++)
+            {
+                if (!catalog.TryGet(i, out TargetId id, out Vector3 position))
+                    continue;
+                if (hitTargets != null && hitTargets.Contains(id))
+                    continue;
+                Consider(context, id, position, point, ref best);
+            }
+
+            if (!best.Found)
+            {
+                target = default;
+                return false;
+            }
+
+            target = HomingTarget.Assigned(best.Id);
+            return true;
+        }
+
+        static void Consider(
+            ModifierContext context,
+            TargetId id,
+            Vector3 position,
+            Vector3 point,
+            ref Candidate best)
+        {
+            if (context.HomingIgnoredTarget.IsAssigned && id.Equals(context.HomingIgnoredTarget.Id))
+                return;
+
+            float sqrDistance = (position - point).sqrMagnitude;
             if (best.Found && sqrDistance >= best.SqrDistance)
                 return;
 

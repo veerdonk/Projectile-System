@@ -190,6 +190,15 @@ namespace Veerdonk.ProjectileSystem.Samples
             return preset != null && preset.useBallisticAim;
         }
 
+        bool UsesAimPointHoming()
+        {
+            Preset preset = CurrentPreset();
+            if (preset == null)
+                return false;
+
+            return preset.label == "Homing" || preset.label == "Pierce+Homing";
+        }
+
         bool TryBallisticDirection(Vector3 origin, Vector3 target, out Vector3 direction)
         {
             return BallisticClearance.TrySolve(
@@ -287,12 +296,19 @@ namespace Veerdonk.ProjectileSystem.Samples
                 direction = GroundAim.Flatten(muzzle.Direction);
             }
 
-            world.Spawn(new SpawnRequest
+            var request = new SpawnRequest
             {
                 Recipe = working,
                 Position = position,
                 Direction = direction
-            });
+            };
+            if (hasGroundPoint && UsesAimPointHoming())
+            {
+                request.HomingAcquirePointSet = true;
+                request.HomingAcquirePoint = lastAimPoint;
+            }
+
+            world.Spawn(request);
         }
 
         [ContextMenu("Reset")]

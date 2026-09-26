@@ -274,6 +274,172 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
+        [Test]
+        public void Homing_FirstLock_IsClosestToAcquirePoint_EvenBehindTravel()
+        {
+            Recipe recipe = HomingRecipe("home-aim", 100f);
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                PublishAimPair(world, out _, out TargetId aimed);
+                ProjectileId id = SpawnAimed(world, recipe, aimedAt: AimedPoint, assigned: default);
+                world.Tick(0.01f);
+
+                Assert.IsTrue(world.TryGetHomingTarget(id, out HomingTarget target));
+                Assert.AreEqual(aimed, target.Id);
+            }
+        }
+
+        [Test]
+        public void Homing_WithoutAcquirePoint_KeepsTravelDirectionLock()
+        {
+            Recipe recipe = HomingRecipe("home-aim-off", 100f);
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                PublishAimPair(world, out TargetId travel, out _);
+                ProjectileId id = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward,
+                    HomingAcquirePointSet = false,
+                    HomingAcquirePoint = AimedPoint
+                });
+                world.Tick(0.01f);
+
+                Assert.IsTrue(world.TryGetHomingTarget(id, out HomingTarget target));
+                Assert.AreEqual(travel, target.Id);
+            }
+        }
+
+        [Test]
+        public void Homing_AssignedTarget_WinsOverAcquirePoint()
+        {
+            Recipe recipe = HomingRecipe("home-aim-assigned", 100f);
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                PublishAimPair(world, out TargetId travel, out _);
+                ProjectileId id = SpawnAimed(world, recipe, AimedPoint, HomingTarget.Assigned(travel));
+                world.Tick(0.01f);
+
+                Assert.IsTrue(world.TryGetHomingTarget(id, out HomingTarget target));
+                Assert.AreEqual(travel, target.Id);
+            }
+        }
+
+        [Test]
+        public void Homing_AfterAimPointLock_RetargetUsesTravelDirection()
+        {
+            Recipe recipe = HomingPierceRecipe("home-aim-retarget", 90f);
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                PublishAimPair(world, out TargetId travel, out TargetId aimed);
+                ProjectileId id = SpawnAimed(world, recipe, AimedPoint, default);
+                world.Tick(0.1f);
+                Assert.IsTrue(world.TryGetHomingTarget(id, out HomingTarget locked));
+                Assert.AreEqual(aimed, locked.Id);
+
+                hits.Queue(HitKind.Target, new Vector3(0f, 0f, 1f), Vector3.back, aimed);
+                world.Tick(0.1f);
+                Assert.IsTrue(world.TryGetHomingTarget(id, out locked));
+                Assert.IsFalse(locked.IsAssigned);
+
+                world.Tick(0.1f);
+                Assert.IsTrue(world.TryGetHomingTarget(id, out locked));
+                Assert.AreEqual(travel, locked.Id);
+            }
+        }
+
+        [Test]
+        public void Homing_AssignedTarget_ThenHit_DoesNotFallBackToAcquirePoint()
+        {
+            Recipe recipe = HomingPierceRecipe("home-aim-assigned-hit", 90f);
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                PublishAimPair(world, out TargetId travel, out _);
+                ProjectileId id = SpawnAimed(world, recipe, AimedPoint, HomingTarget.Assigned(travel));
+                world.Tick(0.1f);
+
+                hits.Queue(HitKind.Target, new Vector3(0f, 0f, 1f), Vector3.back, travel);
+                world.Tick(0.1f);
+                world.Tick(0.1f);
+
+                Assert.IsTrue(world.TryGetHomingTarget(id, out HomingTarget locked));
+                Assert.IsFalse(locked.IsAssigned);
+            }
+        }
+
+        [Test]
+        public void MulticastExtra_InheritsAcquirePoint_AndLocksClosestToIt()
+        {
+            Recipe extra = HomingRecipe("home-aim-extra", 100f);
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "home-aim-multi",
+                onSpawn: new IModifier[] { new Multicast(2, extra, new StraightAimPattern()) });
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                PublishAimPair(world, out _, out TargetId aimed);
+                world.Spawn(SpawnAimedRequest(recipe, AimedPoint, default));
+                world.Tick(0.01f);
+
+                var active = SimulationTestHelper.CollectActive(world);
+                Assert.AreEqual(2, active.Count);
+                bool foundExtra = false;
+                for (int i = 0; i < active.Count; i++)
+                {
+                    if (active[i].recipe.Id != extra.Id)
+                        continue;
+
+                    Assert.IsTrue(world.TryGetHomingTarget(active[i].id, out HomingTarget target));
+                    Assert.AreEqual(aimed, target.Id);
+                    foundExtra = true;
+                }
+
+                Assert.IsTrue(foundExtra);
+            }
+        }
+
+        static readonly Vector3 AimedPoint = new Vector3(6f, 0f, -1f);
+
+        static void PublishAimPair(ProjectileWorld world, out TargetId travel, out TargetId aimed)
+        {
+            travel = new TargetId(1);
+            aimed = new TargetId(2);
+            world.SetHitTarget(travel, new Vector3(0f, 0f, 30f), 0.5f);
+            world.SetHitTarget(aimed, AimedPoint, 0.5f);
+        }
+
+        static ProjectileId SpawnAimed(ProjectileWorld world, Recipe recipe, Vector3 aimedAt, HomingTarget assigned)
+        {
+            return world.Spawn(SpawnAimedRequest(recipe, aimedAt, assigned));
+        }
+
+        static SpawnRequest SpawnAimedRequest(Recipe recipe, Vector3 aimedAt, HomingTarget assigned)
+        {
+            return new SpawnRequest
+            {
+                Recipe = recipe,
+                Position = Vector3.zero,
+                Direction = Vector3.forward,
+                HomingTarget = assigned,
+                HomingAcquirePointSet = true,
+                HomingAcquirePoint = aimedAt
+            };
+        }
+
+        sealed class StraightAimPattern : IMulticastPattern
+        {
+            public Vector3 GetDirection(ModifierContext context, Vector3 forward, int index, int count)
+            {
+                return forward.sqrMagnitude > 1e-8f ? forward : Vector3.forward;
+            }
+        }
+
         static Recipe HomingRecipe(string id, float turnRate)
         {
             return SimulationTestHelper.CreateRecipe(
