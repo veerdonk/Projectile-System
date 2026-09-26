@@ -81,7 +81,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/SquarePattern.cs` | Dice pips through 9, then odd-sized grids. Default Multiply pattern |
 | `Runtime/CirclePattern.cs` | Triangle, then center + ring, then inner hexagon and outer rings |
 | `Runtime/RandomCirclePattern.cs` | Uniform disk of radius Spread; uses the world seed; rejects samples closer than the child diameter |
-| `Runtime/Homing.cs` | `OnTick`: steer at n degrees/second toward a lock. Acquires via `IHomingAcquisition` when unassigned. A Target hit drops the lock (`Homing.ReleaseLockOnTargetHit` after `OnHit`) |
+| `Runtime/Homing.cs` | `OnTick`: steer at n degrees/second toward a lock. First acquire may use `SpawnRequest.HomingAcquirePoint` (`ClosestToPointAcquisition`, ADR-033). Later empty locks use `IHomingAcquisition` (default travel). A Target hit drops the lock (`Homing.ReleaseLockOnTargetHit` after `OnHit`) |
 | `Runtime/Speed.cs` | Scale current speed by n, keep travel direction. `OnTravel` start scale, `OnInterval` progressive, `OnHit` after bounce/pierce. Scale <= 0 is a no-op |
 | `Runtime/Gravity.cs` | Scale instance gravity by n. Same stages as `Speed`. Does not add `g * dt`; Burst still integrates |
 | `Runtime/BallisticAim.cs` | Fire-time helper. `TrySolve` returns the launch direction speed + gravity need to pass through a point (world down, flatter/shorter-time root: extra speed → nearly straight, level min speed → ~45°). Not a modifier, not a flight path, not a Range stat; callers copy into `SpawnRequest.Direction` |
@@ -99,7 +99,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/PrefabGroundFieldViewFactory.cs` | Map `GroundField.PresentationId` → prefab; does not rescale; unknown ids fall back to the primitive |
 | `Runtime/IStatusEffect.cs` | Effect contract plus v1 `DummyStatusEffect` (`Id` `"dummy"`). Package does not tick DoT |
 | `Runtime/IStatusReceiver.cs` | Game/sandbox apply contract. Package never calls it; sandbox maps `StatusApplied` → `Apply` |
-| `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds `SetHomingCandidate` poses. Acquisition also reads hit-target positions; the same id is one candidate and the hit-target position wins. `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget` |
+| `Runtime/IHomingAcquisition.cs` | How an unassigned instance picks a lock. `HomingCatalog` holds `SetHomingCandidate` poses. Acquisition also reads hit-target positions; the same id is one candidate and the hit-target position wins. `ClosestInTravelDirectionAcquisition` (v1 default) takes the nearest in-front candidate, skipping `HomingIgnoredTarget`. `ClosestToPointAcquisition` (phase 28) takes the nearest to a fire-time world point, no in-front filter |
 | `Runtime/ProjectilePool.cs` | Entity recycle + optional GameObject views from `IProjectileViewFactory` |
 | `Runtime/HitTargetCatalog.cs` | Published spheres from `SetHitTarget` / `RemoveHitTarget`, including `ProtectionLevel`. Direct sweep, area sphere, ground disk, and Homing all read it |
 | `Runtime/PhysicsHitQuery.cs` | PhysX SphereCast / overlap plus published hit volumes (ADR-030). Ignore last collider / TargetId so pierce/bounce can leave the surface. `Overlap` / `OverlapDisk` return `IDamageable` colliders and published Targets |

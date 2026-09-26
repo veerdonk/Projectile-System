@@ -136,7 +136,9 @@ struct SpawnRequest
     Recipe Recipe;
     Vector3 Position;
     Vector3 Direction;
-    HomingTarget HomingTarget; // optional initial lock; Homing acquires if unassigned (ADR-009, ADR-010)
+    HomingTarget HomingTarget; // optional initial lock; skips acquire (ADR-009, ADR-010)
+    bool HomingAcquirePointSet; // ADR-033; game copies a world aim point (not mouse)
+    Vector3 HomingAcquirePoint;
 }
 
 struct ProjectileId { /* opaque handle */ }

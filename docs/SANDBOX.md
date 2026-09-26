@@ -37,8 +37,8 @@ Always: enter Play Mode from the imported `Yard.unity`, fire once, confirm the p
 | 2 | **Bounce** | Aim at the side wall, reflects, then dies on DummyBounce |
 | 3 | **Interval multiply** | Extra instances every 0.5s along travel |
 | 4 | **Multicast** | Three instances leave the muzzle immediately |
-| 5 | **Homing** | Aim ~25° off the dummy line; strong turn hits DummyTarget |
-| 6 | **Pierce+Homing** | First dummy is pierced; instance then homes onto DummyBounce |
+| 5 | **Homing** | Click DummyBounce (off-lane) and fire — shot turns toward DummyBounce first (phase 28 aim-point lock). Without an aim point, travel-direction lock is unchanged |
+| 6 | **Pierce+Homing** | Click the first dummy, fire: pierce it; instance then homes onto DummyBounce (retarget is still travel-direction) |
 | 6 | **Bounce+Multiply** | Aim at +X walls; two extra instances at each bounce; parent stays live |
 | 7 | **Speed on travel** | Leaves the muzzle twice as fast as Straight |
 | 8 | **ApplyStatus** | DummyTarget HUD shows `dummy` and the cube flashes green |
@@ -67,6 +67,7 @@ Always: enter Play Mode from the imported `Yard.unity`, fire once, confirm the p
 | 25 | Edit Mode published volumes (package 0.1.1) | Straight shot vs a sphere with no collider raises Target `Hit`. Pierce / Bounce / AreaEffect / GroundField tests in [REQUIREMENTS.md](REQUIREMENTS.md). Yard collider dummies unchanged; no new preset |
 | 26 | Edit Mode published volumes | Homing acquires from `SetHitTarget` only. ApplyStatus on a published Target. Basic/Strong published protection. OnTick AreaEffect Hits each Tick; occupancy enter once then exit. Yard collider presets unchanged |
 | 27 | Edit Mode compose + Create menu | `Compose` Straight + Pierce kit pierces two dummies. Illegal stage throws. **Create > Projectile > Modifier Kit** exists. `Samples~/Yard/Recipes/PierceKit.asset` is Pierce(2) on OnHit. Yard Straight asset unchanged |
+| 28 | Homing + DummyBounce click | Homing preset, click DummyBounce, fire — first lock is DummyBounce. Pierce+Homing still retargets with travel-direction after the pierce |
 
 AreaEffect, GroundField, Recipe gravity, barrel pitch, and needed-arc `BallisticAim` (Cannonball) are sample presets.
 

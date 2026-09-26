@@ -46,7 +46,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - **Pierce(n)** — `OnHit` + `Target`: pass through `n` targets; despawn on hit `n+1`
 - **Bounce(n)** — `OnHit`: reflect off `n` `World` or `Target` hits; despawn on hit `n+1`. `Hit` still fires on `Target`, so dummy HP still drops
-- **Homing(n)** — `OnTick`: steer toward a homing target; higher `n` turns faster. A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel. Published hit volumes count as candidates (ADR-031); the same id in `SetHomingCandidate` is one candidate and the hit-target position wins. `SetHomingCandidate` remains for a pose that is not hittable
+- **Homing(n)** — `OnTick`: steer toward a homing target; higher `n` turns faster. A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel. Published hit volumes count as candidates (ADR-031); the same id in `SetHomingCandidate` is one candidate and the hit-target position wins. `SetHomingCandidate` remains for a pose that is not hittable. Phase 28: if `SpawnRequest.HomingAcquirePointSet`, the **first** lock is the candidate closest to that world point (ADR-033); retarget after a Target hit still uses travel direction
 - **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
 - **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`). Optional `Spread` is meters between adjacent pips. Layout comes from an `IMultiplyPattern` (default `SquarePattern`)
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
@@ -628,6 +628,24 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** two `Compose` results that would otherwise share the base Recipe’s `Id`
 - **When:** both are spawned
 - **Then:** the caller assigned distinct ids. Reusing one id still replaces the store slot (existing `RecipeStore` rule)
+
+### Phase 28 — First lock is closest to the fire-time aim point
+
+- **Given:** two published candidates; A is nearer in front of travel; B is nearer `HomingAcquirePoint`
+- **When:** Homing spawns with `HomingAcquirePointSet` and no `HomingTarget`
+- **Then:** the first lock is B
+
+### Phase 28 — No aim point keeps travel-direction acquire
+
+- **Given:** the same two candidates and `HomingAcquirePointSet` false
+- **When:** Homing acquires
+- **Then:** the first lock is A (closest in front of travel)
+
+### Phase 28 — Retarget after a Target hit is travel-direction
+
+- **Given:** first lock B from an aim point; a Target hit on B
+- **When:** Homing acquires again
+- **Then:** it uses `ClosestInTravelDirectionAcquisition` (skip B while in front); it does not pick from the old aim point
 
 ## Product constraints
 
