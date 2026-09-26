@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ModifierKit` (`Create > Projectile > Modifier Kit`) and `ModifierKitLayer`. A kit is extra modifiers plus the stage list each belongs to. It has no speed, lifetime, or presentation.
 - `Recipe.Clone`, `Recipe.Append`, and `Recipe.Compose(basis, id, kits)`. Compose clones the base, sets a new `Recipe.Id`, and appends kits in order. Reusing an id on `Spawn` still replaces the stored Recipe. OnInterval extras do nothing unless `Interval` is already on the base or on an OnSpawn layer; kits do not insert one.
 
+### Fixed
+
+- The modifier kit inspector picks `ApplyStatus`, `AreaEffect`, and `GroundField` status from the shipped `IStatusEffect` list.
+
 ## [0.1.2] - 2026-09-26
 
 ### Added

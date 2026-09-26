@@ -4,7 +4,10 @@ using UnityEngine;
 
 namespace Veerdonk.ProjectileSystem
 {
-    /// <summary>Inspector for <see cref="ModifierKit"/>: one stage dropdown and a filtered Add menu per layer.</summary>
+    /// <summary>
+    /// Inspector for <see cref="ModifierKit"/>: one stage dropdown and a filtered Add menu per layer.
+    /// <see cref="IStatusEffect"/> fields use the same shipped-type dropdown as <see cref="RecipeAsset"/>.
+    /// </summary>
     [CustomEditor(typeof(ModifierKit))]
     public sealed class ModifierKitEditor : UnityEditor.Editor
     {
@@ -145,10 +148,79 @@ namespace Veerdonk.ProjectileSystem
 
             while (!SerializedProperty.EqualContents(child, end))
             {
-                EditorGUILayout.PropertyField(child, true);
+                if (IsStatusEffectField(child))
+                    DrawStatusPopup(child);
+                else
+                    EditorGUILayout.PropertyField(child, true);
                 if (!child.NextVisible(false))
                     break;
             }
+        }
+
+        static bool IsStatusEffectField(SerializedProperty property)
+        {
+            if (property.propertyType != SerializedPropertyType.ManagedReference)
+                return false;
+
+            string typeName = property.managedReferenceFieldTypename;
+            return typeName != null
+                && typeName.EndsWith(".IStatusEffect", StringComparison.Ordinal);
+        }
+
+        static void DrawStatusPopup(SerializedProperty property)
+        {
+            Type[] types = RecipeAssetEditor.StatusEffects();
+            var labels = new string[types.Length + 1];
+            labels[0] = "None";
+            for (int i = 0; i < types.Length; i++)
+                labels[i + 1] = ObjectNames.NicifyVariableName(types[i].Name);
+
+            object currentValue = property.managedReferenceValue;
+            int current = 0;
+            if (currentValue != null)
+            {
+                int found = IndexOf(types, currentValue.GetType());
+                if (found >= 0)
+                    current = found + 1;
+            }
+
+            int next = EditorGUILayout.Popup("Status", current, labels);
+            if (next != current)
+                AssignStatusEffect(property, next);
+        }
+
+        /// <summary>
+        /// Writes a shipped <see cref="IStatusEffect"/> onto a SerializeReference field.
+        /// Index 0 clears it. Later indexes follow <see cref="RecipeAssetEditor.StatusEffects"/>.
+        /// </summary>
+        public static void AssignStatusEffect(SerializedProperty property, int index)
+        {
+            if (property == null)
+                throw new ArgumentNullException(nameof(property));
+
+            Type[] types = RecipeAssetEditor.StatusEffects();
+            if (index <= 0)
+            {
+                property.managedReferenceValue = null;
+                return;
+            }
+
+            int typeIndex = index - 1;
+            if (typeIndex >= types.Length)
+                throw new ArgumentOutOfRangeException(nameof(index));
+
+            property.managedReferenceValue = Activator.CreateInstance(types[typeIndex]);
+        }
+
+        static int IndexOf(Type[] types, Type match)
+        {
+            for (int i = 0; i < types.Length; i++)
+            {
+                if (types[i] == match)
+                    return i;
+            }
+
+            return -1;
         }
     }
 }

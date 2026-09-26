@@ -1,5 +1,6 @@
 using System;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace Veerdonk.ProjectileSystem.Editor.Tests
@@ -206,6 +207,41 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 Assert.IsTrue(world.TryGetState(first, out _, out _, out stored));
                 Assert.AreEqual(0, stored.OnHit.Length);
             }
+        }
+
+        [Test]
+        public void ApplyStatus_StatusDropdown_ClearsThenSelectsDummy()
+        {
+            pierceKit = Kit(RecipeStage.OnHit, new ApplyStatus(new DummyStatusEffect()));
+            var serialized = new SerializedObject(pierceKit);
+            SerializedProperty effect = StatusProperty(serialized, "effect");
+            Assert.IsInstanceOf<DummyStatusEffect>(effect.managedReferenceValue);
+
+            Type[] catalog = RecipeAssetEditor.StatusEffects();
+            int dummyIndex = -1;
+            for (int i = 0; i < catalog.Length; i++)
+            {
+                if (catalog[i] == typeof(DummyStatusEffect))
+                    dummyIndex = i + 1;
+            }
+
+            Assert.Greater(dummyIndex, 0);
+            ModifierKitEditor.AssignStatusEffect(effect, 0);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            Assert.IsNull(((ApplyStatus)pierceKit.Layers[0].Modifiers[0]).Effect);
+
+            serialized.Update();
+            effect = StatusProperty(serialized, "effect");
+            ModifierKitEditor.AssignStatusEffect(effect, dummyIndex);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            Assert.IsInstanceOf<DummyStatusEffect>(((ApplyStatus)pierceKit.Layers[0].Modifiers[0]).Effect);
+        }
+
+        static SerializedProperty StatusProperty(SerializedObject serialized, string field)
+        {
+            SerializedProperty modifiers = serialized.FindProperty("layers").GetArrayElementAtIndex(0)
+                .FindPropertyRelative("modifiers");
+            return modifiers.GetArrayElementAtIndex(0).FindPropertyRelative(field);
         }
 
         static Recipe Basis()
