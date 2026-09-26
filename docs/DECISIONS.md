@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-032 — Modifier kits append onto a cloned base Recipe
+
+- **Date:** 2026-09-26
+- **Decision:** Games build a shot from a **base** `Recipe` (usually `RecipeAsset.ToRecipe()`) plus zero or more **modifier kits**. `ModifierKit` is a ScriptableObject (`Create > Projectile > Modifier Kit`) of **layers**: each layer is one `RecipeStage` and a `SerializeReference` `IModifier[]`. It has **no** Speed / Damage / Lifetime / Presentation — those stay on the base. `Recipe.Clone()` deep-copies stats and lists (same modifier clone path as `ToRecipe()`). `Recipe.Append(stage, modifier)` appends after `[ModifierStage]` validates that stage. `ModifierKit.ApplyTo(Recipe)` clones each layer’s modifiers onto that Recipe, in layer order then list order. `Recipe.Compose(basis, id, kits)` clones `basis`, sets `Id`, applies kits in argument order, and returns the new Recipe. Empty kits / empty layers are no-ops. An illegal stage (Pierce on OnSpawn, a layer with combined flags) throws. Do **not** auto-insert `Interval(n)` when appending to `OnInterval`. `IProjectileWorld` is unchanged. This is not wrap-the-next-spell, not a graph, and not a second Recipe type.
+- **Why:** Games want a projectile “base” plus single upgrades or combinations at fire time. `Recipe` lists are already that composition; mutating the authored asset or reusing `Recipe.Id` is the footgun (`RecipeStore` replaces the slot for a repeated id, so live instances can pick up the next composition). A kit without a stage cannot place `Speed` / `AreaEffect` / `GroundField`. Merging two full `RecipeAsset`s would fight over stats. The sample sheet already appends on a working copy (ADR-027); designers need the same append as an Inspector asset.
+- **Consequences:** Two new public types (`ModifierKit`, `ModifierKitLayer`) plus `Recipe.Clone` / `Append` / `Compose`. Custom Inspector reuses the RecipeAsset Add-menu filter per layer stage. Share `ToRecipe`’s modifier clone so kit instances are not the authored `SerializeReference` objects. Bump `package.json` to **0.1.3** (after 26’s 0.1.2). Consumer docs (`README`, package `AGENTS.md`, `Documentation/index.md`, `CHANGELOG`) describe base + kits. No second façade.
+
 ## ADR-031 — Published volumes also drive Homing, protection, ApplyStatus, OnTick auras, and occupancy
 
 - **Date:** 2026-09-23

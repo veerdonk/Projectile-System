@@ -67,7 +67,8 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | --- | --- |
 | `Runtime/ProjectileWorld.cs` | Façade: owns the ECS `World`, `Tick`, `Spawn`, `Dispose` |
 | `Runtime/Ecs/ProjectileComponents.cs` | Component structs + delta-time singleton |
-| `Runtime/Ecs/RecipeStore.cs` | RecipeIndex ↔ Recipe |
+| `Runtime/Ecs/RecipeStore.cs` | RecipeIndex ↔ Recipe. Keyed by `Recipe.Id`; a later `Spawn` with the same id **replaces** the slot (live instances read the new lists). Phase 27 compositions must pass a new id |
+| `Runtime/ModifierKit.cs` | ScriptableObject layers (`RecipeStage` + modifiers) appended onto a cloned base Recipe (ADR-032). Not a second façade |
 | `Runtime/Ecs/LifetimeSystem.cs` | Burst lifetime job |
 | `Runtime/Ecs/ProjectileSimulationSystem.cs` | Stages, hits, pool return, views; one live snapshot after expire |
 | `Runtime/Pierce.cs` | `OnHit` Target: consume remaining pierce, cancel despawn |

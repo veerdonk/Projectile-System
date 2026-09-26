@@ -33,14 +33,11 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 25 — published hit volumes**
+**Phases 26–27 scheduled (implement 26 first)**
 
-- `SetHitTarget(id, position, radius)` is three arguments. Phase 26 adds `ProtectionLevel`. Do not honor shields, homing, ApplyStatus, OnTick auras, or occupancy on this catalog yet.
-- `Pierce(n)` still absorbs `n` Target hits. Dying on the third published volume is `Pierce(2)`, same as `PierceTests` and the yard Pierce preset. The phase bullet says `Pierce(1)`; that count would die on the second volume.
-- Direct ignore is the last published `TargetId` while the instance still overlaps that sphere (skin 0.02), same slot idea as the last collider. Area and GroundField do not use that ignore.
-- Nearest contact wins between a scripted/PhysX hit and a published sweep. Ties keep the collider hit.
-- After the version bump, **Projectile Lab > Rebuild** writes the imported yard under `Assets/Samples/.../0.1.1/Projectile Yard/`. Yard dummies stay colliders.
-- Sample path / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage line endings / Sonar notes from phase 24 still apply. Do not create a git tag in a phase session. `.github/workflows/release-package.yml` on `main` creates `v{package.json version}` and a GitHub Release when that tag is missing (CHANGELOG section plus generated PR notes). First merge of the workflow will tag **v0.1.1**.
+- **26** (ADR-031, `package.json` 0.1.2): Homing reads hit-target poses; optional `ProtectionLevel` on `SetHitTarget`; ApplyStatus proofs; `AreaEffect` on `OnTick`; `occupancy` on AreaEffect and GroundField. Do not delete `SetHomingCandidate`.
+- **27** (ADR-032, 0.1.3): `ModifierKit` Inspector + `Recipe.Clone` / `Append` / `Compose`. Unique `Recipe.Id` per composition (`RecipeStore` replaces on reuse). Do not auto-insert `Interval`. Share `ToRecipe` modifier clone. Consumer README / AGENTS.md / `Documentation/index.md` / CHANGELOG are in scope for 27.
+- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage line endings / Sonar notes from phase 24 still apply. Do not create a git tag in a phase session; `.github/workflows/release-package.yml` tags `v{version}` on `main`.
 
 ## Do not
 

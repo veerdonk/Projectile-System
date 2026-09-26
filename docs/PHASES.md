@@ -617,6 +617,29 @@ Finish Target-gated behaviour on the phase-25 catalog so an ECS enemy published 
 
 **Proof:** Homing acquires a volume published only via `SetHitTarget`. ApplyStatus fires on that Direct hit. Strong published volume eats the shot with no `Hit`. Occupancy enter once, silent while standing, exit Hit; OnTick AreaEffect without occupancy Hits every Tick.
 
+**Stop.** Modifier kits (base Recipe + Inspector upgrades) are **phase 27**. Do not start it in the same session.
+
+## Phase 27 — Modifier kits (base Recipe + Inspector upgrades)
+
+Games designate a Recipe as the projectile base and append one modifier or a combination at fire time. Inspector-authored **kits** hold the extras; runtime compose clones the base, assigns a new `Id`, and appends. ADR-032. Does not depend on phase 26; if both are still queued, implement **26 first**.
+
+**In scope**
+
+- `ModifierKit` ScriptableObject (`Create > Projectile > Modifier Kit`). Layers: `ModifierKitLayer { RecipeStage Stage; IModifier[] Modifiers }` (`SerializeReference`). No stats on the kit. One layer = one of the six stages (not a flags combination). A combination kit is several layers (e.g. Pierce OnHit + Homing OnTick)
+- Inspector: per layer, stage dropdown + Add/Remove using the same `[ModifierStage]` filter as `RecipeAssetEditor` (OnHit offers Pierce; OnSpawn does not). Game `IModifier` types still show through `TypeCache`
+- `Recipe.Clone()`: independent copy of stats and lists. Reuse `RecipeAsset`’s modifier clone so authored kit/asset instances are not shared with the spawned Recipe
+- `Recipe.Append(RecipeStage stage, IModifier modifier)` (and array overload): append; throw if the modifier’s `[ModifierStage]` does not include `stage`, if `stage` is not exactly one flag, or if `modifier` is null
+- `ModifierKit.ApplyTo(Recipe recipe)`: clone-append each layer in order. Null/empty kit or layer is a no-op. Does **not** change `Recipe.Id`
+- `Recipe.Compose(Recipe basis, string id, params ModifierKit[] kits)`: `Clone`, set `Id`, apply kits in order, return. Throw if `basis` is null or `id` is null/empty. Same `Id` on `Spawn` still replaces the store slot — callers must pass a unique id per composition
+- Do **not** auto-insert `Interval(n)` when a kit targets `OnInterval`. Document that OnInterval extras do nothing without `Interval` on the base (or on an OnSpawn layer)
+- Edit Mode tests: Straight `ToRecipe` + Pierce kit → Pierce through two dummies then die on the third; two kits append in order (Pierce then ApplyStatus both on OnHit); Homing+Pierce combination kit; `Append` Pierce onto OnSpawn throws; Compose with a new id leaves the base Recipe lists unchanged; applying the kit does not alias the asset’s modifier instance; empty kit is identity. Existing collider tests stay green
+- **Docs (required):** [ARCHITECTURE.md](ARCHITECTURE.md) sketch, [REQUIREMENTS.md](REQUIREMENTS.md) glossary + scenarios, [SANDBOX.md](SANDBOX.md), package `README.md` (base + kit fire snippet), package `AGENTS.md`, `Documentation/index.md`, `CHANGELOG.md` for 0.1.3. XML `<summary>` on the new public types and `Clone` / `Append` / `Compose`. Call out unique `Recipe.Id` and the Interval footgun
+- One example kit asset in `Samples~/Yard` (Pierce on OnHit) so Import shows the Inspector. Do not add a second turret path or write back to `RecipeAsset`. Bump `package.json` to **0.1.3**. Do not create a git tag in the phase session
+
+**Out of scope:** merging two `RecipeAsset`s’ stats; wrap / graphs; changing `RecipeStore` identity; auto-`Interval`; drag-reorder; save Play Mode sheet to a kit; `IProjectileWorld` changes; applying HP; Unity Physics; Entities Graphics
+
+**Proof:** Edit Mode compose tests above are green. Create menu offers **Projectile > Modifier Kit**. Package README / AGENTS.md show `Compose` / `ApplyTo`. Yard Straight asset is unchanged.
+
 **Stop.**
 
 ## Later (not scheduled)
