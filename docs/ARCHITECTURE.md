@@ -53,6 +53,8 @@ Recipe
 
 **Authoring:** `RecipeAsset` is the Unity asset ([DECISIONS.md](DECISIONS.md) ADR-023). Tests and `Spawn` keep using `Recipe`. `ToRecipe()` copies stats and builds modifier instances. Multiply/Multicast children on the asset are other `RecipeAsset` references, resolved on build. Do not put `RecipeAsset` on `SpawnRequest`.
 
+**Modifier kits:** a game may treat one Recipe as a **base** and append extras at fire time ([DECISIONS.md](DECISIONS.md) ADR-032). `ModifierKit` is a ScriptableObject of layers (`RecipeStage` + modifiers), not a second Recipe and not stats. `Recipe.Clone()`, `Append`, `ModifierKit.ApplyTo`, and `Recipe.Compose(basis, id, kits)` clone then append. Each composition needs its own `Recipe.Id` (`RecipeStore` replaces the slot when the same id is spawned again). Kits do not insert `Interval(n)` for you.
+
 **Gravity:** `Recipe.Gravity` is downward acceleration in m/s², default 0 ([DECISIONS.md](DECISIONS.md) ADR-017). Burst integrates it each tick; `Gravity(n)` scales the instance value (ADR-018). Aim-to-point is `BallisticAim.TrySolve` at fire time (ADR-019, ADR-028): it returns the elevation that speed + gravity need to pass through the point (fast → nearly straight, barely enough on the level → ~45°). Not a baked curve and not an authored Range.
 
 ## Modifier contract
@@ -209,6 +211,27 @@ class RecipeAsset : ScriptableObject
     // Multiply/Multicast child slots are RecipeAsset refs.
     Recipe ToRecipe();
 }
+
+class Recipe
+{
+    // Stats + six lists as in the Recipe block above.
+    Recipe Clone(); // deep copy; same Id until the caller changes it
+    void Append(RecipeStage stage, IModifier modifier);
+    static Recipe Compose(Recipe basis, string id, params ModifierKit[] kits);
+}
+
+struct ModifierKitLayer
+{
+    RecipeStage Stage; // exactly one of the six
+    IModifier[] Modifiers;
+}
+
+class ModifierKit : ScriptableObject
+{
+    // Create > Projectile > Modifier Kit. No stats. ADR-032.
+    ModifierKitLayer[] Layers;
+    void ApplyTo(Recipe recipe); // clone-append; does not change Recipe.Id
+}
 ```
 
 Sandbox fire button / sample turret calls `Spawn`. A single sandbox driver calls `Tick` (for example from one `Update`). Instances do not have their own `Update`. `ProjectileWorld` is `IDisposable` (dispose the Entities `World`). Play Mode demo: turret + preset dropdown + recipe sheet in `Samples~/Yard/` ([DECISIONS.md](DECISIONS.md) ADR-024, ADR-029). Phase 21.b can Add/Remove modifiers on that working copy (ADR-027); it still does not write the `RecipeAsset`. Runtime has no camera, input, or HP.
@@ -231,7 +254,7 @@ Sandbox fire button / sample turret calls `Spawn`. A single sandbox driver calls
 Packages/com.veerdonk.projectile-system/
   Runtime/     façade, recipes, modifiers, pooling, PhysX query  (asmdef `Veerdonk.ProjectileSystem`)
   Runtime/Ecs/ internal components, RecipeStore, systems
-  Editor/      RecipeAsset inspector (ADR-023); more tooling later
+  Editor/      RecipeAsset inspector (ADR-023); ModifierKit inspector (ADR-032)
   Tests/Runtime
   Tests/Editor
   Samples~/Yard/   UPM sample (ADR-029): turret yard, presets, dummy HP. Hidden until Import

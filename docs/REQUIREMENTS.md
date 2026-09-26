@@ -11,6 +11,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Projectile** — the concept of a spell, bullet, missile, or shot (not a live object)
 - **Recipe** — authored definition: base stats (speed, radius, lifetime, gravity, presentation id, combat/cast numbers) plus six modifier lists. Unity authors a `RecipeAsset`; `Spawn` still takes `Recipe` ([DECISIONS.md](DECISIONS.md) ADR-023)
 - **Recipe asset** — ScriptableObject that creates and edits a Recipe in the Inspector. Six stage lists; Add menus are filtered by `[ModifierStage]`. `ToRecipe()` builds the runtime `Recipe`
+- **Modifier kit** — ScriptableObject of extra modifiers plus the stage list each belongs to. Applied onto a cloned base Recipe at fire time (`Compose` / `ApplyTo`). No Speed / Lifetime / Presentation of its own. See [DECISIONS.md](DECISIONS.md) ADR-032
 - **Instance** — one live simulated projectile
 - **Modifier** — a named behavior with a magnitude, written `Name(magnitude)` (see below)
 - **Stage list** — one of the six ordered modifier lists on a Recipe (`OnSpawn`, `OnTravel`, `OnTick`, `OnInterval`, `OnHit`, `OnExpire`). See [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -603,6 +604,30 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** `AreaEffect` or `GroundField` with `occupancy` true; a published volume that starts outside, enters, stays, then leaves
 - **When:** ticked through that motion
 - **Then:** one `HitSource.OccupancyEnter` (and status if authored) on enter; no further Hits from that modifier while inside; `HitSource.OccupancyExit` (Damage 0, no status) on leave. Strong published volumes are skipped
+
+### Phase 27 — Base Recipe plus a Pierce kit pierces
+
+- **Given:** a Straight `RecipeAsset` (empty OnHit) and a `ModifierKit` with Pierce(2) on OnHit
+- **When:** `Recipe.Compose(base.ToRecipe(), "straight+pierce", pierceKit)` is spawned down a three-dummy line
+- **Then:** the first two Targets live through and the third despawns the instance. The Straight asset’s lists are unchanged
+
+### Phase 27 — Two kits append in order
+
+- **Given:** a Pierce kit and an ApplyStatus kit, both OnHit
+- **When:** `Compose` applies Pierce then ApplyStatus
+- **Then:** OnHit runs Pierce then ApplyStatus. Swapping kit order swaps list order
+
+### Phase 27 — Illegal stage throws
+
+- **Given:** `Append(RecipeStage.OnSpawn, new Pierce(1))` or a kit layer with combined stage flags
+- **When:** compose / append runs
+- **Then:** it throws. The base Recipe is unchanged
+
+### Phase 27 — Unique Id per composition
+
+- **Given:** two `Compose` results that would otherwise share the base Recipe’s `Id`
+- **When:** both are spawned
+- **Then:** the caller assigned distinct ids. Reusing one id still replaces the store slot (existing `RecipeStore` rule)
 
 ## Product constraints
 
