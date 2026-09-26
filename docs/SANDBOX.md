@@ -66,7 +66,7 @@ Always: enter Play Mode from the imported `Yard.unity`, fire once, confirm the p
 | 24 | Package Manager → Import **Projectile Yard** | `Yard.unity` Play Mode; Pierce still pierces the first two dummies. Runtime has no `SampleLab` |
 | 25 | Edit Mode published volumes (package 0.1.1) | Straight shot vs a sphere with no collider raises Target `Hit`. Pierce / Bounce / AreaEffect / GroundField tests in [REQUIREMENTS.md](REQUIREMENTS.md). Yard collider dummies unchanged; no new preset |
 | 26 | Edit Mode published volumes | Homing acquires from `SetHitTarget` only. ApplyStatus on a published Target. Basic/Strong published protection. OnTick AreaEffect Hits each Tick; occupancy enter once then exit. Yard collider presets unchanged |
-| 27 | Edit Mode compose + Create menu | `Compose` Straight + Pierce kit pierces two dummies. Illegal stage throws. **Create > Projectile > Modifier Kit** exists. Yard Straight asset unchanged |
+| 27 | Edit Mode compose + Create menu | `Compose` Straight + Pierce kit pierces two dummies. Illegal stage throws. **Create > Projectile > Modifier Kit** exists. `Samples~/Yard/Recipes/PierceKit.asset` is Pierce(2) on OnHit. Yard Straight asset unchanged |
 
 AreaEffect, GroundField, Recipe gravity, barrel pitch, and needed-arc `BallisticAim` (Cannonball) are sample presets.
 

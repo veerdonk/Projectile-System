@@ -16,614 +16,143 @@
 
 Always run `sigmap ask` (or `sigmap --query`) before searching for files relevant to a task.
 
-## changes (last 10 commits — 6 minutes ago)
-```
-Packages\com.veerdonk.projectile-system\Editor\RecipeAssetEditor.cs +RecipeAssetEditor
-Packages\com.veerdonk.projectile-system\Runtime\RecipeAsset.cs +RecipeAsset
-Packages\com.veerdonk.projectile-system\Runtime\RecipeStage.cs +ModifierStageAttribute
-```
-
 ## Assets
 
-### Assets\Sandbox\SandboxProjectileProtection.cs
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\BallisticClearance.cs
+```
+class BallisticClearance  :11-203
+  TrySolve(Vector3 origin, Vector3 target, float speed, float gravity, float radius, float lifetimeSeconds, Collider intended, out Vector3 direction) → bool  :24-32
+  TrySolve(Vector3 origin, Vector3 target, float speed, float gravity, Func<Vector3, PathOutcome> trace, out Vector3 direction) → bool  :43-49
+  TryMinimumLoft(Vector3 origin, Vector3 target, Vector3 low, Vector3 high, Func<Vector3, PathOutcome> trace, out Vector3 direction) → bool  :69-75
+  Pitch(Vector3 direction) → float  :116-116
+  DirectionFromPitch(Vector3 azimuth, float pitch) → Vector3  :122-122
+  Trace(Vector3 origin, Vector3 direction, float speed, float gravity, float radius, Vector3 target, float lifetimeSeconds, Collider intended) → PathOutcome  :133-141
+enum PathOutcome  :17-22
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\Editor\BallisticClearanceTests.cs
+```
+class BallisticClearanceTests  :7-68
+  TrySolve_ClearPath_UsesFlatterRoot() → void  :15-15
+  TrySolve_BlockedFlatterPath_UsesMinimumPitchNotSteepCap() → void  :29-29
+  TrySolve_Unreachable_ReturnsFalse() → void  :56-56
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\Editor\GroundAimTests.cs
+```
+class GroundAimTests  :7-117
+  AimDirection_IsHorizontalTowardGroundPoint() → void  :10-10
+  AimDirection_FalseWhenRayMissesGround() → void  :21-21
+  TryPoint_HitsGroundPlane() → void  :29-29
+  TryPoint_FalseWhenRayMissesGround() → void  :39-39
+  PitchLook_HasVerticalTowardGroundPoint() → void  :46-46
+  Flatten_ZerosY() → void  :57-57
+  TryAimPoint_HitsCubeTop_NotGroundBehind() → void  :66-66
+  SpawnPosition_LiftsAboveGround_WhenOnTravelSizeWouldOverlap() → void  :92-92
+  SpawnPosition_KeepsMuzzleHeight_WhenSizeFits() → void  :106-106
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\Editor\SampleModifierCatalogTests.cs
+```
+class SampleModifierCatalogTests  :7-102
+  OnHitCatalog_ContainsPierce_NotHoming() → void  :10-10
+  OnSpawnCatalog_DoesNotContainPierce() → void  :18-18
+  OnTickCatalog_ContainsHoming_NotPierce() → void  :27-27
+  Create_UsesPhaseDefaults() → void  :35-35
+  Create_AreaEffect_SetsWorkingEffectRadiusWhenZero() → void  :69-69
+  AppendPierce_ToEmptyOnHit_LeavesAssetUnrelated() → void  :77-77
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\Editor\SamplePresetAssets.cs
+```
+class SamplePresetAssets  :7-226
+  CreateOrUpdate() → SampleLab.Preset[]  :11-11
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\Editor\SampleSceneBuilder.cs
+```
+class SampleSceneBuilder  :13-168
+  Rebuild() → void  :29-29
+  RebuildFromCommandLine() → void  :44-44
+  EnsureAssetFolder(string assetPath) → void  :104-104
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\GroundAim.cs
+```
+class GroundAim  :8-65
+  TryPoint(Ray cameraRay, out Vector3 point) → bool  :12-12
+  TryAimPoint(Ray cameraRay, out Vector3 point, out Collider collider) → bool  :25-25
+  TryDirection(Ray cameraRay, Vector3 from, out Vector3 direction) → bool  :38-38
+  Flatten(Vector3 direction) → Vector3  :58-58
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\SampleLab.cs
+```
+class SampleLab  :11-429
+  Fire() → void  :262-262
+  ResetLab() → void  :299-299
+  BindChildren() → void  :377-377
+class Preset  :16-21
+enum LastFire  :23-28
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\SampleModifierCatalog.cs
+```
+class SampleModifierCatalog  :8-278
+  ModifiersFor(RecipeStage stage) → Type[]  :19-19
+  Create(Type type, Recipe defaultChild, Recipe working = null) → IModifier  :37-37
+  DefaultChild(SampleLab.Preset[] presets) → Recipe  :94-94
+  GetList(Recipe recipe, RecipeStage stage) → IModifier[]  :103-103
+  SetList(Recipe recipe, RecipeStage stage, IModifier[] list) → void  :120-120
+  Append(Recipe recipe, RecipeStage stage, IModifier modifier) → void  :151-151
+  RemoveAt(Recipe recipe, RecipeStage stage, int index) → void  :163-163
+  ReplaceAt(Recipe recipe, RecipeStage stage, int index, IModifier modifier) → void  :183-183
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\SampleRecipeSheet.cs
+```
+class SampleRecipeSheet  :8-367
+  ClearBuffers() → void  :15-15
+  Draw(Recipe recipe, SampleLab.Preset[] presets) → void  :22-22
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\SampleYard.cs
+```
+class SampleYard  :6-357
+  BuildIfNeeded(Transform root) → bool  :51-51
+  SpawnPosition(Vector3 muzzle, Recipe recipe) → Vector3  :82-82
+  StartRadius(Recipe recipe) → float  :91-91
+  FindTurret(Transform root) → Transform  :107-107
+  FindGun(Transform root) → Transform  :112-112
+  FindMuzzle(Transform root) → SandboxSpawnPoint  :118-118
+  ResetTurretPose(Transform root) → void  :131-131
+  AimCamera() → void  :141-141
+  ApplyColors(Transform root) → void  :151-151
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\SandboxCubeLabel.cs
+```
+class SandboxCubeLabel  :7-100
+  Ensure(Transform cube, string labelTitle) → void  :16-16
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\SandboxDummyTarget.cs
+```
+class SandboxDummyTarget  :14-198
+  Configure(int id, float maxHpValue = 10f, ProtectionLevel protectionLevel = ProtectionLevel.None, bool restoreHp = true) → void  :38-38
+  Restore() → void  :47-47
+  Bind(IProjectileWorld world) → void  :61-61
+  Unbind() → void  :72-72
+  Apply(IStatusEffect effect) → void  :104-104
+```
+
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\SandboxProjectileProtection.cs
 ```
 class SandboxProjectileProtection  :7-17
   Configure(ProtectionLevel protectionLevel) → void  :13-13
 ```
 
-## Packages
-
-### Packages\com.veerdonk.projectile-system\CHANGELOG.md
+### Assets\Samples\com.veerdonk.projectile-system\0.1.0\Projectile Yard\SandboxSpawnPoint.cs
 ```
-h1 Changelog
-h2 [0.1.0] - 2026-09-14
-h3 This is the first release of *\<com.veerdonk.projectile-system\>*.
-```
-
-### Packages\com.veerdonk.projectile-system\Documentation\index.md
-```
-h1 About &lt;package name&gt;
-h1 Installing &lt;package name&gt;
-h1 Using &lt;package name&gt;
-h2 How to add images
-h1 Technical details
-h2 Requirements
-h2 Known limitations
-h2 Package contents
-h2 Document revision history
-```
-
-### Packages\com.veerdonk.projectile-system\Editor\RecipeAssetEditor.cs
-```
-class RecipeAssetEditor  :11-343
-  ModifiersFor(RecipeStage stage) → Type[]  :33-33
-  Patterns() → Type[]  :49-49
-  StatusEffects() → Type[]  :54-54
-  OnInspectorGUI() → void  :96-96
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\ApplyStatus.cs
-```
-class ApplyStatus  :13-38
-  Apply(ModifierContext context) → void  :29-29
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\BallisticAim.cs
-```
-class BallisticAim  :12-129
-  TrySolve(Vector3 origin, Vector3 target, float speed, float gravity, out Vector3 direction) → bool  :20-25
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\ChainBudget.cs
-```
-struct ChainBudget  :8-27
-  Inherit(int left) → ChainBudget  :13-13
-  Start(int recipeGenerations) → int  :18-18
-  Resolve(int recipeGenerations) → int  :23-23
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\CirclePattern.cs
-```
-class CirclePattern  :11-96
-  GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count) → Vector3  :13-13
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\Ecs\ProjectileComponents.cs
-```
-struct Projectile  :6-28
-struct ProjectilePosition  :30-33
-struct ProjectileVelocity  :35-38
-struct ProjectileCandidate  :40-43
-struct SimDeltaTime  :45-48
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\Ecs\ProjectileSimulationSystem.cs
-```
-class SimulationBridge  :10-20
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\Ecs\RecipeStore.cs
-```
-class RecipeStore  :6-34
-  GetOrAdd(Recipe recipe) → int  :11-11
-  Get(int index) → Recipe  :30-30
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\HitInfo.cs
-```
-enum HitKind  :7-11
-enum HitSource  :14-18
-enum ProtectionLevel  :24-29
-struct HitInfo  :55-67
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IDamageable.cs
-```
-interface IDamageable  :6-9
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IGroundFieldViewFactory.cs
-```
-interface IGroundFieldViewFactory  :9-12
-class PrimitiveGroundFieldViewFactory  :17-34
-  Create(float radius, string presentationId, Transform poolParent) → ProjectileView  :21-21
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IHitQuery.cs
-```
-interface IHitQuery  :6-15
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IHomingAcquisition.cs
-```
-class HomingCatalog  :10-74
-  Set(TargetId id, Vector3 position) → void  :16-16
-  Remove(TargetId id) → void  :30-30
-  TryGet(int index, out TargetId id, out Vector3 position) → bool  :39-39
-  TryGetPosition(in HomingTarget target, out Vector3 position) → bool  :54-54
-interface IHomingAcquisition  :79-87
-class ClosestInTravelDirectionAcquisition  :93-144
-  TryAcquire(ModifierContext context, out HomingTarget target) → bool  :95-95
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IModifier.cs
-```
-interface IModifier  :8-12
-class ModifierContext  :17-306
-  RequestSpawn(Recipe recipe, Vector3 position, Vector3 direction) → void  :102-102
-  RequestStatus(IStatusEffect effect) → void  :112-112
-  RequestAreaOverlap(Vector3 center, float damage, IStatusEffect status) → void  :123-123
-  RequestGroundField(Vector3 center, float radius, float lifetimeSeconds, float damage, IStatusEffect status, float intervalSeconds, string presentationId = null) → void  :132-139
-  SuppressDirectHit() → void  :153-153
-  SuppressDirectStatus() → void  :159-159
-  ClearRequestedStatus() → void  :174-174
-  ClearAreaRequests() → void  :179-179
-  ClearGroundFieldRequests() → void  :186-186
-  RequestMulticastExtra(Recipe recipe, Vector3 position, Vector3 direction) → void  :199-199
-  RequestMultiplyChild(Recipe recipe, Vector3 position, Vector3 direction) → void  :204-204
-  NextFloat(float minInclusive, float maxExclusive) → float  :226-226
-  Bind(ProjectileId instanceId, Vector3 position, Vector3 velocity, float speed, float gravity, float remainingLifetime, int remainingPierce, int remainingBounce, float radius, float damage, float criticalChance, float manaCost, float effectRadius, float spread, float intervalSeconds, int multiplyGenerationsLeft, bool hasHit, in HitInfo hit, float deltaTime, HomingTarget homingTarget, HomingTarget homingIgnoredTarget) → void  :234-255
-  ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity) → void  :286-286
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IMulticastPattern.cs
-```
-interface IMulticastPattern  :7-14
-class RandomConePattern  :17-57
-  GetDirection(ModifierContext context, Vector3 forward, int index, int count) → Vector3  :28-28
-  Sample(ModifierContext context, Vector3 forward, float halfAngleDegrees) → Vector3  :34-34
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IMultiplyPattern.cs
-```
-interface IMultiplyPattern  :6-14
-class MultiplyPatternPlane  :16-39
-  ToWorld(Vector3 forward, float localX, float localY) → Vector3  :18-18
-  FromLocal(Vector3 forward, Vector2 local) → Vector3  :35-35
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IProjectileProtection.cs
-```
-interface IProjectileProtection  :7-10
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IProjectileViewFactory.cs
-```
-interface IProjectileViewFactory  :9-12
-class PrimitiveViewFactory  :17-35
-  Create(Recipe recipe, Transform poolParent) → ProjectileView  :19-19
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IProjectileWorld.cs
-```
-interface IProjectileWorld  :9-34
-struct StatusInfo  :37-42
-struct SpawnRequest  :45-54
-struct HomingTarget  :83-92
-  Assigned(TargetId id) → HomingTarget  :88-88
-struct ExpireInfo  :95-98
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IStatusEffect.cs
-```
-interface IStatusEffect  :6-9
-class DummyStatusEffect  :13-18
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\IStatusReceiver.cs
-```
-interface IStatusReceiver  :7-10
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\PhysicsHitQuery.cs
-```
-class PhysicsHitQuery  :7-340
-  TryCast(ProjectileId instanceId, Vector3 origin, Vector3 direction, float distance, float radius, out HitInfo hit) → bool  :15-15
-  CopyIgnore(ProjectileId from, ProjectileId to) → void  :61-61
-  Overlap(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results) → void  :70-70
-  OverlapDisk(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results) → void  :115-115
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\PrefabGroundFieldViewFactory.cs
-```
-class PrefabGroundFieldViewFactory  :12-41
-  Create(float radius, string presentationId, Transform poolParent) → ProjectileView  :25-25
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\PrefabViewFactory.cs
-```
-class PrefabViewFactory  :12-44
-  Create(Recipe recipe, Transform poolParent) → ProjectileView  :25-25
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\ProjectilePool.cs
-```
-class ProjectilePool  :8-175
-  Prewarm(int recipeIndex, Recipe recipe, int count) → void  :50-50
-  Rent(int recipeIndex, Recipe recipe, out ProjectileView view) → Entity  :68-68
-  Return(int recipeIndex, Entity entity) → void  :95-95
-  TryGetView(Entity entity, out ProjectileView view) → bool  :111-111
-  Dispose() → void  :116-116
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\ProjectileView.cs
-```
-class ProjectileView  :9-46
-  Bind(Vector3 position, float radius) → void  :19-19
-  SetRadius(float radius) → void  :26-26
-  SetPose(Vector3 position, Vector3 velocity) → void  :35-35
-  Release() → void  :42-42
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\ProjectileWorld.cs
-```
-class ProjectileWorld  :10-676
-  Prewarm(Recipe recipe, int count) → void  :128-128
-  Spawn(in SpawnRequest request) → ProjectileId  :144-144
-  Tick(float dt) → void  :152-152
-  SetHomingCandidate(TargetId id, Vector3 position) → void  :165-165
-  RemoveHomingCandidate(TargetId id) → void  :171-171
-  TryGetState(ProjectileId id, out Vector3 position, out Vector3 velocity, out Recipe recipe) → bool  :177-177
-  TryGetManaCost(ProjectileId id, out float manaCost) → bool  :211-211
-  TryGetRadius(ProjectileId id, out float radius) → bool  :219-219
-  TryGetGravity(ProjectileId id, out float gravity) → bool  :245-245
-  TryGetSpread(ProjectileId id, out float spread) → bool  :271-271
-  TryGetCombatStats(ProjectileId id, out float damage, out float criticalChance, out float manaCost, out float effectRadius) → bool  :297-302
-  TryGetRemaining(ProjectileId id, out int remainingPierce, out int remainingBounce) → bool  :334-334
-  TryGetHomingTarget(ProjectileId id, out HomingTarget target) → bool  :362-362
-  TryGetActiveAt(int index, out ProjectileId id, out Vector3 position, out Vector3 velocity, out Recipe recipe) → bool  :390-390
-  Dispose() → void  :429-429
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\RandomCirclePattern.cs
-```
-class RandomCirclePattern  :14-77
-  GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count) → Vector3  :22-22
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\Recipe.cs
-```
-class Recipe  :6-68
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\RecipeAsset.cs
-```
-class RecipeAsset  :8-277
-  ToRecipe() → Recipe  :138-138
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\RecipeStage.cs
-```
-enum RecipeStage  :6-14
-class ModifierStageAttribute  :17-25
-```
-
-### Packages\com.veerdonk.projectile-system\Runtime\SquarePattern.cs
-```
-class SquarePattern  :10-161
-  GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count) → Vector3  :12-12
-```
-
-### Packages\com.veerdonk.projectile-system\Samples\Example\SampleExample.cs
-```
-class MyPublicSampleExampleClass  :18-28
-  CountThingsAndDoStuffAndOutputIt() → void  :23-23
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\ApplyStatusTests.cs
-```
-class ApplyStatusTests  :7-231
-  TargetHit_RaisesStatusApplied_WithDummyEffect_ThenDespawns() → void  :10-10
-  TwoApplyStatus_OnTargetHit_RaisesStatusAppliedInListOrder() → void  :68-68
-  WorldHit_DoesNotRaiseStatusApplied() → void  :113-113
-  Pierce1_ApplyStatus_RaisesOncePerTargetHit_IncludingKillingHit() → void  :142-142
-  Pierce1_TwoApplyStatus_RaisesEachEffectPerTargetHit() → void  :186-186
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\AreaEffectTests.cs
-```
-class AreaEffectTests  :7-288
-  OnHit_Splash_HitsNearbyTarget_AndDirectContact() → void  :10-10
-  OnHit_AreaOnly_SuppressesDirectHit() → void  :55-55
-  OnTravel_Burst_HitsTargetAtSpawn_BeforeMove() → void  :91-91
-  OnInterval_Aura_HitsBesidePath_ThenMissesAfterLeaving() → void  :124-124
-  EffectRadius0_HitsNobody() → void  :170-170
-  WorldOverlap_IsIgnored_TargetInSphereIsHit() → void  :204-204
-  AreaStatus_PerTarget_SuppressesDirectStatus() → void  :242-242
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\BallisticAimTests.cs
-```
-class BallisticAimTests  :6-198
-  TrySolve_ReachableSandboxDummy_PathMeetsTarget() → void  :16-16
-  TrySolve_MinSpeedLevelTarget_ElevationNear45() → void  :30-30
-  TrySolve_FastLevelTarget_ElevationNearLineOfSight() → void  :47-47
-  TrySolve_TooSlow_LevelTarget_ReturnsFalse() → void  :66-66
-  TrySolve_TooFar_ReturnsFalse() → void  :80-80
-  TrySolve_Gravity0_HighTarget_ReturnsFalse() → void  :93-93
-  TrySolve_Gravity0_TargetOnTheRay_ReturnsHorizontalDirection() → void  :106-106
-  TrySolve_NonPositiveSpeed_ReturnsFalse() → void  :120-120
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\BounceTests.cs
-```
-class BounceTests  :6-161
-  Bounce1_ReflectsVelocity_ThenTargetHitDespawns() → void  :9-9
-  Bounce_SecondWorldHitDespawns() → void  :65-65
-  Bounce0_WorldHitDespawns() → void  :93-93
-  Bounce1_TargetHit_Reflects_RaisesHit_AndStaysLive() → void  :123-123
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\CombatScaleTests.cs
-```
-class CombatScaleTests  :7-218
-  Damage2_OnTravel_DoublesHitDamage() → void  :10-10
-  Pierce1_ThenDamage2_OnHit_FirstHitUnscaled_SecondDoubled() → void  :41-41
-  Mana05_OnTravel_HalvesInstanceCost_LeavesRecipeUnchanged() → void  :82-82
-  Critical2_OnTravel_ClampsAtOne() → void  :112-112
-  Damage05_OnInterval_ScalesAgainEachCrossing() → void  :146-146
-  CombatScale_NonPositiveScale_IsNoOp() → void  :176-176
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\CombatStatsTests.cs
-```
-class CombatStatsTests  :6-185
-  TargetHit_CarriesRecipeCombatStats() → void  :9-9
-  RecipeWithoutAuthoredStats_HitDamageIsOne() → void  :42-42
-  HitDamage_ComesFromTheInstanceCopy_NotTheLiveRecipe() → void  :75-75
-  ManaCost_StaysOnTheRecipe_AndTickDoesNotChangeIt() → void  :106-106
-  ModifierContext_ExposesTheInstanceCombatStats() → void  :138-138
-  Apply(ModifierContext context) → void  :176-176
-class StatProbe  :168-184
-  Apply(ModifierContext context) → void  :176-176
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\CombinationTests.cs
-```
-class CombinationTests  :7-143
-  Pierce1_Homing_ReleasesLockOnTargetHit_ThenAcquiresTheNextCandidate() → void  :10-10
-  Bounce2_Multiply2_OnHit_SpawnsTwoChildrenPerWorldHit_ChildrenDoNotInherit() → void  :56-56
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\GravityTests.cs
-```
-class GravityTests  :6-351
-  Gravity0_StaysLevelOverSeveralTicks() → void  :9-9
-  GravityPositive_DecreasesY_WhileXZFollowLaunch() → void  :36-36
-  GravityNegative_KeepsStraightIntegrate() → void  :78-78
-  Gravity_IsCopiedOntoTheInstance_AndLeavesTheRecipeUnchanged() → void  :104-104
-  ModifierContext_ExposesInstanceGravity() → void  :129-129
-  Gravity2_OnTravel_DropsAsTwiceRecipeGravity_AndLeavesRecipeUnchanged() → void  :153-153
-  Gravity05_OnInterval_HalvesDropEachPeriod() → void  :200-200
-  Gravity_NonPositiveScale_LeavesInstanceAndRecipeUnchanged() → void  :243-243
-  Pierce1_ThenGravity2_OnHit_ScalesAfterTheHit() → void  :273-273
-  Bounce_ReflectsGravityUpdatedVelocity() → void  :304-304
-  Apply(ModifierContext context) → void  :346-346
-class GravityProbe  :342-350
-  Apply(ModifierContext context) → void  :346-346
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\GroundFieldTests.cs
-```
-class GroundFieldTests  :7-470
-  OnHit_Plant_PulsesImmediately_AndAgainAtInterval() → void  :10-10
-  OutsideXZ_IsMissed_EvenWhenSphereWouldCoverHighTarget() → void  :64-64
-  AfterLifetime_NoFurtherHits_AndNoExpiredForField() → void  :108-108
-  Status_RaisesPerPulse() → void  :152-152
-  OnExpire_PlantsAtExpirePosition() → void  :194-194
-  OnTravel_PlantsAtSpawn() → void  :231-231
-  Strong_IsSkipped_BasicCarriesProtection() → void  :264-264
-  RadiusZero_OrLifetimeZero_PlantsNothing() → void  :309-309
-  OnHitThenOnExpire_PlantTwoDisks() → void  :347-347
-  CreateViewsFalse_DoesNotCallGroundFieldFactory() → void  :383-383
-  UnknownPresentationId_FallsBackToPrimitiveDisk() → void  :407-407
-  KnownPresentationId_KeepsAuthoredPrefabScale() → void  :425-425
-  Create(float radius, string presentationId, Transform poolParent) → ProjectileView  :464-464
-class CountingGroundFieldViewFactory  :460-469
-  Create(float radius, string presentationId, Transform poolParent) → ProjectileView  :464-464
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\HitDespawnTests.cs
-```
-class HitDespawnTests  :6-69
-  TargetHit_RaisesHit_Despawns_AndRestoresPool() → void  :9-9
-  WorldHit_Despawns() → void  :50-50
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\HomingTests.cs
-```
-class HomingTests  :6-295
-  Homing_TurnsTowardAssignedTargetAtDegreesPerSecond() → void  :18-18
-  Homing100_TurnsHarderThanHoming10_InTheSameDt() → void  :47-47
-  Homing_AcquiresClosestCandidateInTravelDirection() → void  :58-58
-  Homing_AssignedSpawnTargetSkipsAcquisition() → void  :84-84
-  Homing_DoesNotRetargetUntilATargetHit() → void  :109-109
-  Homing_OnTargetHit_DropsLock_AndDoesNotReacquireThatTargetWhileItStaysAhead() → void  :136-136
-  Homing_WorldHit_DoesNotDropLock() → void  :170-170
-  Homing100_HitsSandboxDummy_Homing10_Misses() → void  :206-206
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\IntervalTests.cs
-```
-class IntervalTests  :8-160
-  Interval_DrivesEveryModifierOnTheOnIntervalList() → void  :11-11
-  OnInterval_WithoutInterval_NeverFires() → void  :48-48
-  Interval_SetsThePeriodForThatRecipe() → void  :80-80
-  Interval_RemovedFromRecipe_DoesNotSurviveOnAPooledEntity() → void  :109-109
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\KinematicMoveTests.cs
-```
-class KinematicMoveTests  :6-31
-  Tick_MovesAlongDirectionBySpeedTimesDt() → void  :9-9
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\LifetimeExpireTests.cs
-```
-class LifetimeExpireTests  :6-39
-  Tick_ExpiresAtLifetimeAndReturnsToPool_WithoutChildren() → void  :9-9
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\LiveSnapshotTests.cs
-```
-class LiveSnapshotTests  :6-47
-  SecondInstanceStillMoves_WhenFirstDespawnsOnHit() → void  :9-9
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\MulticastTests.cs
-```
-class MulticastTests  :7-349
-  Multicast3_OnSpawn_CreatesThreeInstancesInARandomCone() → void  :10-10
-  Multicast3_ExtraRecipeWithItsOwnMulticast_DoesNotRecurse() → void  :52-52
-  Multicast3_OneGeneration_ExpandsOneMoreRoundThenStops() → void  :81-81
-  Prewarm_CoversEveryMulticastGeneration() → void  :111-111
-  Multicast3_GenerationsOnTheExtraRecipe_DoNotExtendTheChain() → void  :139-139
-  Multicast3_SpawnedDirectly_StillMulticasts() → void  :165-165
-  Multicast3_CustomPattern_AimsEveryInstanceIncludingTheOriginal() → void  :187-187
-  Multicast3_SameSeed_IsDeterministic() → void  :227-227
-  Multicast1_LeavesTheOriginalAlone() → void  :241-241
-  Multicast0_LeavesTheOriginalAlone() → void  :247-247
-  GetDirection(ModifierContext context, Vector3 forward, int index, int count) → Vector3  :343-343
-class FanPattern  :334-348
-  GetDirection(ModifierContext context, Vector3 forward, int index, int count) → Vector3  :343-343
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\MultiplyPatternTests.cs
-```
-class MultiplyPatternTests  :7-404
-  SquarePattern_NamedCounts_MatchLattice() → void  :13-13
-  SquarePattern_10_AddsTopMiddleOf5x5() → void  :78-78
-  CirclePattern_3_IsEquilateralTriangle_4_AddsCenter() → void  :85-85
-  CirclePattern_6_IsCenterPlusPentagon() → void  :109-109
-  CirclePattern_1_And_2_MatchSquare() → void  :125-125
-  RandomCirclePattern_StaysInsideDisk_AndIsDeterministic() → void  :132-132
-  RandomCirclePattern_SeparatesByMinDistance() → void  :154-154
-  Multiply8_RandomCircle_OnHit_ChildrenAreAtLeastChildDiameterApart() → void  :163-163
-  Spread0_StacksForEveryPattern() → void  :200-200
-  Multiply2_Square_OnInterval_PlacesPairInTravelPlane() → void  :216-216
-  Multiply5_Square_OnHit_PlacesDie5AroundHitPoint() → void  :257-257
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\MultiplyTests.cs
-```
-class MultiplyTests  :7-418
-  Multiply2_OnInterval_SpawnsTwoChildrenAlongTravel_AfterHalfSecond() → void  :10-10
-  Multiply2_OnInterval_LargeDt_FiresEachCrossing() → void  :59-59
-  Multiply_OnInterval_DoesNotFireOnExpireTick() → void  :86-86
-  Multiply1_OnExpire_SpawnsChildFromLifetime() → void  :113-113
-  Multiply1_OnExpire_ChildDoesNotInheritMultiply_ByDefault() → void  :147-147
-  Multiply1_OnExpire_ChildInheritsMultiply_ForOneGeneration() → void  :168-168
-  Prewarm_CoversOnExpireChildren() → void  :192-192
-  Prewarm_CoversIntervalChildrenAliveAtOnce() → void  :208-208
-  Multiply1_OnExpire_KillingHit_UsesHitNormal() → void  :238-238
-  KillingHit_RunsOnHitThenOnExpire() → void  :273-273
-  Multiply3_OnHit_DefaultSpread0_StacksAlongHitNormal() → void  :308-308
-  Multiply3_OnHit_RandomCircle_SameSeed_IsDeterministic() → void  :351-351
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\OnHitSpawnPoseTests.cs
-```
-class OnHitSpawnPoseTests  :6-84
-  MultiplyOnHit_SpawnsChildAtPointAlongNormal_UsingChildRecipe() → void  :9-9
-  Multiply0_OnHit_DoesNotSpawnChild() → void  :53-53
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\PierceTests.cs
-```
-class PierceTests  :6-118
-  Pierce2_FirstTwoTargetHitsContinue_ThirdDespawns() → void  :9-9
-  Pierce0_TargetHitDespawns() → void  :65-65
-  Pierce_DoesNotAbsorbWorldHit() → void  :95-95
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\PoolCountTests.cs
-```
-class PoolCountTests  :6-33
-  AvailableCount_UnchangedAfterRentAndReturn() → void  :9-9
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\ProtectionTests.cs
-```
-class ProtectionTests  :7-264
-  Basic_Bounce1_Reflects_RaisesProtectedHit_NoStatusApplied() → void  :10-10
-  Basic_Pierce1_Continues_ThenUnprotectedTargetIsUnchanged() → void  :54-54
-  Basic_Pierce1_ConsumesOnWorldHit() → void  :100-100
-  Strong_EatsBouncingShot_NoHit_NoOnHitOrOnExpireChildren() → void  :133-133
-  UnprotectedTarget_StillRaisesHitAndStatus() → void  :182-182
-  AreaOverlap_SkipsStrong_IncludesBasicWithProtection() → void  :217-217
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\ScriptedHitQuery.cs
-```
-class ScriptedHitQuery  :6-163
-  Queue(HitKind kind, Vector3 point, Vector3 normal, TargetId targetId = default, ProtectionLevel protection = ProtectionLevel.None) → void  :14-19
-  QueueFor(ProjectileId instanceId, HitKind kind, Vector3 point, Vector3 normal, TargetId targetId = default, ProtectionLevel protection = ProtectionLevel.None) → void  :34-40
-  AddOverlapTarget(TargetId targetId, Vector3 position, ProtectionLevel protection = ProtectionLevel.None) → void  :47-50
-  AddOverlapWorld(Vector3 position) → void  :61-61
-  TryCast(ProjectileId instanceId, Vector3 origin, Vector3 direction, float distance, float radius, out HitInfo hit) → bool  :70-70
-  Overlap(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results) → void  :92-92
-  OverlapDisk(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results) → void  :121-121
-  CopyIgnore(ProjectileId from, ProjectileId to) → void  :152-152
-struct OverlapBody  :156-162
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\SimulationTestHelper.cs
-```
-class SimulationTestHelper  :7-74
-  CreateRecipe(string id, float speed = 10f, float lifetime = 10f, float radius = 0.25f, float damage = 1f, float criticalChance = 0f, float manaCost = 0f, float effectRadius = 0f, float gravity = 0f, IModifier[] onSpawn = null, IModifier[] onTravel = null, IModifier[] onTick = null, IModifier[] onHit = null, IModifier[] onInterval = null, IModifier[] onExpire = null) → Recipe  :9-24
-  OffSurface(Vector3 point, Vector3 direction, float radius) → Vector3  :61-61
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\SizeSpreadScaleTests.cs
-```
-class SizeSpreadScaleTests  :7-231
-  Size2_OnTravel_DoublesRadius() → void  :10-10
-  Spread2_OnTravel_WithMultiply2_SquareSpread2_PlacesPair4mApart() → void  :35-35
-  Spread2_OnTravel_WithMultiplySpread0_StillStacks() → void  :68-68
-  EffectRadius2_OnTravel_DoublesHitInfoEffectRadius() → void  :103-103
-  SizeSpreadEffectRadius_NonPositiveScale_IsNoOp() → void  :134-134
-  Size05_OnInterval_ScalesAgainEachCrossing() → void  :187-187
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Editor\SpeedTests.cs
-```
-class SpeedTests  :6-200
-  Speed2_OnTravel_StartsAtTwiceRecipeSpeed() → void  :9-9
-  Speed05_OnInterval_ScalesAgainEachCrossing() → void  :41-41
-  Bounce1_ThenSpeed2_OnHit_ScalesReflectedVelocity() → void  :72-72
-  Pierce1_ThenSpeed05_OnHit_ScalesAndStaysLive() → void  :107-107
-  Speed_OnInterval_RunsWhenMultiplyGenerationsAreSpent() → void  :138-138
-  Speed_NonPositiveScale_IsNoOp() → void  :179-179
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Runtime\GroundFieldViewPlayModeTests.cs
-```
-class GroundFieldViewPlayModeTests  :9-117
-  PrefabFactory_RentsAuthoredMesh_AndReusesView() → IEnumerator  :12-12
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Runtime\PhysicsHitPlayModeTests.cs
-```
-class PhysicsHitPlayModeTests  :9-644
-  StraightShot_HitsTarget_ReturnsToPool() → IEnumerator  :12-12
-  OnHitSpawn_CreatesChildAfterTargetHit() → IEnumerator  :63-63
-  OnHitMultiply3_DoesNotRehitSameTarget() → IEnumerator  :131-131
-  LifetimeOnly_ExpiresWithoutChild() → IEnumerator  :187-187
-  Pierce2_HitsThreeTargets_ThenReturnsToPool() → IEnumerator  :229-229
-  Pierce2_LargeCubesSmallDt_DoesNotSpendAllPierceOnFirstTarget() → IEnumerator  :287-287
-  Bounce1_ReflectsOffWall_ThenHitsTarget() → IEnumerator  :342-342
-  OnTravel_AreaOverlap_HitsDamageable_IgnoresWorld() → IEnumerator  :401-401
-  OnHit_AreaOverlap_IncludesContactedDummy() → IEnumerator  :458-458
-  OnTravel_GroundFieldDisk_HitsInsideXZ_IgnoresOutsideCircle() → IEnumerator  :530-530
-class TestDamageable  :640-643
-```
-
-### Packages\com.veerdonk.projectile-system\Tests\Runtime\ViewFactoryPlayModeTests.cs
-```
-class ViewFactoryPlayModeTests  :9-275
-  CubePresentation_RentsCubeView_HitsTarget() → IEnumerator  :12-12
-  SpherePresentation_RentsSphereView_HitsTarget() → IEnumerator  :18-18
-  ReturnToPool_ReusesSameViewGameObject() → IEnumerator  :24-24
-  UnknownPresentationId_FallsBackToSphere() → IEnumerator  :94-94
-class TestDamageable  :271-274
+class SandboxSpawnPoint  :6-17
 ```

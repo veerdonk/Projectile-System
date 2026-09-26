@@ -162,8 +162,26 @@ namespace Veerdonk.ProjectileSystem.Samples.Editor
                 }))
             };
 
+            UpsertPierceKit();
             AssetDatabase.SaveAssets();
             return presets;
+        }
+
+        static void UpsertPierceKit()
+        {
+            string path = $"{Folder}/PierceKit.asset";
+            ModifierKit kit = AssetDatabase.LoadAssetAtPath<ModifierKit>(path);
+            if (kit == null)
+            {
+                kit = ScriptableObject.CreateInstance<ModifierKit>();
+                AssetDatabase.CreateAsset(kit, path);
+            }
+
+            kit.Layers = new[]
+            {
+                new ModifierKitLayer(RecipeStage.OnHit, new Pierce(2))
+            };
+            EditorUtility.SetDirty(kit);
         }
 
         static SampleLab.Preset Preset(string label, RecipeAsset asset, bool useBallisticAim = false)

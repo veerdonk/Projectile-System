@@ -22,10 +22,12 @@ namespace Veerdonk.ProjectileSystem
 
         /// <summary>
         /// Publishes a sphere that Direct casts, <c>AreaEffect</c>, and <c>GroundField</c> treat as
-        /// <see cref="HitKind.Target"/>. Call again to move or resize. <paramref name="radius"/> &lt;= 0 removes it.
-        /// Separate from <see cref="SetHomingCandidate"/>.
+        /// <see cref="HitKind.Target"/>. Call again to move, resize, or change <paramref name="protection"/>.
+        /// <paramref name="radius"/> &lt;= 0 removes it. Homing also reads this pose. The same id in
+        /// <see cref="SetHomingCandidate"/> is one candidate, and this position wins.
+        /// <see cref="ProtectionLevel.Basic"/> matches a Basic collider. <see cref="ProtectionLevel.Strong"/> eats the shot.
         /// </summary>
-        void SetHitTarget(TargetId id, Vector3 position, float radius);
+        void SetHitTarget(TargetId id, Vector3 position, float radius, ProtectionLevel protection = ProtectionLevel.None);
 
         /// <summary>Drops a previously published hit volume.</summary>
         void RemoveHitTarget(TargetId id);

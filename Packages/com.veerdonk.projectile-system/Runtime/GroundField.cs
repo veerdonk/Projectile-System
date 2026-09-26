@@ -8,8 +8,9 @@ namespace Veerdonk.ProjectileSystem
     /// Plants a lingering horizontal disk. Size, lifetime, damage, optional status, and pulse
     /// period live on this modifier. OnHit uses the contact point; OnExpire / OnTravel use the
     /// instance position. The disk sits on the world ground plane (Y = 0).
+    /// <see cref="Occupancy"/> replaces pulses with enter/exit while the disk lives.
     /// The modifier queues a plant; it does not call Physics or spawn a Recipe.
-    /// Radius or lifetime &lt;= 0 is a no-op. Interval &lt;= 0 never pulses.
+    /// Radius or lifetime &lt;= 0 is a no-op. Interval &lt;= 0 never pulses when occupancy is false.
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnHit | RecipeStage.OnExpire)]
@@ -21,6 +22,7 @@ namespace Veerdonk.ProjectileSystem
         [SerializeReference] IStatusEffect status;
         [SerializeField] float intervalSeconds;
         [SerializeField] string presentationId;
+        [SerializeField] bool occupancy;
 
         public GroundField()
         {
@@ -32,7 +34,8 @@ namespace Veerdonk.ProjectileSystem
             float damage,
             IStatusEffect status = null,
             float intervalSeconds = 0f,
-            string presentationId = null)
+            string presentationId = null,
+            bool occupancy = false)
         {
             this.radius = radius;
             this.lifetimeSeconds = lifetimeSeconds;
@@ -40,6 +43,7 @@ namespace Veerdonk.ProjectileSystem
             this.status = status;
             this.intervalSeconds = intervalSeconds;
             this.presentationId = presentationId;
+            this.occupancy = occupancy;
         }
 
         /// <summary>XZ disk radius in meters. &lt;= 0 plants nothing.</summary>
@@ -83,6 +87,16 @@ namespace Veerdonk.ProjectileSystem
             set => presentationId = value;
         }
 
+        /// <summary>
+        /// When true, a Target raises <see cref="HitSource.OccupancyEnter"/> once on enter (and status, if set)
+        /// and <see cref="HitSource.OccupancyExit"/> with damage 0 on leave. Interval pulses are not raised.
+        /// </summary>
+        public bool Occupancy
+        {
+            get => occupancy;
+            set => occupancy = value;
+        }
+
         /// <inheritdoc />
         public void Apply(ModifierContext context)
         {
@@ -99,7 +113,8 @@ namespace Veerdonk.ProjectileSystem
                 Damage,
                 Status,
                 IntervalSeconds,
-                PresentationId);
+                PresentationId,
+                Occupancy);
         }
     }
 
@@ -150,14 +165,18 @@ namespace Veerdonk.ProjectileSystem
                 Damage = request.Damage,
                 Status = request.Status,
                 PresentationId = request.PresentationId,
-                PlantedThisTick = true
+                PlantedThisTick = true,
+                Occupancy = request.Occupancy,
+                Occupants = request.Occupancy ? new List<TargetId>() : null
             };
             if (createViews)
                 field.View = RentView(center, request.Radius, request.PresentationId);
 
             fields.Add(field);
-            if (request.IntervalSeconds > 0f)
-                Pulse(field);
+            if (request.Occupancy)
+                UpdateOccupancy(fields[fields.Count - 1]);
+            else if (request.IntervalSeconds > 0f)
+                Pulse(fields[fields.Count - 1]);
         }
 
         public void ClearPlantedThisTick()
@@ -184,8 +203,31 @@ namespace Veerdonk.ProjectileSystem
                 field.RemainingLifetime -= dt;
                 if (field.RemainingLifetime <= 0f)
                 {
+                    if (field.Occupancy && field.Occupants != null)
+                    {
+                        overlapResults.Clear();
+                        OccupancyExchange.Exchange(
+                            field.Occupants,
+                            overlapResults,
+                            seenTargets,
+                            field.SourceId,
+                            field.Damage,
+                            0f,
+                            field.Radius,
+                            status: null,
+                            hit,
+                            statusApplied);
+                    }
+
                     ReturnView(field);
                     fields.RemoveAt(i);
+                    continue;
+                }
+
+                if (field.Occupancy)
+                {
+                    fields[i] = field;
+                    UpdateOccupancy(fields[i]);
                     continue;
                 }
 
@@ -224,6 +266,26 @@ namespace Veerdonk.ProjectileSystem
             allViews.Clear();
             viewPools.Clear();
             fields.Clear();
+        }
+
+        void UpdateOccupancy(in LiveField field)
+        {
+            if (field.Occupants == null)
+                return;
+
+            overlapResults.Clear();
+            hitQuery.OverlapDisk(field.SourceId, field.Center, field.Radius, overlapResults);
+            OccupancyExchange.Exchange(
+                field.Occupants,
+                overlapResults,
+                seenTargets,
+                field.SourceId,
+                field.Damage,
+                0f,
+                field.Radius,
+                field.Status,
+                hit,
+                statusApplied);
         }
 
         void Pulse(in LiveField field)
@@ -366,6 +428,8 @@ namespace Veerdonk.ProjectileSystem
             public string PresentationId;
             public ProjectileView View;
             public bool PlantedThisTick;
+            public bool Occupancy;
+            public List<TargetId> Occupants;
         }
     }
 }

@@ -113,30 +113,32 @@ namespace Veerdonk.ProjectileSystem
                 return false;
             }
 
+            var best = new Candidate();
+            HitTargetCatalog hitTargets = context.HitTargets;
+            if (hitTargets != null)
+            {
+                int hitCount = hitTargets.Count;
+                for (int i = 0; i < hitCount; i++)
+                {
+                    if (!hitTargets.TryGet(i, out TargetId id, out Vector3 position))
+                        continue;
+                    Consider(context, id, position, travel, ref best);
+                }
+            }
+
             HomingCatalog catalog = context.HomingCatalog;
-            TargetId bestId = default;
-            float bestSqrDistance = float.PositiveInfinity;
-            bool found = false;
             int count = catalog.Count;
             for (int i = 0; i < count; i++)
             {
                 if (!catalog.TryGet(i, out TargetId id, out Vector3 position))
                     continue;
-                if (context.HomingIgnoredTarget.IsAssigned && id.Equals(context.HomingIgnoredTarget.Id))
+                if (hitTargets != null && hitTargets.Contains(id))
                     continue;
-
-                Vector3 toTarget = position - context.Position;
-                if (Vector3.Dot(toTarget, travel) <= 0f)
-                    continue;
-
-                float sqrDistance = toTarget.sqrMagnitude;
-                if (sqrDistance >= bestSqrDistance)
-                    continue;
-
-                bestSqrDistance = sqrDistance;
-                bestId = id;
-                found = true;
+                Consider(context, id, position, travel, ref best);
             }
+
+            TargetId bestId = best.Id;
+            bool found = best.Found;
 
             if (!found)
             {
@@ -146,6 +148,36 @@ namespace Veerdonk.ProjectileSystem
 
             target = HomingTarget.Assigned(bestId);
             return true;
+        }
+
+        static void Consider(
+            ModifierContext context,
+            TargetId id,
+            Vector3 position,
+            Vector3 travel,
+            ref Candidate best)
+        {
+            if (context.HomingIgnoredTarget.IsAssigned && id.Equals(context.HomingIgnoredTarget.Id))
+                return;
+
+            Vector3 toTarget = position - context.Position;
+            if (Vector3.Dot(toTarget, travel) <= 0f)
+                return;
+
+            float sqrDistance = toTarget.sqrMagnitude;
+            if (best.Found && sqrDistance >= best.SqrDistance)
+                return;
+
+            best.SqrDistance = sqrDistance;
+            best.Id = id;
+            best.Found = true;
+        }
+
+        struct Candidate
+        {
+            public TargetId Id;
+            public float SqrDistance;
+            public bool Found;
         }
     }
 }

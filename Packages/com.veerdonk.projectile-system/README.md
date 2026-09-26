@@ -33,10 +33,10 @@ The package is already embedded. Open the project in Unity 6 LTS. Import sample 
 ## Basic use
 
 1. `new ProjectileWorld` (optional view factories for meshes).
-2. Author a `Recipe` in code, or **Create > Projectile > Recipe** and call `ToRecipe()`.
+2. Author a `Recipe` in code, or **Create > Projectile > Recipe** and call `ToRecipe()`. Extras at fire time are **Create > Projectile > Modifier Kit**, then `Recipe.Compose`.
 3. `Spawn(new SpawnRequest { Recipe, Position, Direction })`.
 4. `Tick(dt)` once per frame from one driver.
-5. Listen to `Hit` to apply HP in your game. Put `IDamageable` on colliders that should count as targets. A target with no collider is `SetHitTarget(id, position, radius)` (`RemoveHitTarget` to drop it; `radius <= 0` removes). That catalog is separate from Homing.
+5. Listen to `Hit` to apply HP in your game. Put `IDamageable` on colliders that should count as targets. A target with no collider is `SetHitTarget(id, position, radius, protection)` (`RemoveHitTarget` to drop it; `radius <= 0` removes). Homing also steers toward that pose. `protection` is `None`, `Basic`, or `Strong`.
 6. `Dispose()` when the scene unloads (the world owns an Entities `World`).
 
 ```csharp
@@ -76,6 +76,17 @@ public sealed class ProjectileDriver : MonoBehaviour
         });
     }
 
+    public void FireWithKit(ModifierKit pierceKit, string recipeId)
+    {
+        Recipe recipe = Recipe.Compose(recipeAsset.ToRecipe(), recipeId, pierceKit);
+        world.Spawn(new SpawnRequest
+        {
+            Recipe = recipe,
+            Position = muzzle.position,
+            Direction = muzzle.forward
+        });
+    }
+
     void OnHit(HitInfo hit)
     {
         // Subtract HP in your game. The package does not.
@@ -83,7 +94,7 @@ public sealed class ProjectileDriver : MonoBehaviour
 }
 ```
 
-Recipe composition is six ordered stage lists: `OnSpawn`, `OnTravel`, `OnTick`, `OnInterval`, `OnHit`, `OnExpire`. API list: [Documentation/index.md](Documentation/index.md).
+Pass a new `recipeId` on every `Compose`. Spawning the same id again replaces the stored Recipe. An OnInterval kit layer does nothing unless `Interval` is already on the base, or on an OnSpawn layer. Recipe composition is six ordered stage lists: `OnSpawn`, `OnTravel`, `OnTick`, `OnInterval`, `OnHit`, `OnExpire`. API list: [Documentation/index.md](Documentation/index.md).
 
 ## Sample
 

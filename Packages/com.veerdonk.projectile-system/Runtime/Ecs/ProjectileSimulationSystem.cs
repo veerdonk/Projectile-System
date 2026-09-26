@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
@@ -22,8 +23,16 @@ namespace Veerdonk.ProjectileSystem
     [DisableAutoCreation]
     partial class ProjectileSimulationSystem : SystemBase
     {
+        const int OccupancyOnTravel = 1;
+        const int OccupancyOnTick = 2;
+        const int OccupancyOnInterval = 3;
+        const int OccupancyOnHit = 4;
+
         readonly List<HitInfo> overlapResults = new List<HitInfo>();
         readonly List<TargetId> seenAreaTargets = new List<TargetId>();
+        readonly List<TargetId> occupancyCurrent = new List<TargetId>();
+        readonly List<OccupancyKey> occupancyRemove = new List<OccupancyKey>();
+        readonly Dictionary<OccupancyKey, List<TargetId>> occupancyInside = new Dictionary<OccupancyKey, List<TargetId>>();
 
         public SimulationBridge Bridge;
 
@@ -60,6 +69,7 @@ namespace Veerdonk.ProjectileSystem
                 Projectile projectile = em.GetComponentData<Projectile>(entity);
                 Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
                 RunStage(recipe.OnTick, entity, hasHit: false, default, dt);
+                FlushAreaOverlaps(entity, OccupancyOnTick);
                 RunIntervals(entity, dt);
             }
 
@@ -84,7 +94,7 @@ namespace Veerdonk.ProjectileSystem
             Bridge.ModifierContext.MulticastGenerationsForExtras = multicastGenerationsLeft - 1;
             RunStage(recipe.OnSpawn, entity, hasHit: false, default, dt: 0f, skipMulticast: multicastGenerationsLeft <= 0);
             RunStage(recipe.OnTravel, entity, hasHit: false, default, dt: 0f);
-            FlushAreaOverlaps(entity);
+            FlushAreaOverlaps(entity, OccupancyOnTravel);
             FlushGroundFields(entity);
         }
 
@@ -148,7 +158,7 @@ namespace Veerdonk.ProjectileSystem
                     Bridge.Hit?.Invoke(hit);
                 if (!Bridge.ModifierContext.DirectStatusSuppressed)
                     FlushStatusApplied(hit);
-                FlushAreaOverlaps(entity);
+                FlushAreaOverlaps(entity, OccupancyOnHit);
                 FlushGroundFields(entity);
                 if (Bridge.ModifierContext.CancelDespawn)
                 {
@@ -165,8 +175,10 @@ namespace Veerdonk.ProjectileSystem
 
         void ReturnToPool(Entity entity, in Projectile projectile)
         {
+            var instanceId = new ProjectileId(projectile.Id);
+            ClearOccupancy(instanceId);
             Bridge.Pool.Return(projectile.RecipeIndex, entity);
-            Bridge.Expired?.Invoke(new ExpireInfo { InstanceId = new ProjectileId(projectile.Id) });
+            Bridge.Expired?.Invoke(new ExpireInfo { InstanceId = instanceId });
         }
 
         void ContinueAfterHit(Entity entity, in HitInfo hit)
@@ -219,7 +231,7 @@ namespace Veerdonk.ProjectileSystem
                 Bridge.ModifierContext.ApplyTo(ref projectile, ref intervalVelocity);
                 em.SetComponentData(entity, projectile);
                 em.SetComponentData(entity, intervalVelocity);
-                FlushAreaOverlaps(entity);
+                FlushAreaOverlaps(entity, OccupancyOnInterval);
             }
 
             SyncViewRadius(entity);
@@ -257,7 +269,7 @@ namespace Veerdonk.ProjectileSystem
             }
         }
 
-        void FlushAreaOverlaps(Entity entity)
+        void FlushAreaOverlaps(Entity entity, int occupancyChannel)
         {
             IReadOnlyList<AreaOverlapRequest> requests = Bridge.ModifierContext.RequestedAreaOverlaps;
             if (requests.Count == 0)
@@ -265,8 +277,19 @@ namespace Veerdonk.ProjectileSystem
 
             Projectile projectile = EntityManager.GetComponentData<Projectile>(entity);
             var instanceId = new ProjectileId(projectile.Id);
+            int occupancySlot = 0;
             for (int r = 0; r < requests.Count; r++)
-                FlushAreaRequest(requests[r], instanceId, projectile);
+            {
+                AreaOverlapRequest request = requests[r];
+                if (!request.Occupancy)
+                {
+                    FlushAreaRequest(request, instanceId, projectile);
+                    continue;
+                }
+
+                FlushOccupancyRequest(request, instanceId, projectile, occupancyChannel, occupancySlot);
+                occupancySlot++;
+            }
         }
 
         void FlushAreaRequest(in AreaOverlapRequest request, ProjectileId instanceId, in Projectile projectile)
@@ -279,6 +302,51 @@ namespace Veerdonk.ProjectileSystem
             Bridge.HitQuery.Overlap(instanceId, request.Center, request.Radius, overlapResults);
             for (int i = 0; i < overlapResults.Count; i++)
                 TryEmitAreaHit(overlapResults[i], request, instanceId, projectile);
+        }
+
+        void FlushOccupancyRequest(
+            in AreaOverlapRequest request,
+            ProjectileId instanceId,
+            in Projectile projectile,
+            int channel,
+            int slot)
+        {
+            if (request.Radius <= 0f)
+                return;
+
+            var key = new OccupancyKey(instanceId, channel, slot);
+            if (!occupancyInside.TryGetValue(key, out List<TargetId> previous))
+            {
+                previous = new List<TargetId>();
+                occupancyInside[key] = previous;
+            }
+
+            overlapResults.Clear();
+            Bridge.HitQuery.Overlap(instanceId, request.Center, request.Radius, overlapResults);
+            OccupancyExchange.Exchange(
+                previous,
+                overlapResults,
+                occupancyCurrent,
+                instanceId,
+                request.Damage,
+                projectile.CriticalChance,
+                projectile.EffectRadius,
+                request.Status,
+                Bridge.Hit,
+                Bridge.StatusApplied);
+        }
+
+        void ClearOccupancy(ProjectileId instanceId)
+        {
+            occupancyRemove.Clear();
+            foreach (KeyValuePair<OccupancyKey, List<TargetId>> pair in occupancyInside)
+            {
+                if (pair.Key.Instance == instanceId)
+                    occupancyRemove.Add(pair.Key);
+            }
+
+            for (int i = 0; i < occupancyRemove.Count; i++)
+                occupancyInside.Remove(occupancyRemove[i]);
         }
 
         void TryEmitAreaHit(
@@ -412,6 +480,37 @@ namespace Veerdonk.ProjectileSystem
         static Vector3 ToVector3(float3 value)
         {
             return new Vector3(value.x, value.y, value.z);
+        }
+
+        readonly struct OccupancyKey : IEquatable<OccupancyKey>
+        {
+            public OccupancyKey(ProjectileId instance, int channel, int slot)
+            {
+                Instance = instance;
+                Channel = channel;
+                Slot = slot;
+            }
+
+            public ProjectileId Instance { get; }
+            public int Channel { get; }
+            public int Slot { get; }
+
+            public bool Equals(OccupancyKey other)
+            {
+                return Instance == other.Instance && Channel == other.Channel && Slot == other.Slot;
+            }
+
+            public override bool Equals(object obj) => obj is OccupancyKey other && Equals(other);
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = Instance.GetHashCode();
+                    hash = (hash * 397) ^ Channel;
+                    return (hash * 397) ^ Slot;
+                }
+            }
         }
     }
 

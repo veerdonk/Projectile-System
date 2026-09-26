@@ -1,11 +1,19 @@
 using System;
+using System.Reflection;
 
 namespace Veerdonk.ProjectileSystem
 {
-    /// <summary>Authored definition: base stats plus six ordered modifier lists.</summary>
+    /// <summary>
+    /// Authored definition: base stats plus six ordered modifier lists.
+    /// <see cref="Clone"/>, <see cref="Append(RecipeStage, IModifier)"/>, and <see cref="Compose"/> build a fire-time
+    /// variant from a base plus <see cref="ModifierKit"/>s. Each composition needs its own <see cref="Id"/>.
+    /// </summary>
     public sealed class Recipe
     {
-        /// <summary>Game identifier. Not used by the simulation.</summary>
+        /// <summary>
+        /// Store key. A later <see cref="IProjectileWorld.Spawn"/> with the same id replaces that slot,
+        /// so each <see cref="Compose"/> result needs its own id.
+        /// </summary>
         public string Id { get; set; }
 
         /// <summary>Launch speed in meters per second. Copied onto the instance at spawn.</summary>
@@ -76,5 +84,158 @@ namespace Veerdonk.ProjectileSystem
 
         /// <summary>Runs when the instance returns to the pool, except Strong protection (no OnExpire).</summary>
         public IModifier[] OnExpire { get; set; } = Array.Empty<IModifier>();
+
+        /// <summary>
+        /// Independent copy of stats and lists. <see cref="Id"/> is copied until the caller changes it.
+        /// Modifiers are cloned with the same path as <see cref="RecipeAsset.ToRecipe"/>.
+        /// </summary>
+        public Recipe Clone()
+        {
+            return new Recipe
+            {
+                Id = Id,
+                Speed = Speed,
+                Radius = Radius,
+                LifetimeSeconds = LifetimeSeconds,
+                Gravity = Gravity,
+                Damage = Damage,
+                CriticalChance = CriticalChance,
+                ManaCost = ManaCost,
+                EffectRadius = EffectRadius,
+                PresentationId = PresentationId,
+                MulticastGenerations = MulticastGenerations,
+                MultiplyGenerations = MultiplyGenerations,
+                OnSpawn = RecipeAsset.CloneModifierList(OnSpawn),
+                OnTravel = RecipeAsset.CloneModifierList(OnTravel),
+                OnTick = RecipeAsset.CloneModifierList(OnTick),
+                OnInterval = RecipeAsset.CloneModifierList(OnInterval),
+                OnHit = RecipeAsset.CloneModifierList(OnHit),
+                OnExpire = RecipeAsset.CloneModifierList(OnExpire)
+            };
+        }
+
+        /// <summary>
+        /// Appends <paramref name="modifier"/> to the one list named by <paramref name="stage"/>.
+        /// Throws if <paramref name="modifier"/> is null, <paramref name="stage"/> is not exactly one of the six
+        /// lists, or the modifier's <see cref="ModifierStageAttribute"/> does not include that list.
+        /// Does not insert <see cref="Interval"/>.
+        /// </summary>
+        public void Append(RecipeStage stage, IModifier modifier)
+        {
+            if (modifier == null)
+                throw new ArgumentNullException(nameof(modifier));
+
+            Append(stage, new[] { modifier });
+        }
+
+        /// <summary>Appends each modifier, in order, after the same checks as <see cref="Append(RecipeStage, IModifier)"/>.</summary>
+        public void Append(RecipeStage stage, IModifier[] modifiers)
+        {
+            if (modifiers == null)
+                throw new ArgumentNullException(nameof(modifiers));
+
+            EnsureSingleStage(stage);
+            for (int i = 0; i < modifiers.Length; i++)
+            {
+                if (modifiers[i] == null)
+                    throw new ArgumentNullException(nameof(modifiers));
+                EnsureAllowed(stage, modifiers[i]);
+            }
+
+            if (modifiers.Length == 0)
+                return;
+
+            SetList(stage, Join(List(stage), modifiers));
+        }
+
+        /// <summary>
+        /// Clones <paramref name="basis"/>, sets <see cref="Id"/> to <paramref name="id"/>, and applies
+        /// <paramref name="kits"/> in order. Throws if <paramref name="basis"/> is null or <paramref name="id"/> is
+        /// null or empty. A null or empty kit is skipped. Reusing <paramref name="id"/> on <see cref="IProjectileWorld.Spawn"/>
+        /// replaces the stored Recipe, so each composition needs its own id.
+        /// An <see cref="OnInterval"/> extra does nothing unless <see cref="Interval"/> is already on the base
+        /// or on an <see cref="RecipeStage.OnSpawn"/> layer. This method does not insert one.
+        /// </summary>
+        public static Recipe Compose(Recipe basis, string id, params ModifierKit[] kits)
+        {
+            if (basis == null)
+                throw new ArgumentNullException(nameof(basis));
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentException("Recipe.Id is required.", nameof(id));
+
+            Recipe copy = basis.Clone();
+            copy.Id = id;
+            if (kits == null)
+                return copy;
+
+            for (int i = 0; i < kits.Length; i++)
+            {
+                if (kits[i] == null)
+                    continue;
+                kits[i].ApplyTo(copy);
+            }
+
+            return copy;
+        }
+
+        IModifier[] List(RecipeStage stage)
+        {
+            switch (stage)
+            {
+                case RecipeStage.OnSpawn: return OnSpawn;
+                case RecipeStage.OnTravel: return OnTravel;
+                case RecipeStage.OnTick: return OnTick;
+                case RecipeStage.OnInterval: return OnInterval;
+                case RecipeStage.OnHit: return OnHit;
+                case RecipeStage.OnExpire: return OnExpire;
+                default:
+                    throw new ArgumentException("Stage must be exactly one of the six Recipe lists.", nameof(stage));
+            }
+        }
+
+        void SetList(RecipeStage stage, IModifier[] list)
+        {
+            switch (stage)
+            {
+                case RecipeStage.OnSpawn: OnSpawn = list; break;
+                case RecipeStage.OnTravel: OnTravel = list; break;
+                case RecipeStage.OnTick: OnTick = list; break;
+                case RecipeStage.OnInterval: OnInterval = list; break;
+                case RecipeStage.OnHit: OnHit = list; break;
+                case RecipeStage.OnExpire: OnExpire = list; break;
+                default:
+                    throw new ArgumentException("Stage must be exactly one of the six Recipe lists.", nameof(stage));
+            }
+        }
+
+        static void EnsureSingleStage(RecipeStage stage)
+        {
+            int value = (int)stage;
+            bool oneBit = value > 0 && (value & (value - 1)) == 0;
+            if (!oneBit || !Enum.IsDefined(typeof(RecipeStage), stage))
+                throw new ArgumentException("Stage must be exactly one of the six Recipe lists.", nameof(stage));
+        }
+
+        static void EnsureAllowed(RecipeStage stage, IModifier modifier)
+        {
+            ModifierStageAttribute attribute = modifier.GetType().GetCustomAttribute<ModifierStageAttribute>();
+            if (attribute == null || (attribute.Stages & stage) == 0)
+                throw new ArgumentException($"{modifier.GetType().Name} cannot be appended to {stage}.", nameof(modifier));
+        }
+
+        static IModifier[] Join(IModifier[] source, IModifier[] extra)
+        {
+            if (source == null || source.Length == 0)
+            {
+                var only = new IModifier[extra.Length];
+                Array.Copy(extra, only, extra.Length);
+                return only;
+            }
+
+            var next = new IModifier[source.Length + extra.Length];
+            Array.Copy(source, next, source.Length);
+            Array.Copy(extra, 0, next, source.Length, extra.Length);
+            return next;
+        }
     }
 }

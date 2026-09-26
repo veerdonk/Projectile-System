@@ -8,7 +8,9 @@ namespace Veerdonk.ProjectileSystem
         readonly List<Volume> volumes = new List<Volume>();
         readonly Dictionary<ProjectileId, TargetId> ignored = new Dictionary<ProjectileId, TargetId>();
 
-        public void Set(TargetId id, Vector3 position, float radius)
+        public int Count => volumes.Count;
+
+        public void Set(TargetId id, Vector3 position, float radius, ProtectionLevel protection = ProtectionLevel.None)
         {
             if (radius <= 0f)
             {
@@ -21,11 +23,43 @@ namespace Veerdonk.ProjectileSystem
                 if (!volumes[i].Id.Equals(id))
                     continue;
 
-                volumes[i] = new Volume(id, position, radius);
+                volumes[i] = new Volume(id, position, radius, protection);
                 return;
             }
 
-            volumes.Add(new Volume(id, position, radius));
+            volumes.Add(new Volume(id, position, radius, protection));
+        }
+
+        public bool TryGet(int index, out TargetId id, out Vector3 position)
+        {
+            if (index < 0 || index >= volumes.Count)
+            {
+                id = default;
+                position = default;
+                return false;
+            }
+
+            Volume volume = volumes[index];
+            id = volume.Id;
+            position = volume.Position;
+            return true;
+        }
+
+        public bool TryGetPosition(TargetId id, out Vector3 position)
+        {
+            if (!TryFind(id, out Volume volume))
+            {
+                position = default;
+                return false;
+            }
+
+            position = volume.Position;
+            return true;
+        }
+
+        public bool Contains(TargetId id)
+        {
+            return TryFind(id, out _);
         }
 
         public void Remove(TargetId id)
@@ -94,7 +128,7 @@ namespace Veerdonk.ProjectileSystem
                 {
                     InstanceId = instanceId,
                     Kind = HitKind.Target,
-                    Protection = ProtectionLevel.None,
+                    Protection = volume.Protection,
                     TargetId = volume.Id,
                     Point = point,
                     Normal = normal
@@ -112,6 +146,9 @@ namespace Veerdonk.ProjectileSystem
             for (int i = 0; i < volumes.Count; i++)
             {
                 Volume volume = volumes[i];
+                if (volume.Protection == ProtectionLevel.Strong)
+                    continue;
+
                 Vector3 delta = volume.Position - center;
                 float limit = radius + volume.Radius;
                 if (delta.sqrMagnitude > limit * limit)
@@ -129,6 +166,9 @@ namespace Veerdonk.ProjectileSystem
             for (int i = 0; i < volumes.Count; i++)
             {
                 Volume volume = volumes[i];
+                if (volume.Protection == ProtectionLevel.Strong)
+                    continue;
+
                 float dx = volume.Position.x - center.x;
                 float dz = volume.Position.z - center.z;
                 float limit = radius + volume.Radius;
@@ -166,7 +206,7 @@ namespace Veerdonk.ProjectileSystem
             {
                 InstanceId = instanceId,
                 Kind = HitKind.Target,
-                Protection = ProtectionLevel.None,
+                Protection = volume.Protection,
                 TargetId = volume.Id,
                 Point = point,
                 Normal = normal
@@ -258,16 +298,18 @@ namespace Veerdonk.ProjectileSystem
 
         struct Volume
         {
-            public Volume(TargetId id, Vector3 position, float radius)
+            public Volume(TargetId id, Vector3 position, float radius, ProtectionLevel protection)
             {
                 Id = id;
                 Position = position;
                 Radius = radius;
+                Protection = protection;
             }
 
             public TargetId Id { get; }
             public Vector3 Position { get; }
             public float Radius { get; }
+            public ProtectionLevel Protection { get; }
         }
     }
 }

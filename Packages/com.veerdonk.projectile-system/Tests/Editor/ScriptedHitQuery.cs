@@ -65,6 +65,11 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             });
         }
 
+        public void ClearOverlaps()
+        {
+            overlapBodies.Clear();
+        }
+
         public void AddOverlapWorld(Vector3 position)
         {
             overlapBodies.Add(new OverlapBody

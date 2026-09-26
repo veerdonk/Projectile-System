@@ -196,6 +196,11 @@ namespace Veerdonk.ProjectileSystem
             return recipe;
         }
 
+        internal static IModifier[] CloneModifierList(IModifier[] source)
+        {
+            return CloneList(source, new Dictionary<RecipeAsset, Recipe>());
+        }
+
         static IModifier[] CloneList(IModifier[] source, Dictionary<RecipeAsset, Recipe> visited)
         {
             if (source == null || source.Length == 0)
@@ -242,7 +247,8 @@ namespace Veerdonk.ProjectileSystem
                         area.Damage,
                         CloneStatus(area.Status),
                         area.IncludeDirectHit,
-                        area.IncludeDirectStatus);
+                        area.IncludeDirectStatus,
+                        area.Occupancy);
                 case GroundField field:
                     return new GroundField(
                         field.Radius,
@@ -250,7 +256,8 @@ namespace Veerdonk.ProjectileSystem
                         field.Damage,
                         CloneStatus(field.Status),
                         field.IntervalSeconds,
-                        field.PresentationId);
+                        field.PresentationId,
+                        field.Occupancy);
                 case Multiply multiply:
                     return new Multiply(
                         multiply.Count,
