@@ -67,6 +67,13 @@ namespace Veerdonk.ProjectileSystem
         public Vector3 Direction;
         /// <summary>Optional lock. When assigned, Homing skips acquisition.</summary>
         public HomingTarget HomingTarget;
+        /// <summary>
+        /// When true, Homing’s first lock is the catalog candidate closest to <see cref="HomingAcquirePoint"/>.
+        /// The game copies a world point (the package does not read the mouse). Later empty locks still use travel direction.
+        /// </summary>
+        public bool HomingAcquirePointSet;
+        /// <summary>Fire-time world point. Ignored unless <see cref="HomingAcquirePointSet"/> is true.</summary>
+        public Vector3 HomingAcquirePoint;
         internal ProjectileId InheritIgnoreFrom;
         internal ChainBudget MulticastChain;
         internal ChainBudget MultiplyChain;

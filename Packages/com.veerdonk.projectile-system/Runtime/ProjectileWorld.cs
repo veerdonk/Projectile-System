@@ -525,7 +525,12 @@ namespace Veerdonk.ProjectileSystem
                 HomingHasTarget = request.HomingTarget.IsAssigned,
                 HomingTargetId = request.HomingTarget.Id,
                 HomingHasIgnoredTarget = false,
-                HomingIgnoredTargetId = default
+                HomingIgnoredTargetId = default,
+                HomingAcquirePointSet = request.HomingAcquirePointSet,
+                HomingAcquirePoint = request.HomingAcquirePointSet
+                    ? new float3(request.HomingAcquirePoint.x, request.HomingAcquirePoint.y, request.HomingAcquirePoint.z)
+                    : default,
+                HomingAimPointUsed = false
             });
             em.SetComponentData(entity, new ProjectilePosition { Value = position });
             em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });

@@ -472,7 +472,10 @@ namespace Veerdonk.ProjectileSystem
                 IntervalSeconds = projectile.IntervalSeconds,
                 MultiplyGenerationsLeft = projectile.MultiplyGenerationsLeft,
                 HomingTarget = homing,
-                HomingIgnoredTarget = ignored
+                HomingIgnoredTarget = ignored,
+                HomingAcquirePointSet = projectile.HomingAcquirePointSet,
+                HomingAcquirePoint = ToVector3(projectile.HomingAcquirePoint),
+                HomingAimPointUsed = projectile.HomingAimPointUsed
             };
             Bridge.ModifierContext.Bind(state, hasHit, hit, dt);
         }

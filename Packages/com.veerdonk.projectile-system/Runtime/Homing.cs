@@ -7,16 +7,19 @@ namespace Veerdonk.ProjectileSystem
     /// <summary>
     /// OnTick: steer toward a homing target. <see cref="TurnRateDegreesPerSecond"/> is the maximum turn in
     /// degrees per second — Homing(100) turns at 100°/s, Homing(10) at 10°/s. If spawn did not assign a target,
-    /// <see cref="Acquisition"/> picks one. Candidates are <see cref="IProjectileWorld.SetHomingCandidate"/> poses
-    /// and published hit-target positions. The same <see cref="TargetId"/> in both catalogs is one candidate, and
-    /// the hit-target position wins. A Target hit drops the lock and ignores that TargetId while it stays
-    /// in front of travel, so a pierce shot does not re-lock the dummy it is still overlapping. Other candidates
-    /// may lock on a later tick.
+    /// the first lock is <see cref="ClosestToPointAcquisition"/> when <see cref="SpawnRequest.HomingAcquirePointSet"/>
+    /// is true, and <see cref="Acquisition"/> otherwise. After that first lock, empty locks use <see cref="Acquisition"/>.
+    /// Candidates are <see cref="IProjectileWorld.SetHomingCandidate"/> poses and published hit-target positions.
+    /// The same <see cref="TargetId"/> in both catalogs is one candidate, and the hit-target position wins.
+    /// A Target hit drops the lock and ignores that TargetId while it stays in front of travel, so a pierce shot
+    /// does not re-lock the dummy it is still overlapping. Other candidates may lock on a later tick.
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnTick)]
     public sealed class Homing : IModifier, IDeserializationCallback
     {
+        static readonly ClosestToPointAcquisition AimPoint = new ClosestToPointAcquisition();
+
         [SerializeField] float turnRateDegreesPerSecond;
         IHomingAcquisition acquisition;
 
@@ -38,7 +41,11 @@ namespace Veerdonk.ProjectileSystem
             set => turnRateDegreesPerSecond = value;
         }
 
-        /// <summary>Picks a lock when spawn did not assign one. Default is closest-in-travel-direction.</summary>
+        /// <summary>
+        /// Picks a lock when spawn did not assign one, and every empty lock after the first.
+        /// When <see cref="SpawnRequest.HomingAcquirePointSet"/> is true, the first lock uses
+        /// <see cref="ClosestToPointAcquisition"/> instead. Default is closest-in-travel-direction.
+        /// </summary>
         public IHomingAcquisition Acquisition => acquisition;
 
         void IDeserializationCallback.OnDeserialization(object sender)
@@ -75,10 +82,12 @@ namespace Veerdonk.ProjectileSystem
 
             if (!target.IsAssigned)
             {
-                if (!Acquisition.TryAcquire(context, out target))
+                if (!TryAcquireLock(context, out target))
                     return;
                 context.HomingTarget = target;
             }
+            else if (context.HomingAcquirePointSet)
+                context.HomingAimPointUsed = true;
 
             if (!context.TryGetSteeringPosition(target, out Vector3 targetPosition))
                 return;
@@ -104,6 +113,20 @@ namespace Veerdonk.ProjectileSystem
 
             Vector3 newDir = Vector3.RotateTowards(currentDir, toTarget.normalized, maxRadians, 0f);
             context.Velocity = newDir * speed;
+        }
+
+        bool TryAcquireLock(ModifierContext context, out HomingTarget target)
+        {
+            if (context.HomingAcquirePointSet && !context.HomingAimPointUsed)
+            {
+                if (!AimPoint.TryAcquire(context, out target))
+                    return false;
+
+                context.HomingAimPointUsed = true;
+                return true;
+            }
+
+            return Acquisition.TryAcquire(context, out target);
         }
 
         static void DropIgnoredIfPassed(ModifierContext context)

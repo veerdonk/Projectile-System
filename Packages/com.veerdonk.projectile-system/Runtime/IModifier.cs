@@ -122,6 +122,17 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Last Target hit. Acquisition skips it while it stays in front of travel.</summary>
         public HomingTarget HomingIgnoredTarget { get; set; }
 
+        /// <summary>
+        /// True when spawn stored a fire-time aim point. Homing’s first lock uses
+        /// <see cref="ClosestToPointAcquisition"/> against <see cref="HomingAcquirePoint"/>.
+        /// </summary>
+        public bool HomingAcquirePointSet { get; internal set; }
+
+        /// <summary>World point captured at fire. Ignored unless <see cref="HomingAcquirePointSet"/> is true.</summary>
+        public Vector3 HomingAcquirePoint { get; internal set; }
+
+        internal bool HomingAimPointUsed { get; set; }
+
         /// <summary>Published homing poses for this world.</summary>
         public HomingCatalog HomingCatalog { get; }
 
@@ -227,7 +238,7 @@ namespace Veerdonk.ProjectileSystem
 
         internal void RequestMulticastExtra(Recipe recipe, Vector3 position, Vector3 direction)
         {
-            Enqueue(recipe, position, direction, ChainBudget.Inherit(MulticastGenerationsForExtras), default);
+            Enqueue(recipe, position, direction, ChainBudget.Inherit(MulticastGenerationsForExtras), default, copyAimPoint: true);
         }
 
         internal void RequestMultiplyChild(Recipe recipe, Vector3 position, Vector3 direction)
@@ -235,7 +246,13 @@ namespace Veerdonk.ProjectileSystem
             Enqueue(recipe, position, direction, default, ChainBudget.Inherit(MultiplyGenerationsLeft - 1));
         }
 
-        void Enqueue(Recipe recipe, Vector3 position, Vector3 direction, ChainBudget multicast, ChainBudget multiply)
+        void Enqueue(
+            Recipe recipe,
+            Vector3 position,
+            Vector3 direction,
+            ChainBudget multicast,
+            ChainBudget multiply,
+            bool copyAimPoint = false)
         {
             if (recipe == null)
                 throw new ArgumentNullException(nameof(recipe));
@@ -247,7 +264,9 @@ namespace Veerdonk.ProjectileSystem
                 Direction = direction,
                 InheritIgnoreFrom = InstanceId,
                 MulticastChain = multicast,
-                MultiplyChain = multiply
+                MultiplyChain = multiply,
+                HomingAcquirePointSet = copyAimPoint && HomingAcquirePointSet,
+                HomingAcquirePoint = copyAimPoint ? HomingAcquirePoint : default
             });
         }
 
@@ -289,6 +308,9 @@ namespace Veerdonk.ProjectileSystem
             DeltaTime = deltaTime;
             HomingTarget = state.HomingTarget;
             HomingIgnoredTarget = state.HomingIgnoredTarget;
+            HomingAcquirePointSet = state.HomingAcquirePointSet;
+            HomingAcquirePoint = state.HomingAcquirePoint;
+            HomingAimPointUsed = state.HomingAimPointUsed;
         }
 
         internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
@@ -309,6 +331,12 @@ namespace Veerdonk.ProjectileSystem
             projectile.HomingTargetId = HomingTarget.Id;
             projectile.HomingHasIgnoredTarget = HomingIgnoredTarget.IsAssigned;
             projectile.HomingIgnoredTargetId = HomingIgnoredTarget.Id;
+            projectile.HomingAcquirePointSet = HomingAcquirePointSet;
+            projectile.HomingAcquirePoint = new Unity.Mathematics.float3(
+                HomingAcquirePoint.x,
+                HomingAcquirePoint.y,
+                HomingAcquirePoint.z);
+            projectile.HomingAimPointUsed = HomingAimPointUsed;
             velocity.Value = new Unity.Mathematics.float3(Velocity.x, Velocity.y, Velocity.z);
         }
     }
@@ -394,5 +422,8 @@ namespace Veerdonk.ProjectileSystem
         public int MultiplyGenerationsLeft;
         public HomingTarget HomingTarget;
         public HomingTarget HomingIgnoredTarget;
+        public bool HomingAcquirePointSet;
+        public Vector3 HomingAcquirePoint;
+        public bool HomingAimPointUsed;
     }
 }

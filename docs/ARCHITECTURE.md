@@ -137,8 +137,8 @@ struct SpawnRequest
     Vector3 Position;
     Vector3 Direction;
     HomingTarget HomingTarget; // optional initial lock; skips acquire (ADR-009, ADR-010)
-    bool HomingAcquirePointSet; // ADR-033; game copies a world aim point (not mouse)
-    Vector3 HomingAcquirePoint;
+    bool HomingAcquirePointSet; // ADR-033; game copies a world aim point (not mouse). First Homing lock only.
+    Vector3 HomingAcquirePoint; // closest catalog candidate; no travel-direction filter. Later empty locks use travel.
 }
 
 struct ProjectileId { /* opaque handle */ }
@@ -265,7 +265,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.3 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, and `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031).
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.4 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), and `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 
