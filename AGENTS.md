@@ -33,11 +33,11 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 28 — aim-point first Homing lock**
+**Phase 29 scheduled (hit-target catalog index)**
 
-- `HomingAimPointUsed` on the projectile row is set when the aim-point lock succeeds, or when spawn already assigned `HomingTarget`, so the next empty lock is travel-direction. A failed first acquire does not set it. Multicast extras copy the point; multiply / OnHit children do not.
-- Yard `SampleLab.Fire` sets the point only for preset labels `Homing` and `Pierce+Homing`, and only when `hasGroundPoint`. The imported yard under `Assets/Samples/` is gitignored; Rebuild copies `Samples~/Yard`.
-- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Do not create a git tag in a phase session; `.github/workflows/release-package.yml` tags `v{version}` on `main`.
+- ADR-034: `Dictionary<TargetId, int>` next to the list in `HitTargetCatalog` and `HomingCatalog`. Do **not** swap-remove (TryGet order must stay compact-left). Sweep/overlap stay a list walk.
+- No public API change. Bump to **0.1.5** so the game can pin it. No git tag in the phase session; the `main` workflow creates `v0.1.5`.
+- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply.
 
 ## Do not
 

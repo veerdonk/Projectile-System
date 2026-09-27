@@ -647,6 +647,18 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** Homing acquires again
 - **Then:** it uses `ClosestInTravelDirectionAcquisition` (skip B while in front); it does not pick from the old aim point
 
+### Phase 29 — Republishing a hit target does not reorder the catalog
+
+- **Given:** `SetHitTarget` for ids 1, 2, 3 in that order
+- **When:** `SetHitTarget` is called again for id 2 with a new position (same radius)
+- **Then:** `TryGet` index 0, 1, 2 is still ids 1, 2, 3; id 2 has the new position. A following `RemoveHitTarget(2)` leaves ids 1 then 3
+
+### Phase 29 — Many SetHitTarget updates do not grow the catalog
+
+- **Given:** 32 published volumes
+- **When:** `SetHitTarget` is called again for each of those 32 ids
+- **Then:** the catalog still has 32 entries (in-place update, not a second copy of each id)
+
 ## Product constraints
 
 - Sandbox uses URP

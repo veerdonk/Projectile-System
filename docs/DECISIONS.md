@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-034 — Hit-target (and homing) catalogs index by TargetId
+
+- **Date:** 2026-09-27
+- **Decision:** `HitTargetCatalog` keeps the existing `List<Volume>` as the iteration / `TryGet(index)` order (first `Set` appends; later `Set` of the same id overwrites that slot). Next to it, a `Dictionary<TargetId, int>` maps id → list index. `Set`, `Contains`, `TryGetPosition`, and `TryFind` use the dictionary (average constant time). `Remove` looks up the index, `RemoveAt`, then decrements dictionary indices after the hole so remaining `TryGet` order matches today’s compact-left order. Do **not** swap-with-last (that would reorder `TryGet`). `radius <= 0` still removes. Apply the same index map to `HomingCatalog` (`SetHomingCandidate` / `RemoveHomingCandidate` / `TryGetPosition`). Sweep, area, and disk still walk the list once per query (already cheap vs publish). No public API change. `HitTargetCatalog` stays internal. No spatial hash, no Unity Physics, no second façade.
+- **Why:** Games call `SetHitTarget` once per living enemy per frame. `Set` currently scans the list, so N updates cost ~N²/2 comparisons (~9 ms at 1000 ids in a Debug editor; the tick is ~0.02 ms). Homing `Contains` / `TryGetPosition` and pierce ignore also scan. The game cannot replace the catalog (`IHitQuery` is internal). Observable hits, homing candidates, and `TryGet` order stay the same so spell checks do not need a fork.
+- **Consequences:** No new public types. Bump `package.json` to **0.1.5** so a game can pin the named version. Git tag / GitHub Release come from `.github/workflows/release-package.yml` on `main`. Edit Mode tests cover order, in-place update, remove-compact, and `radius <= 0`. Do not assert wall-clock milliseconds in tests.
+
 ## ADR-033 — First Homing lock is closest to a fire-time aim point
 
 - **Date:** 2026-09-26
