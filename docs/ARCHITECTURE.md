@@ -43,19 +43,23 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 ```text
 Recipe
   Id
+  Delivery                 // Straight (default), Arc, Hitscan; Beam in phase 31
   Speed, Radius, LifetimeSeconds, Gravity
+  BeamPulseSeconds         // phase 31; Beam only
   Damage, CriticalChance, ManaCost, EffectRadius
   PresentationId
   OnSpawn[], OnTravel[], OnTick[], OnInterval[], OnHit[], OnExpire[]
 ```
 
-`LifetimeSeconds` is the only despawn clock. When remaining lifetime reaches 0, run `OnExpire` and return the instance to the pool.
+`LifetimeSeconds` is the only despawn clock. When remaining lifetime reaches 0, run `OnExpire` and return the instance to the pool. `Despawn` (phase 31) is an explicit expire, not a second clock.
 
 **Authoring:** `RecipeAsset` is the Unity asset ([DECISIONS.md](DECISIONS.md) ADR-023). Tests and `Spawn` keep using `Recipe`. `ToRecipe()` copies stats and builds modifier instances. Multiply/Multicast children on the asset are other `RecipeAsset` references, resolved on build. Do not put `RecipeAsset` on `SpawnRequest`.
 
 **Modifier kits:** a game may treat one Recipe as a **base** and append extras at fire time ([DECISIONS.md](DECISIONS.md) ADR-032). `ModifierKit` is a ScriptableObject of layers (`RecipeStage` + modifiers), not a second Recipe and not stats. `Recipe.Clone()`, `Append`, `ModifierKit.ApplyTo`, and `Recipe.Compose(basis, id, kits)` clone then append. Each composition needs its own `Recipe.Id` (`RecipeStore` replaces the slot when the same id is spawned again). Kits do not insert `Interval(n)` for you.
 
-**Gravity:** `Recipe.Gravity` is downward acceleration in m/s², default 0 ([DECISIONS.md](DECISIONS.md) ADR-017). Burst integrates it each tick; `Gravity(n)` scales the instance value (ADR-018). Aim-to-point is `BallisticAim.TrySolve` at fire time (ADR-019, ADR-028): it returns the elevation that speed + gravity need to pass through the point (fast → nearly straight, barely enough on the level → ~45°). Not a baked curve and not an authored Range.
+**Delivery:** `Recipe.Delivery` is how the shot is delivered ([DECISIONS.md](DECISIONS.md) ADR-035, ADR-036). **Straight** is today’s kinematic SphereCast (no gravity). **Arc** is kinematic with gravity; `Spawn` calls `BallisticAim.TrySolve` when `HomingAcquirePointSet` (unreachable → no spawn). **Hitscan** is one `Radius` polyline query inside `Spawn`, then expire — no view, World ends the ray unless Bounce, Pierce n+1, Homing `n` is max degrees of kink. **Beam** (phase 31) is a live instance that pulses that polyline until lifetime or `Despawn`; Homing kink and Pierce n+1 are per pulse; World clips a pulse.
+
+**Gravity:** `Recipe.Gravity` is downward acceleration in m/s², default 0 ([DECISIONS.md](DECISIONS.md) ADR-017). Burst integrates it each tick **only when Delivery is Arc** (ADR-035); `Gravity(n)` scales the instance value (ADR-018). Aim-to-point is `BallisticAim.TrySolve` (ADR-019, ADR-028): Arc `Spawn` calls it; games may still call it for barrel preview. Fast → nearly straight, barely enough on the level → ~45°. Not a baked curve and not an authored Range.
 
 ## Modifier contract
 
@@ -86,7 +90,7 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Multiply spread:** `Multiply` authors `Spread` as meters between adjacent pips on an `IMultiplyPattern` ([DECISIONS.md](DECISIONS.md) ADR-015). Default `SquarePattern`. `Spread = 0` stacks. Children keep travel / hit-normal direction. `Spread(n)` scales the instance copy of that spacing (phase 12). The original shot is not jittered.
 
-**Views:** the pool asks `IProjectileViewFactory` for a GameObject view from `Recipe.PresentationId` ([DECISIONS.md](DECISIONS.md) ADR-021). Default is a sphere primitive. Hits stay SphereCast of `Radius`; the mesh is not the collider. Ground-field disks use a separate `IGroundFieldViewFactory` (ADR-026); default is a thin cylinder. A game prefab is not rescaled.
+**Views:** the pool asks `IProjectileViewFactory` for a GameObject view from `Recipe.PresentationId` ([DECISIONS.md](DECISIONS.md) ADR-021). Default is a sphere primitive. Hits stay SphereCast of `Radius`; the mesh is not the collider. Hitscan creates **no** view (ADR-035). Beam uses a primitive **cylinder per polyline segment** (ADR-036); sample red via `PresentationId`. Ground-field disks use a separate `IGroundFieldViewFactory` (ADR-026); default is a thin cylinder. A game prefab is not rescaled.
 
 **Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` / `OnTick` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016, ADR-031). Area damage is on the modifier. Interval and OnTick are auras on the live instance (OnTick overlaps every Tick). Direct contact can be suppressed. Overlap includes `IDamageable` colliders **and** published hit volumes (ADR-030). `occupancy` (default false) replaces pulses with `HitSource.OccupancyEnter` / `OccupancyExit` (ADR-031).
 
@@ -137,16 +141,21 @@ struct SpawnRequest
     Vector3 Position;
     Vector3 Direction;
     HomingTarget HomingTarget; // optional initial lock; skips acquire (ADR-009, ADR-010)
-    bool HomingAcquirePointSet; // ADR-033; game copies a world aim point (not mouse). First Homing lock only.
-    Vector3 HomingAcquirePoint; // closest catalog candidate; no travel-direction filter. Later empty locks use travel.
+    bool HomingAcquirePointSet; // ADR-033 / ADR-035; game copies a world aim point (not mouse).
+    Vector3 HomingAcquirePoint; // Homing first lock; Arc Spawn loft target; Hitscan / Beam aim. No second AimPoint field.
 }
 
 struct ProjectileId { /* opaque handle */ }
 
+enum Delivery { Straight, Arc, Hitscan, Beam } // Beam is phase 31 (ADR-036)
+
 interface IProjectileWorld
 {
     ProjectileId Spawn(in SpawnRequest request);
+    // Arc + HomingAcquirePointSet: TrySolve; unreachable → default id, no Expired (ADR-035).
+    // Hitscan: polyline query inside Spawn, then pool (Hit events already raised).
     void Tick(float dt);
+    void Despawn(ProjectileId id); // phase 31. OnExpire + pool. Unknown / pooled = no-op.
     void SetHomingCandidate(TargetId id, Vector3 position);
     void RemoveHomingCandidate(TargetId id);
     void SetHitTarget(TargetId id, Vector3 position, float radius, ProtectionLevel protection = None);
@@ -182,9 +191,9 @@ interface IMultiplyPattern
 
 static class BallisticAim
 {
-    // Fire-time direction so speed+gravity pass through target.
-    // Always the flatter (shorter-time) root. Fast → nearly LOS; level min speed → ~45°.
-    // false = unreachable. Does not simulate; copy into SpawnRequest.Direction.
+    // Direction so speed+gravity pass through target. Always the flatter (shorter-time) root.
+    // Fast → nearly LOS; level min speed → ~45°. false = unreachable. Does not simulate.
+    // Arc Spawn calls this when HomingAcquirePointSet (ADR-035). Games may still call it for barrel preview.
     bool TrySolve(Vector3 origin, Vector3 target, float speed, float gravity, out Vector3 direction);
 }
 
@@ -265,7 +274,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.4 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), and `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033).
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.5 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), and indexed catalogs (ADR-034). Phase 30 adds `Delivery` / Arc Spawn / Hitscan (0.1.6). Phase 31 adds `Delivery.Beam`, `BeamPulseSeconds`, and `Despawn` (0.1.7).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 

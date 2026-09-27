@@ -9,7 +9,7 @@ Agents implement the first version **one phase at a time** ([PHASES.md](PHASES.m
 Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - **Projectile** — the concept of a spell, bullet, missile, or shot (not a live object)
-- **Recipe** — authored definition: base stats (speed, radius, lifetime, gravity, presentation id, combat/cast numbers) plus six modifier lists. Unity authors a `RecipeAsset`; `Spawn` still takes `Recipe` ([DECISIONS.md](DECISIONS.md) ADR-023)
+- **Recipe** — authored definition: base stats (delivery, speed, radius, lifetime, gravity, presentation id, combat/cast numbers) plus six modifier lists. Unity authors a `RecipeAsset`; `Spawn` still takes `Recipe` ([DECISIONS.md](DECISIONS.md) ADR-023). `Delivery` is Straight (default), Arc, Hitscan, or Beam (ADR-035, ADR-036)
 - **Recipe asset** — ScriptableObject that creates and edits a Recipe in the Inspector. Six stage lists; Add menus are filtered by `[ModifierStage]`. `ToRecipe()` builds the runtime `Recipe`
 - **Modifier kit** — ScriptableObject of extra modifiers plus the stage list each belongs to. Applied onto a cloned base Recipe at fire time (`Compose` / `ApplyTo`). No Speed / Lifetime / Presentation of its own. Each composition needs a unique `Recipe.Id`. An OnInterval extra does nothing unless `Interval` is already on the base or on an OnSpawn layer; kits do not insert one. See [DECISIONS.md](DECISIONS.md) ADR-032
 - **Instance** — one live simulated projectile
@@ -34,19 +34,20 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Ground field** — flat lingering disk planted by `GroundField`. Has its own size, lifetime, damage, optional status, and pulse period. Stays after the projectile despawns. Not a Recipe and not an `AreaEffect` aura
 - **Presentation** — GameObject view for an instance. Selected by `Recipe.PresentationId` through `IProjectileViewFactory`. Not the hit shape
 - **Size** — projectile collision size. This **is** `Recipe.Radius`; there is no second size field
-- **Gravity** — downward acceleration in m/s² on the Recipe (default 0) and the instance. Burst adds it to velocity each tick. 0 is a straight shot. Ballistic reach is derived from Speed + Gravity (ADR-028); there is no Range stat
+- **Gravity** — downward acceleration in m/s² on the Recipe (default 0) and the instance. Burst adds it to velocity each tick **only when `Delivery` is Arc** (ADR-035). Straight / Hitscan / Beam ignore it for motion. Arc with gravity 0 stays level. Ballistic reach is derived from Speed + Gravity (ADR-028); there is no Range stat
+- **Delivery** — how the shot is delivered (`Straight`, `Arc`, `Hitscan`, `Beam`). Not a modifier and not a seventh stage. Arc: `Spawn` solves loft from `HomingAcquirePoint`. Hitscan: one polyline query then expire. Beam: live instance, pulse polyline until lifetime or `Despawn`
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
-  - **Strength** for homing (how hard it turns)
+  - **Strength** for homing: degrees per second on Straight / Arc (`OnTick` steer); **degrees of kink** per segment on Hitscan / Beam (ADR-035)
   - **Scale** for speed, damage, critical chance, mana cost, multiply spread, effect radius, size, and gravity (multiplier: `Speed(2)` doubles, `Speed(0.5)` halves; same for `Damage`, `Critical`, `Mana`, `Spread`, `EffectRadius`, `Size`, `Gravity`)
-  - **Seconds** for interval (`Interval(0.5)` runs `OnInterval` every half second) and for `GroundField` lifetime / pulse period
+  - **Seconds** for interval (`Interval(0.5)` runs `OnInterval` every half second), for `GroundField` lifetime / pulse period, and for `Recipe.BeamPulseSeconds` (phase 31)
   - **Distance** for multiply spread (`Multiply` `Spread` is meters between adjacent pips on the multiply pattern)
 
 ### Named modifiers (v1)
 
 - **Pierce(n)** — `OnHit` + `Target`: pass through `n` targets; despawn on hit `n+1`
 - **Bounce(n)** — `OnHit`: reflect off `n` `World` or `Target` hits; despawn on hit `n+1`. `Hit` still fires on `Target`, so dummy HP still drops
-- **Homing(n)** — `OnTick`: steer toward a homing target; higher `n` turns faster. A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel. Published hit volumes count as candidates (ADR-031); the same id in `SetHomingCandidate` is one candidate and the hit-target position wins. `SetHomingCandidate` remains for a pose that is not hittable. If `SpawnRequest.HomingAcquirePointSet`, the **first** lock is the candidate closest to that world point (ADR-033); retarget after a Target hit still uses travel direction
+- **Homing(n)** — Straight / Arc `OnTick`: steer toward a homing target; higher `n` turns faster (°/s). Hitscan / Beam: max degrees each polyline segment may kink toward a lock (ADR-035). A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel. Published hit volumes count as candidates (ADR-031); the same id in `SetHomingCandidate` is one candidate and the hit-target position wins. `SetHomingCandidate` remains for a pose that is not hittable. If `SpawnRequest.HomingAcquirePointSet`, the **first** lock is the candidate closest to that world point (ADR-033); retarget after a Target hit still uses travel direction. That same point is the Arc loft target and the Hitscan / Beam aim point (no second field)
 - **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
 - **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`). Optional `Spread` is meters between adjacent pips. Layout comes from an `IMultiplyPattern` (default `SquarePattern`)
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
@@ -60,8 +61,8 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **ApplyStatus** — `OnHit` + `Target`: request one or more `IStatusEffect`s on the hit Target. The package does not simulate the effects (see [DECISIONS.md](DECISIONS.md) ADR-011)
 - **AreaEffect** — overlap Targets in instance `EffectRadius` and raise Area `Hit` / `StatusApplied`. Own damage on the modifier. `OnHit` (splash at the hit point), `OnTravel` (burst at spawn), `OnInterval` and `OnTick` (aura on the flying instance; OnTick overlaps every Tick). Flags choose whether the projectile’s own contact damage/status still apply. See [DECISIONS.md](DECISIONS.md) ADR-016. `occupancy` (default false) uses enter/exit instead of pulses (ADR-031)
 - **GroundField** — plant a lingering horizontal disk (`OnHit` at the hit point, `OnExpire` at the instance, `OnTravel` at spawn). Own radius, lifetime, damage, optional status, and pulse period on the modifier. Same `Hit` / `StatusApplied` events as `AreaEffect`. See [DECISIONS.md](DECISIONS.md) ADR-022. `occupancy` (default false) uses enter/exit instead of pulses (ADR-031)
-- **Gravity(n)** — scale instance gravity by `n`. Same stages as `Speed(n)`. Burst still applies gravity; this modifier does not add `g * dt` itself
-- **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md))
+- **Gravity(n)** — scale instance gravity by `n`. Same stages as `Speed(n)`. Burst still applies gravity **on Arc only**; this modifier does not add `g * dt` itself
+- **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md)). Beam still expires when it elapses, even if the fire button is held. `Despawn` is an explicit expire (phase 31)
 
 ## Goals
 
@@ -99,6 +100,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - Cameras, lighting, URP (host project)
 - Input handling, turret, sample HUD (preset dropdown, recipe sheet with Add/Remove from phase 21.b, fire, reset)
 - Dummy targets (HP, `IDamageable`, `IStatusReceiver`, optional `IProjectileProtection`). Games without colliders publish hit volumes (phase 25 / ADR-030)
+- Hold-to-fire for Beam (phase 31): press `Spawn`, release `Despawn`. Runtime does not read the mouse
 - Player or enemy objects if you add them later
 
 If a type needs `Player`, `Enemy`, or camera code, it does not belong in **Runtime**. The UPM sample may contain those as an example.
@@ -658,6 +660,72 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** 32 published volumes
 - **When:** `SetHitTarget` is called again for each of those 32 ids
 - **Then:** the catalog still has 32 entries (in-place update, not a second copy of each id)
+
+### Phase 30 — Arc Spawn solves loft
+
+- **Given:** a Recipe with `Delivery.Arc`, reachable speed/gravity, and `HomingAcquirePointSet` at DummyTarget
+- **When:** `Spawn` runs
+- **Then:** the instance is lofted so the simulated path meets DummyTarget. The caller did not have to copy `BallisticAim.TrySolve` onto `Direction`
+
+### Phase 30 — Unreachable Arc does not spawn
+
+- **Given:** the same Arc Recipe with speed too low for the aim point
+- **When:** `Spawn` runs
+- **Then:** it returns default `ProjectileId` and raises no `Expired`
+
+### Phase 30 — Straight ignores gravity
+
+- **Given:** a Straight Recipe with `Gravity > 0`
+- **When:** it flies several ticks
+- **Then:** y is unchanged (level shot). The same gravity on `Delivery.Arc` drops
+
+### Phase 30 — Hitscan published volume
+
+- **Given:** a Hitscan Recipe and a published sphere with no GameObject collider on the ray
+- **When:** `Spawn` returns
+- **Then:** Direct Target `Hit` with that `TargetId` has already been raised. There is no flying view
+
+### Phase 30 — Hitscan Pierce n+1 on published volumes
+
+- **Given:** Hitscan + `Pierce(2)` and three published volumes along the ray
+- **When:** `Spawn` returns
+- **Then:** three Target Hits; the instance is pooled after the third (`Pierce(n)` absorbs n, dies on n+1)
+
+### Phase 30 — Hitscan World ends the ray
+
+- **Given:** Hitscan + `Pierce(2)` and a World wall before a published Target
+- **When:** `Spawn` returns
+- **Then:** World `Hit` only (no Pierce through the wall). With `Bounce(1)` instead, the ray reflects and may hit the Target
+
+### Phase 30 — Hitscan Homing kink after pierce
+
+- **Given:** Hitscan + Pierce + Homing, first published volume on the barrel ray, second off-axis
+- **When:** `Spawn` returns
+- **Then:** after the first pierce, the next segment kinks toward the second volume by at most Homing `n` degrees
+
+### Phase 31 — Beam pulse is Direct OnHit
+
+- **Given:** a Beam Recipe and a published volume on the first segment
+- **When:** a pulse runs
+- **Then:** Direct `Hit` (and `ApplyStatus` if authored). The instance stays live
+
+### Phase 31 — Beam Pierce n+1 is per pulse
+
+- **Given:** Beam + `Pierce(2)` and three published volumes along the polyline
+- **When:** two pulses run
+- **Then:** each pulse Hits the first two and ends on the third; the instance is still live after both pulses. `Despawn` or `LifetimeSeconds` is what ends the Beam
+
+### Phase 31 — Lifetime caps a held Beam
+
+- **Given:** a Beam with a short `LifetimeSeconds`, never `Despawn`ed
+- **When:** remaining lifetime reaches 0
+- **Then:** `OnExpire` / `Expired` run and the instance returns to the pool even if the game is still holding fire
+
+### Phase 32 — Hitscan debug line
+
+- **Given:** Play Mode, Hitscan preset, debug overlay on
+- **When:** fire at the dummy line
+- **Then:** a debug polyline shows the query (Hitscan has no mesh)
 
 ## Product constraints
 
