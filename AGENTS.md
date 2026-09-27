@@ -33,11 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 30 — ignore firing collider (scheduled, not built); 31–33 Delivery / Beam / debug still queued**
+**Phase 30 — ignore firing collider (built); 31–33 Delivery / Beam / debug still queued**
 
-- Implement **exactly one** of 30, then 31, then 32, then 33. This session only inserted the CR as phase 30 and shifted Delivery.
-- Phase 30: public `SpawnRequest.IgnoreCollider`. Seed the existing Direct one-collider skip at rent, **before** `OnSpawn`. Not a hit. Drop when clear (`RememberOrClearIgnore`). Children via `CopyIgnore`. Not `IProjectileProtection`. Direct only. Play Mode PhysX tests. Yard turret stays collider-less. Package **0.1.6**.
-- Then Delivery (31, 0.1.7), Beam (32, 0.1.8), sample debug (33). Hitscan/Beam must honor the skip.
+- `SpawnRequest.IgnoreCollider` is seeded in `SpawnCore` after `CopyIgnore` and before `RunSpawnStages`, via `IHitQuery.SetIgnore` into `PhysicsHitQuery.ignoreColliderByInstance`. `ScriptedHitQuery.SetIgnore` is a no-op. `RememberOrClearIgnore` still drops the one slot. Do not add a second ignore for Hitscan/Beam — they must call the same `SetIgnore` / skip.
+- Package is **0.1.6**. No git tag in the phase session; the `main` workflow creates `v0.1.6`.
+- Play Mode proofs are in `PhysicsHitPlayModeTests` (`IgnoreCollider_*`). Yard turret stays collider-less.
+- Next is phase 31 (0.1.7). Hitscan/Beam must honor this skip.
 - `HomingAcquirePoint` is the Arc loft target, Hitscan/Beam aim, and Homing first lock. Do **not** add `AimPoint`.
 - Gravity Burst is Arc-only. Existing Gravity Edit Mode tests and Cannonball **must** set `Delivery.Arc` or they fly straight.
 - Hitscan Homing `n` is degrees of kink, not °/s. Pierce is still n+1 (`Pierce(2)` dies on the third published volume).

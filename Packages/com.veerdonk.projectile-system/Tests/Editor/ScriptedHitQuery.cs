@@ -197,6 +197,10 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             hitTargets?.CopyIgnore(from, to);
         }
 
+        public void SetIgnore(ProjectileId instanceId, Collider collider)
+        {
+        }
+
         struct OverlapBody
         {
             public HitKind Kind;

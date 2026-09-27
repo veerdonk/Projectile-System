@@ -23,5 +23,11 @@ namespace Veerdonk.ProjectileSystem
 
         /// <summary>Child instances ignore the same collider the parent already overlapped.</summary>
         void CopyIgnore(ProjectileId from, ProjectileId to);
+
+        /// <summary>
+        /// Direct overlap and sweep skip this collider until the instance body no longer overlaps it.
+        /// Same one slot as <see cref="CopyIgnore"/>. Null does nothing.
+        /// </summary>
+        void SetIgnore(ProjectileId instanceId, Collider collider);
     }
 }

@@ -74,6 +74,12 @@ namespace Veerdonk.ProjectileSystem
         public bool HomingAcquirePointSet;
         /// <summary>Fire-time world point. Ignored unless <see cref="HomingAcquirePointSet"/> is true.</summary>
         public Vector3 HomingAcquirePoint;
+        /// <summary>
+        /// Collider that fired this shot. Direct overlap and sweep skip it until the instance body no longer overlaps it.
+        /// That skip is not a hit. After the body is clear, a later contact is a normal hit. Null is no skip.
+        /// Multicast extras and multiply children copy the skip. Area and ground queries are unchanged.
+        /// </summary>
+        public Collider IgnoreCollider;
         internal ProjectileId InheritIgnoreFrom;
         internal ChainBudget MulticastChain;
         internal ChainBudget MultiplyChain;

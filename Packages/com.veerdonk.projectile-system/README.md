@@ -36,8 +36,9 @@ The package is already embedded. Open the project in Unity 6 LTS. Import sample 
 2. Author a `Recipe` in code, or **Create > Projectile > Recipe** and call `ToRecipe()`. Extras at fire time are **Create > Projectile > Modifier Kit**, then `Recipe.Compose`.
 3. `Spawn(new SpawnRequest { Recipe, Position, Direction })`.
 4. `Tick(dt)` once per frame from one driver.
-5. Listen to `Hit` to apply HP in your game. Put `IDamageable` on colliders that should count as targets. A target with no collider is `SetHitTarget(id, position, radius, protection)` (`RemoveHitTarget` to drop it; `radius <= 0` removes). Homing also steers toward that pose. `protection` is `None`, `Basic`, or `Strong`. To lock the candidate closest to a fire-time aim point, set `SpawnRequest.HomingAcquirePointSet` and copy the world point into `HomingAcquirePoint`. Later locks stay travel-direction. The package does not read the mouse.
-6. `Dispose()` when the scene unloads (the world owns an Entities `World`).
+5. To spawn overlapping the shooter, set `SpawnRequest.IgnoreCollider` to that collider. Direct casts skip it until the shot has left; a later touch is a normal hit. Area and ground queries are unchanged.
+6. Listen to `Hit` to apply HP in your game. Put `IDamageable` on colliders that should count as targets. A target with no collider is `SetHitTarget(id, position, radius, protection)` (`RemoveHitTarget` to drop it; `radius <= 0` removes). Homing also steers toward that pose. `protection` is `None`, `Basic`, or `Strong`. To lock the candidate closest to a fire-time aim point, set `SpawnRequest.HomingAcquirePointSet` and copy the world point into `HomingAcquirePoint`. Later locks stay travel-direction. The package does not read the mouse.
+7. `Dispose()` when the scene unloads (the world owns an Entities `World`).
 
 ```csharp
 using UnityEngine;
@@ -72,7 +73,8 @@ public sealed class ProjectileDriver : MonoBehaviour
         {
             Recipe = recipeAsset.ToRecipe(),
             Position = muzzle.position,
-            Direction = muzzle.forward
+            Direction = muzzle.forward,
+            IgnoreCollider = muzzle.GetComponentInParent<Collider>()
         });
     }
 

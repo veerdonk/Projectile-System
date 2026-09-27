@@ -536,7 +536,10 @@ namespace Veerdonk.ProjectileSystem
             em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });
             em.SetComponentData(entity, new ProjectileCandidate { Value = position });
 
-            hitQuery.CopyIgnore(request.InheritIgnoreFrom, new ProjectileId(idValue));
+            var id = new ProjectileId(idValue);
+            hitQuery.CopyIgnore(request.InheritIgnoreFrom, id);
+            if (request.IgnoreCollider != null)
+                hitQuery.SetIgnore(id, request.IgnoreCollider);
             simulation.RunSpawnStages(entity, multicastLeft);
             if (view != null)
             {
@@ -544,7 +547,7 @@ namespace Veerdonk.ProjectileSystem
                 view.Bind(request.Position, spawned.Radius);
             }
 
-            return new ProjectileId(idValue);
+            return id;
         }
 
         void FlushPendingSpawns()

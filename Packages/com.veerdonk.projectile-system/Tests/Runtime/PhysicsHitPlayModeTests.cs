@@ -599,6 +599,306 @@ namespace Veerdonk.ProjectileSystem.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator IgnoreCollider_OverlappingWorld_FirstTickStaysLive()
+        {
+            GameObject wall = null;
+            GameObject poolRoot = null;
+            try
+            {
+                wall = CreateWorldCube(Vector3.zero, 4f);
+                poolRoot = new GameObject("TestPool");
+                var world = new ProjectileWorld(poolRoot.transform);
+                try
+                {
+                    Recipe recipe = CreateRecipe("ignore-overlap", speed: 5f, lifetime: 5f);
+                    recipe.OnHit = new IModifier[] { new Pierce(1), new Bounce(1), new ApplyStatus(new DummyStatusEffect()) };
+                    world.Prewarm(recipe, 2);
+
+                    int hits = 0;
+                    int statuses = 0;
+                    world.Hit += _ => hits++;
+                    world.StatusApplied += _ => statuses++;
+
+                    ProjectileId id = world.Spawn(new SpawnRequest
+                    {
+                        Recipe = recipe,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward,
+                        IgnoreCollider = wall.GetComponent<Collider>()
+                    });
+
+                    Physics.SyncTransforms();
+                    yield return null;
+
+                    world.Tick(1f / 60f);
+
+                    Assert.AreEqual(0, hits);
+                    Assert.AreEqual(0, statuses);
+                    Assert.AreEqual(1, world.ActiveCount);
+                    Assert.IsTrue(world.TryGetRemaining(id, out int pierce, out int bounce));
+                    Assert.AreEqual(1, pierce);
+                    Assert.AreEqual(1, bounce);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
+            }
+            finally
+            {
+                if (wall != null)
+                    Object.Destroy(wall);
+                if (poolRoot != null)
+                    Object.Destroy(poolRoot);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator OverlappingWorld_WithoutIgnoreCollider_Despawns()
+        {
+            GameObject wall = null;
+            GameObject poolRoot = null;
+            try
+            {
+                wall = CreateWorldCube(Vector3.zero, 4f);
+                poolRoot = new GameObject("TestPool");
+                var world = new ProjectileWorld(poolRoot.transform);
+                try
+                {
+                    Recipe recipe = CreateRecipe("overlap-despawn", speed: 5f, lifetime: 5f);
+                    world.Prewarm(recipe, 2);
+
+                    HitInfo? seen = null;
+                    world.Hit += info => seen = info;
+
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = recipe,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward
+                    });
+
+                    Physics.SyncTransforms();
+                    yield return null;
+
+                    world.Tick(1f / 60f);
+
+                    Assert.IsTrue(seen.HasValue);
+                    Assert.AreEqual(HitKind.World, seen.Value.Kind);
+                    Assert.AreEqual(0, world.ActiveCount);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
+            }
+            finally
+            {
+                if (wall != null)
+                    Object.Destroy(wall);
+                if (poolRoot != null)
+                    Object.Destroy(poolRoot);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator IgnoreCollider_AfterClear_Reoverlap_IsWorldHit()
+        {
+            GameObject wall = null;
+            GameObject poolRoot = null;
+            try
+            {
+                wall = CreateWorldCube(Vector3.zero, 1f);
+                poolRoot = new GameObject("TestPool");
+                var world = new ProjectileWorld(poolRoot.transform);
+                try
+                {
+                    Recipe recipe = CreateRecipe("ignore-clear", speed: 20f, lifetime: 5f);
+                    world.Prewarm(recipe, 2);
+
+                    int hits = 0;
+                    HitInfo? seen = null;
+                    world.Hit += info =>
+                    {
+                        hits++;
+                        seen = info;
+                    };
+
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = recipe,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward,
+                        IgnoreCollider = wall.GetComponent<Collider>()
+                    });
+
+                    Physics.SyncTransforms();
+                    yield return null;
+
+                    const float dt = 0.05f;
+                    for (int i = 0; i < 40 && world.ActiveCount > 0; i++)
+                    {
+                        world.Tick(dt);
+                        if (hits != 0)
+                            break;
+                        if (world.TryGetActiveAt(0, out _, out Vector3 position, out _, out _) && position.z > 2f)
+                            break;
+                    }
+
+                    Assert.AreEqual(0, hits);
+                    Assert.AreEqual(1, world.ActiveCount);
+                    Assert.IsTrue(world.TryGetActiveAt(0, out _, out Vector3 clear, out _, out _));
+                    Assert.Greater(clear.z, 2f);
+
+                    world.Tick(dt);
+                    Assert.AreEqual(0, hits);
+                    Assert.AreEqual(1, world.ActiveCount);
+                    Assert.IsTrue(world.TryGetActiveAt(0, out _, out clear, out _, out _));
+
+                    wall.transform.position = clear;
+                    Physics.SyncTransforms();
+                    world.Tick(dt);
+
+                    Assert.AreEqual(1, hits);
+                    Assert.IsTrue(seen.HasValue);
+                    Assert.AreEqual(HitKind.World, seen.Value.Kind);
+                    Assert.AreEqual(0, world.ActiveCount);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
+            }
+            finally
+            {
+                if (wall != null)
+                    Object.Destroy(wall);
+                if (poolRoot != null)
+                    Object.Destroy(poolRoot);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator IgnoreCollider_MulticastExtras_SkipWhileOverlapping()
+        {
+            GameObject wall = null;
+            GameObject poolRoot = null;
+            try
+            {
+                wall = CreateWorldCube(Vector3.zero, 8f);
+                poolRoot = new GameObject("TestPool");
+                var world = new ProjectileWorld(poolRoot.transform);
+                try
+                {
+                    Recipe extra = CreateRecipe("ignore-extra", speed: 2f, lifetime: 5f);
+                    Recipe recipe = CreateRecipe("ignore-multicast", speed: 2f, lifetime: 5f);
+                    recipe.OnSpawn = new IModifier[] { new Multicast(3, extra) };
+                    world.Prewarm(recipe, 2);
+                    world.Prewarm(extra, 4);
+
+                    int hits = 0;
+                    world.Hit += _ => hits++;
+
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = recipe,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward,
+                        IgnoreCollider = wall.GetComponent<Collider>()
+                    });
+
+                    Physics.SyncTransforms();
+                    yield return null;
+
+                    Assert.AreEqual(3, world.ActiveCount);
+                    world.Tick(0.05f);
+
+                    Assert.AreEqual(0, hits);
+                    Assert.AreEqual(3, world.ActiveCount);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
+            }
+            finally
+            {
+                if (wall != null)
+                    Object.Destroy(wall);
+                if (poolRoot != null)
+                    Object.Destroy(poolRoot);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator IgnoreCollider_HomingAndApplyStatus_StillHitDummy()
+        {
+            GameObject wall = null;
+            GameObject dummy = null;
+            GameObject poolRoot = null;
+            try
+            {
+                wall = CreateWorldCube(Vector3.zero, 1f);
+                dummy = CreateDummy(new Vector3(0f, 0f, 6f), new TargetId(4));
+                poolRoot = new GameObject("TestPool");
+                var world = new ProjectileWorld(poolRoot.transform);
+                try
+                {
+                    Recipe recipe = CreateRecipe("ignore-home", speed: 20f, lifetime: 5f);
+                    recipe.OnTick = new IModifier[] { new Homing(300f) };
+                    recipe.OnHit = new IModifier[] { new ApplyStatus(new DummyStatusEffect()) };
+                    world.Prewarm(recipe, 2);
+                    world.SetHomingCandidate(new TargetId(4), dummy.transform.position);
+
+                    HitInfo? seen = null;
+                    int worldHits = 0;
+                    StatusInfo? status = null;
+                    world.Hit += info =>
+                    {
+                        seen = info;
+                        if (info.Kind == HitKind.World)
+                            worldHits++;
+                    };
+                    world.StatusApplied += info => status = info;
+
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = recipe,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward,
+                        IgnoreCollider = wall.GetComponent<Collider>()
+                    });
+
+                    Physics.SyncTransforms();
+                    yield return null;
+
+                    TickUntil(world, 1f, w => seen.HasValue);
+
+                    Assert.AreEqual(0, worldHits);
+                    Assert.IsTrue(seen.HasValue);
+                    Assert.AreEqual(HitKind.Target, seen.Value.Kind);
+                    Assert.AreEqual(new TargetId(4), seen.Value.TargetId);
+                    Assert.IsTrue(status.HasValue);
+                    Assert.AreEqual(new TargetId(4), status.Value.TargetId);
+                    Assert.IsInstanceOf<DummyStatusEffect>(status.Value.Effect);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
+            }
+            finally
+            {
+                if (wall != null)
+                    Object.Destroy(wall);
+                if (dummy != null)
+                    Object.Destroy(dummy);
+                if (poolRoot != null)
+                    Object.Destroy(poolRoot);
+            }
+        }
+
         static Recipe CreateRecipe(string id, float speed, float lifetime)
         {
             return new Recipe
@@ -620,6 +920,15 @@ namespace Veerdonk.ProjectileSystem.Tests
             var marker = dummy.AddComponent<TestDamageable>();
             marker.TargetId = targetId;
             return dummy;
+        }
+
+        static GameObject CreateWorldCube(Vector3 position, float scale)
+        {
+            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.name = "TestWorld";
+            cube.transform.position = position;
+            cube.transform.localScale = Vector3.one * scale;
+            return cube;
         }
 
         static void TickUntilIdle(ProjectileWorld world, float maxSeconds)
