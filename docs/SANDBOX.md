@@ -11,11 +11,11 @@ The sandbox is the lab for proving a phase. It lives in the package sample `Pack
 ## Sample layout (phase 21 / 21.b / 22)
 
 - Ground plane and a yard of dummies/walls, viewed from behind and above the turret (not the old side-on lane)
-- Turret: sphere body + cylinder barrel on a **Gun** pitch pivot, no PhysX collider. Horizontal presets spawn at the barrel tip along flattened forward. **Cannonball** uses `BallisticAim.TrySolve` toward the aim point (speed 32, gravity 80) with no `highArc` HUD. If the flatter path hits another collider first (Splash on the way to Bounce), `BallisticClearance` searches the lowest extra loft that still hits the aimed target
+- Turret: sphere body + cylinder barrel on a **Gun** pitch pivot, no PhysX collider. Horizontal presets spawn at the barrel tip along flattened forward. **Cannonball** is `Delivery.Arc` (phase 30): `Spawn` calls `BallisticAim.TrySolve` toward the aim point (speed 32, gravity 80). The sample may still `TrySolve` / `BallisticClearance` to pitch the barrel. No `highArc` HUD. If the flatter path hits another collider first (Splash on the way to Bounce), `BallisticClearance` searches the lowest extra loft that still hits the aimed target **for the barrel**; Arc Spawn stays the flatter root toward the aim point
 - Mouse aim: camera ray hits colliders first (dummy tops), else the ground plane (Y = 0). Turret yaws. Horizontal presets pitch the barrel toward that point. Cannonball pitches to the solved loft (faster Speed is flatter). If the flatter path hits a different collider, the sample searches the **minimum extra pitch** that still hits the aimed cube. Pointer over the on-screen sheet does not aim or fire
-- Fire: click in the world, on-screen **Fire**, or Space. One driver `Tick`s. Unreachable ballistic solves do not spawn
+- Fire: click in the world, on-screen **Fire**, or Space. One driver `Tick`s. Unreachable Arc solves do not spawn. **Laser** (phase 31): hold to keep one Beam instance, release `Despawn`. `LifetimeSeconds` still ends it while held
 - Preset dropdown of `RecipeAsset`s. Play Mode edits a working `Recipe` from `ToRecipe()`; the asset on disk does not change. Switching preset or **Reset** copies again
-- Recipe sheet: base stats plus the six lists with **Add** / **Remove**. Magnitudes stay editable. Add menus are `[ModifierStage]`-filtered (Pierce is OnHit, not OnSpawn). Multiply child / Multicast extra pick a sample preset (`ToRecipe()`). Child Recipes are a name, not a nested editor. Working copy only — the `RecipeAsset` does not change
+- Recipe sheet: base stats (including **Delivery** after phase 30, **BeamPulseSeconds** after phase 31) plus the six lists with **Add** / **Remove**. Magnitudes stay editable. Add menus are `[ModifierStage]`-filtered (Pierce is OnHit, not OnSpawn). Multiply child / Multicast extra pick a sample preset (`ToRecipe()`). Child Recipes are a name, not a nested editor. Working copy only — the `RecipeAsset` does not change
 - Cannonball HUD: last-fire line (`solved` / `unreachable`). No high-arc toggle
 - **Reset:** dummy HP/status, turret yaw and barrel pitch, working copy, `Dispose` + new `ProjectileWorld` (clears live shots and the pool)
 - Colored dummy cubes and status flash. Tiny HUD: active count, pool available, DummyTarget HP/status
@@ -69,8 +69,12 @@ Always: enter Play Mode from the imported `Yard.unity`, fire once, confirm the p
 | 27 | Edit Mode compose + Create menu | `Compose` Straight + Pierce kit pierces two dummies. Illegal stage throws. **Create > Projectile > Modifier Kit** exists. `Samples~/Yard/Recipes/PierceKit.asset` is Pierce(2) on OnHit. Yard Straight asset unchanged |
 | 28 | Homing + DummyBounce click | Homing preset, click DummyBounce, fire — first lock is DummyBounce. Pierce+Homing still retargets with travel-direction after the pierce |
 | 29 | Edit Mode catalog index | Re-Set of existing ids keeps `TryGet` order and Count. Remove compact-left. Yard unchanged |
+| 30 | **Cannonball** (`Delivery.Arc`) | Aim at DummyTarget, fire — Spawn lofted the shot; barrel still shows the preview. Lower Speed until unreachable — no spawn |
+| 30 | **Hitscan** | No flying mesh; DummyTarget takes a Direct hit when you fire. Pierce Hitscan through the dummy line uses n+1 |
+| 31 | **Laser** | Hold Fire — red cylinder segments, DummyTarget ticks each pulse. Release — beam gone. Hold past lifetime — beam ends anyway |
+| 32 | Hitscan / Laser debug overlay | Play Mode overlay draws the Hitscan polyline and Beam segments |
 
-AreaEffect, GroundField, Recipe gravity, barrel pitch, and needed-arc `BallisticAim` (Cannonball) are sample presets.
+AreaEffect, GroundField, Recipe gravity, barrel pitch, needed-arc `BallisticAim` (Cannonball), Hitscan, and Laser are sample presets.
 
 Open the imported `Yard.unity` before Play Mode. `Assets/Samples/` is gitignored; Import or Rebuild creates it.
 

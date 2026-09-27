@@ -33,13 +33,17 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 29 — hit-target catalog index**
+**Phase 30–32 — Delivery, Beam, Play Mode debug (scheduled, not built)**
 
-- `HitTargetCatalog` and `HomingCatalog` each keep `indexById` beside the list. `Remove` only drops the dictionary entry; the list keeps a dead slot until `Compact()` runs at the top of the next list walk (`TryGet`, sweep, `AppendSphere`, `AppendDisk`). A slot is live only when `indexById[slot.Id] == slotIndex`. Any new method that iterates the list must call `Compact()` first. `Count` is `indexById.Count`.
-- Measured in the Debug editor with 1000 targets: re-Set all ~0.08 ms; 100 random removes, or all 1000 in either order, plus the next read ~0.1 ms. Immediate `RemoveAt` + re-index was ~2 ms and ~23 ms (oldest first).
-- Catalog tests are unit tests on the internal types (`HitTargetCatalogTests`), not through `ProjectileWorld`, because `Count` is not on the façade.
-- Package is **0.1.5**. No git tag in the phase session; the `main` workflow creates `v0.1.5`.
-- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply.
+- Implement **exactly one** of 30, then 31, then 32. This session only scheduled them.
+- `HomingAcquirePoint` is the Arc loft target, Hitscan/Beam aim, and Homing first lock. Do **not** add `AimPoint`.
+- Gravity Burst is Arc-only. Existing Gravity Edit Mode tests and Cannonball **must** set `Delivery.Arc` or they fly straight.
+- Hitscan Homing `n` is degrees of kink, not °/s. Pierce is still n+1 (`Pierce(2)` dies on the third published volume).
+- Hitscan / Beam must test **published volumes** (ADR-030), not only colliders. No gizmos in 30 or 31 (that is phase 32, sample-side).
+- Beam: `LifetimeSeconds` still caps while held. Pierce n+1 is **per pulse**; the instance stays until lifetime or `Despawn`. Polyline kinks toward targets in one pulse; max bend is Homing degrees. World clips a pulse. Runtime primitive cylinders; sample red via `PresentationId`. Hold-to-fire is sample-only (press Spawn, release Despawn). Re-aim while held is Later.
+- Arc Spawn is `BallisticAim.TrySolve` from the aim point. `BallisticClearance` extra loft stays sample barrel visual.
+- Versions: 30 → **0.1.6**, 31 → **0.1.7**. Phase 32 is sample debug; no Runtime bump unless review asks. No git tag in a phase session; `.github/workflows/release-package.yml` on `main` tags `v{version}`.
+- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until 30 touches those files.
 
 ## Do not
 
