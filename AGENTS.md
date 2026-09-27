@@ -33,17 +33,19 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 30–32 — Delivery, Beam, Play Mode debug (scheduled, not built)**
+**Phase 30 — ignore firing collider (scheduled, not built); 31–33 Delivery / Beam / debug still queued**
 
-- Implement **exactly one** of 30, then 31, then 32. This session only scheduled them.
+- Implement **exactly one** of 30, then 31, then 32, then 33. This session only inserted the CR as phase 30 and shifted Delivery.
+- Phase 30: public `SpawnRequest.IgnoreCollider`. Seed the existing Direct one-collider skip at rent, **before** `OnSpawn`. Not a hit. Drop when clear (`RememberOrClearIgnore`). Children via `CopyIgnore`. Not `IProjectileProtection`. Direct only. Play Mode PhysX tests. Yard turret stays collider-less. Package **0.1.6**.
+- Then Delivery (31, 0.1.7), Beam (32, 0.1.8), sample debug (33). Hitscan/Beam must honor the skip.
 - `HomingAcquirePoint` is the Arc loft target, Hitscan/Beam aim, and Homing first lock. Do **not** add `AimPoint`.
 - Gravity Burst is Arc-only. Existing Gravity Edit Mode tests and Cannonball **must** set `Delivery.Arc` or they fly straight.
 - Hitscan Homing `n` is degrees of kink, not °/s. Pierce is still n+1 (`Pierce(2)` dies on the third published volume).
-- Hitscan / Beam must test **published volumes** (ADR-030), not only colliders. No gizmos in 30 or 31 (that is phase 32, sample-side).
+- Hitscan / Beam must test **published volumes** (ADR-030), not only colliders. No gizmos in 31 or 32 (that is phase 33, sample-side).
 - Beam: `LifetimeSeconds` still caps while held. Pierce n+1 is **per pulse**; the instance stays until lifetime or `Despawn`. Polyline kinks toward targets in one pulse; max bend is Homing degrees. World clips a pulse. Runtime primitive cylinders; sample red via `PresentationId`. Hold-to-fire is sample-only (press Spawn, release Despawn). Re-aim while held is Later.
 - Arc Spawn is `BallisticAim.TrySolve` from the aim point. `BallisticClearance` extra loft stays sample barrel visual.
-- Versions: 30 → **0.1.6**, 31 → **0.1.7**. Phase 32 is sample debug; no Runtime bump unless review asks. No git tag in a phase session; `.github/workflows/release-package.yml` on `main` tags `v{version}`.
-- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until 30 touches those files.
+- No git tag in a phase session; `.github/workflows/release-package.yml` on `main` tags `v{version}`.
+- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until a later phase touches those files.
 
 ## Do not
 
