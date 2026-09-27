@@ -5,6 +5,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2026-09-27
+
+### Added
+
+- `SpawnRequest.IgnoreCollider`. Direct overlap and sweep skip that collider until the shot body no longer overlaps it, without a hit, despawn, Pierce/Bounce spend, or status. After it clears, a later contact is a normal hit. Multicast extras and multiply children copy the same one-slot skip. Null leaves the previous behaviour. Area and ground queries are unchanged.
+
 ## [0.1.5] - 2026-09-27
 
 ### Changed

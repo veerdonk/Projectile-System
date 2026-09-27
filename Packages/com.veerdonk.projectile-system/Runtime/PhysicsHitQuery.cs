@@ -79,6 +79,13 @@ namespace Veerdonk.ProjectileSystem
             ignoreColliderByInstance[to] = collider;
         }
 
+        public void SetIgnore(ProjectileId instanceId, Collider collider)
+        {
+            if (collider == null)
+                return;
+            ignoreColliderByInstance[instanceId] = collider;
+        }
+
         public void Overlap(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
         {
             if (results == null)

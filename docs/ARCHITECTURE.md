@@ -276,7 +276,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.5 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), and indexed catalogs (ADR-034). Phase 30 adds `SpawnRequest.IgnoreCollider` (0.1.6). Phase 31 adds `Delivery` / Arc Spawn / Hitscan (0.1.7). Phase 32 adds `Delivery.Beam`, `BeamPulseSeconds`, and `Despawn` (0.1.8).
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.6 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), and `SpawnRequest.IgnoreCollider` (ADR-037). Phase 31 adds `Delivery` / Arc Spawn / Hitscan (0.1.7). Phase 32 adds `Delivery.Beam`, `BeamPulseSeconds`, and `Despawn` (0.1.8).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 
