@@ -680,53 +680,75 @@ The first homing target should be the published candidate closest to the world p
 
 **Proof:** Edit Mode order / update / remove tests above. Re-Set of 1000 existing ids is no longer a linear scan per id (implementation uses the dictionary). Yard unchanged.
 
-**Stop.** Delivery (Straight / Arc / Hitscan) is **phase 30**. Do not start it in the same session.
+**Stop.** Seeding the Direct ignore collider at spawn is **phase 30**. Do not start it in the same session.
 
-## Phase 30 — Delivery: Straight, Arc, Hitscan
+## Phase 30 — Spawn ignores the firing collider until clear
 
-`Recipe.Delivery` chooses how a shot is delivered. Arc lofts at `Spawn`. Hitscan is one polyline query then expire. Gravity applies only on Arc. ADR-035. No Beam yet.
+A spawn can name the collider that fired. Direct overlap and sweep skip it until the shot body no longer overlaps it. Not a hit. ADR-037. Game CR: walking wizard + `straight_base` despawns on the first tick because the muzzle gap is smaller than one walk step.
+
+**In scope**
+
+- Public `SpawnRequest.IgnoreCollider` (`Collider`, default null). At rent, **before** `OnSpawn`, write it into the existing per-instance Direct skip (`PhysicsHitQuery`). Null / destroyed is today’s behaviour
+- While that collider still overlaps the instance sphere (or is still in the sweep), Direct TryCast skips it: no `Hit`, no despawn, no Pierce/Bounce spent, no `StatusApplied`. After `RememberOrClearIgnore` drops it, a later contact is a normal hit (World or Target as classified)
+- One slot: this is the same skip pierce/bounce already store after a hit. Do **not** add a second ignore, do **not** use `IProjectileProtection`
+- Children keep the skip through existing `InheritIgnoreFrom` / `CopyIgnore` (multicast extras at spawn copy the shooter; multiply children copy whatever the parent is skipping at their rent). Seed the parent **before** flushing multicast extras
+- Direct only. AreaEffect / GroundField / occupancy unchanged. `IHitQuery` stays internal. Collider is not an ECS field
+- Works for any Recipe (straight, arc, homing, ApplyStatus, …). Hitscan / Beam are **phase 31+** but must use the same query skip when they ship
+- Play Mode tests (PhysX): spawn overlapping a World collider with `IgnoreCollider` set → first `Tick` raises no `Hit` and the instance stays live; the same spawn without the field World-hits and despawns; after the shot has cleared, walking the collider back into the instance (or a second overlap) is a normal World hit; multicast extras spawned from that instance also skip while overlapping. Homing / ApplyStatus Recipes still Direct-hit a dummy. Existing collider tests stay green
+- Docs: [ARCHITECTURE.md](ARCHITECTURE.md) `SpawnRequest`, [REQUIREMENTS.md](REQUIREMENTS.md), [ECS.md](ECS.md) query row, package `AGENTS.md` / `README.md` / `Documentation/index.md`, `CHANGELOG` **0.1.6**, XML on the field. Bump `package.json` to **0.1.6**. Do not create a git tag in the phase session
+- Yard: turret stays collider-less. No new preset. The game passes the wizard capsule / tower collider
+
+**Out of scope:** Delivery / Hitscan / Beam (**phase 31+**); skipping AreaEffect / GroundField; ignoring a published `TargetId` this way; `IProjectileProtection` as a shooter flag; putting the wizard in Runtime; applying HP; Unity Physics; Entities Graphics
+
+**Proof:** Play Mode overlapping-World tests above. Standing still without `IgnoreCollider` still hits. Walking into the muzzle gap with the field set does not despawn.
+
+**Stop.** Delivery (Straight / Arc / Hitscan) is **phase 31**. Do not start it in the same session.
+
+## Phase 31 — Delivery: Straight, Arc, Hitscan
+
+`Recipe.Delivery` chooses how a shot is delivered. Arc lofts at `Spawn`. Hitscan is one polyline query then expire. Gravity applies only on Arc. ADR-035. No Beam yet. Depends on phase 30 so Hitscan Spawn honors `IgnoreCollider`.
 
 **In scope**
 
 - Public `Delivery { Straight, Arc, Hitscan }`. `Recipe.Delivery` default **Straight**. `RecipeAsset` / `ToRecipe` copy it. Inspector shows it with the other base stats
 - **Straight:** today’s kinematic SphereCast. Burst does **not** apply gravity even if `Recipe.Gravity > 0`
 - **Arc:** kinematic + gravity. When `HomingAcquirePointSet`, `Spawn` calls `BallisticAim.TrySolve(origin, HomingAcquirePoint, speed, gravity)` **before** `OnSpawn` and writes that loft into launch velocity. Unreachable → no spawn, default `ProjectileId`, no `Expired`. Aim point unset → use `SpawnRequest.Direction` as already-solved, still apply gravity in flight. Do **not** add a second aim-point field. `BallisticAim.TrySolve` stays public for barrel preview. Multicast extras fan around the solved loft
-- **Hitscan:** after `OnSpawn` / `OnTravel`, resolve a polyline of `Radius` SphereCasts **inside `Spawn`** (PhysX **and** published volumes), raise `Hit` / `OnHit` / `StatusApplied` / `OnExpire` / `Expired` as today, pool before `Spawn` returns. Unbounded = 10 km max. No view. Gravity ignored. Speed does not move it. OnTick / OnInterval do not run. Homing is read from the authored `OnTick` list as max **degrees of kink** per segment, not °/s (first segment from `Direction` toward the first lock, clamped to `n`; after pierce/bounce re-aim, clamped to `n` from the current / reflected direction). Without Homing, pierce stays collinear. World ends the polyline unless `Bounce` remaining reflects. `Pierce(n)` absorbs `n` Target hits and dies on `n+1` (same as kinematic)
+- **Hitscan:** after `OnSpawn` / `OnTravel`, resolve a polyline of `Radius` SphereCasts **inside `Spawn`** (PhysX **and** published volumes), raise `Hit` / `OnHit` / `StatusApplied` / `OnExpire` / `Expired` as today, pool before `Spawn` returns. Unbounded = 10 km max. No view. Gravity ignored. Speed does not move it. OnTick / OnInterval do not run. Homing is read from the authored `OnTick` list as max **degrees of kink** per segment, not °/s (first segment from `Direction` toward the first lock, clamped to `n`; after pierce/bounce re-aim, clamped to `n` from the current / reflected direction). Without Homing, pierce stays collinear. World ends the polyline unless `Bounce` remaining reflects. `Pierce(n)` absorbs `n` Target hits and dies on `n+1` (same as kinematic). Direct query honors `IgnoreCollider` (ADR-037)
 - Existing Gravity Edit Mode tests and the Cannonball `RecipeAsset` set `Delivery.Arc` (default Straight would fly level)
 - Yard: Cannonball `Delivery.Arc`, `Fire` copies `lastAimPoint` and stops using `TrySolve` as `SpawnRequest.Direction` (barrel may still `TrySolve` / `BallisticClearance` for pitch). One **Hitscan** preset (Radius sphere-cast along barrel forward). Recipe sheet shows Delivery. No debug gizmo
 - Edit Mode tests: Arc with aim point meets a reachable dummy (same idea as phase 16); unreachable Arc does not spawn; Straight with `Gravity > 0` stays level; Hitscan vs a published sphere (no collider) raises Target `Hit`; Pierce(2) through two published volumes then dies on the third; World wall ends Hitscan even with Pierce remaining; Bounce(1) reflects Hitscan off World; Homing kinks Hitscan after a pierce toward a second published volume (bend ≤ `n` degrees); Hitscan miss (empty catalog, no wall) expires with no `Hit`; Strong published volume eats Hitscan with no `Hit`. Existing Straight / collider tests stay green
-- Docs: [ARCHITECTURE.md](ARCHITECTURE.md) `Delivery` / Arc Spawn / Hitscan, [REQUIREMENTS.md](REQUIREMENTS.md), [SANDBOX.md](SANDBOX.md), [ECS.md](ECS.md), package `AGENTS.md` / `README.md` / `Documentation/index.md`, `CHANGELOG` **0.1.6**, XML on `Delivery`. Bump `package.json` to **0.1.6**. Do not create a git tag in the phase session
+- Docs: [ARCHITECTURE.md](ARCHITECTURE.md) `Delivery` / Arc Spawn / Hitscan, [REQUIREMENTS.md](REQUIREMENTS.md), [SANDBOX.md](SANDBOX.md), [ECS.md](ECS.md), package `AGENTS.md` / `README.md` / `Documentation/index.md`, `CHANGELOG` **0.1.7**, XML on `Delivery`. Bump `package.json` to **0.1.7**. Do not create a git tag in the phase session
 
-**Out of scope:** `Delivery.Beam`, hold-to-fire, `Despawn`, `BeamPulseSeconds` (**phase 31**); Play Mode debug lines (**phase 32**); gizmos; `Recipe.Range`; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
+**Out of scope:** `Delivery.Beam`, hold-to-fire, `Despawn`, `BeamPulseSeconds` (**phase 32**); Play Mode debug lines (**phase 33**); gizmos; `Recipe.Range`; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
 
 **Proof:** Edit Mode Arc / Hitscan tests above. Play Mode Cannonball still hits DummyTarget with the barrel lofted; Spawn is what solved. Hitscan preset fires along the barrel and hits DummyTarget with no flying mesh.
 
-**Stop.** Beam / hold-to-fire is **phase 31**. Do not start it in the same session.
+**Stop.** Beam / hold-to-fire is **phase 32**. Do not start it in the same session.
 
-## Phase 31 — Beam (laser) and hold-to-fire
+## Phase 32 — Beam (laser) and hold-to-fire
 
-A Beam is a live Recipe instance that pulses a Homing-kinked polyline until `LifetimeSeconds` or `Despawn`. Hold-to-fire is sample-only. ADR-036. Depends on phase 30.
+A Beam is a live Recipe instance that pulses a Homing-kinked polyline until `LifetimeSeconds` or `Despawn`. Hold-to-fire is sample-only. ADR-036. Depends on phase 31.
 
 **In scope**
 
 - `Delivery.Beam`. `Recipe.BeamPulseSeconds` (default 0.1; `<= 0` pulses every `Tick`). `RecipeAsset` / `ToRecipe` / inspector / sheet copy both
 - Live instance at spawn pose (origin + first-segment direction do not follow the mouse). Burst integrate skipped; lifetime still ticks. `LifetimeSeconds` expires the Beam **even if the fire button is held**
-- Each pulse: polyline as Hitscan (published volumes, World clips unless Bounce, Homing kink = degrees, Pierce n+1 **per pulse**). Pierce/Bounce remaining reset from the Recipe at the start of each pulse; the instance is **not** killed by Pierce. Contacts are synthetic Direct `OnHit` so Pierce / Bounce / `ApplyStatus` run. First pulse at spawn (or first Tick — pick one and test it). OnInterval is not the pulse clock
+- Each pulse: polyline as Hitscan (published volumes, World clips unless Bounce, Homing kink = degrees, Pierce n+1 **per pulse**, `IgnoreCollider` skip). Pierce/Bounce remaining reset from the Recipe at the start of each pulse; the instance is **not** killed by Pierce. Contacts are synthetic Direct `OnHit` so Pierce / Bounce / `ApplyStatus` run. First pulse at spawn (or first Tick — pick one and test it). OnInterval is not the pulse clock
 - `IProjectileWorld.Despawn(ProjectileId)`: `OnExpire`, pool, `Expired`. Unknown / already-pooled is a no-op. Works on any live instance
 - View: Runtime primitive cylinder **per polyline segment**, scaled to `Radius`. Sample **Laser** preset, red via `PresentationId`. Hits stay the SphereCast
 - Yard hold-to-fire: press Spawn, hold keeps that one instance, release `Despawn`. Runtime does not read the mouse. No debug gizmo
 - Edit Mode tests: Beam pulse hits a published volume as Direct `Hit`; Pierce(2) on one pulse passes two published volumes and the third contact ends that pulse, instance still live for the next pulse; next pulse can hit again; World clips a pulse; `LifetimeSeconds` expires a Beam with no `Despawn`; `Despawn` raises `Expired` and `OnExpire`; ApplyStatus on a pulsed Target; Strong published eats a pulse with no `Hit`. Existing Hitscan / Arc tests stay green
-- Docs: sketch, `Despawn`, [SANDBOX.md](SANDBOX.md) hold-to-fire, package `AGENTS.md` / `README.md` / `Documentation/index.md`, `CHANGELOG` **0.1.7**, XML. Bump `package.json` to **0.1.7**. Do not create a git tag in the phase session
+- Docs: sketch, `Despawn`, [SANDBOX.md](SANDBOX.md) hold-to-fire, package `AGENTS.md` / `README.md` / `Documentation/index.md`, `CHANGELOG` **0.1.8**, XML. Bump `package.json` to **0.1.8**. Do not create a git tag in the phase session
 
-**Out of scope:** re-aim while held (Later); Play Mode debug overlay (**phase 32**); gizmos in this phase; WASD; orbit camera; save-to-asset; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
+**Out of scope:** re-aim while held (Later); Play Mode debug overlay (**phase 33**); gizmos in this phase; WASD; orbit camera; save-to-asset; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
 
 **Proof:** Edit Mode pulse / Pierce-per-pulse / Despawn tests above. Play Mode Laser: hold — red cylinder segments, DummyTarget ticks each pulse; release — beam gone; keep holding past `LifetimeSeconds` — beam ends anyway.
 
-**Stop.** Play Mode debug tooling is **phase 32**. Do not start it in the same session.
+**Stop.** Play Mode debug tooling is **phase 33**. Do not start it in the same session.
 
-## Phase 32 — Play Mode debug tooling
+## Phase 33 — Play Mode debug tooling
 
-Bare phase. Hitscan has no mesh; Beam segments are easy to miss. Add Play Mode debug drawing and refine it after the human sees it. Do not invent a second façade. Depends on phase 31.
+Bare phase. Hitscan has no mesh; Beam segments are easy to miss. Add Play Mode debug drawing and refine it after the human sees it. Do not invent a second façade. Depends on phase 32.
 
 **In scope**
 
@@ -734,7 +756,7 @@ Bare phase. Hitscan has no mesh; Beam segments are easy to miss. Add Play Mode d
 - Start **sample-side** (`Samples~/Yard`). Do not add Runtime types unless review asks. Toggle or always-on in Play Mode is fine for the first cut; refine colors, thickness, and what is drawn after review
 - Docs: [SANDBOX.md](SANDBOX.md) how to see it. No `package.json` bump if nothing ships in Runtime
 
-**Out of scope:** new deliveries; hold-to-fire (phase 31); re-aim while held; WASD; orbit camera; Unity Physics; Entities Graphics; a second world / debug façade
+**Out of scope:** new deliveries; hold-to-fire (phase 32); re-aim while held; WASD; orbit camera; Unity Physics; Entities Graphics; a second world / debug façade
 
 **Proof:** Play Mode Hitscan — a debug line shows the query through the dummy line. Laser — pulse segments are obvious with the overlay on.
 
