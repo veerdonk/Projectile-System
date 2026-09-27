@@ -33,10 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 29 scheduled (hit-target catalog index)**
+**Phase 29 — hit-target catalog index**
 
-- ADR-034: `Dictionary<TargetId, int>` next to the list in `HitTargetCatalog` and `HomingCatalog`. Do **not** swap-remove (TryGet order must stay compact-left). Sweep/overlap stay a list walk.
-- No public API change. Bump to **0.1.5** so the game can pin it. No git tag in the phase session; the `main` workflow creates `v0.1.5`.
+- `HitTargetCatalog` and `HomingCatalog` each keep `indexById` beside the list. `Remove` only drops the dictionary entry; the list keeps a dead slot until `Compact()` runs at the top of the next list walk (`TryGet`, sweep, `AppendSphere`, `AppendDisk`). A slot is live only when `indexById[slot.Id] == slotIndex`. Any new method that iterates the list must call `Compact()` first. `Count` is `indexById.Count`.
+- Measured in the Debug editor with 1000 targets: re-Set all ~0.08 ms; 100 random removes, or all 1000 in either order, plus the next read ~0.1 ms. Immediate `RemoveAt` + re-index was ~2 ms and ~23 ms (oldest first).
+- Catalog tests are unit tests on the internal types (`HitTargetCatalogTests`), not through `ProjectileWorld`, because `Count` is not on the façade.
+- Package is **0.1.5**. No git tag in the phase session; the `main` workflow creates `v0.1.5`.
 - Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply.
 
 ## Do not

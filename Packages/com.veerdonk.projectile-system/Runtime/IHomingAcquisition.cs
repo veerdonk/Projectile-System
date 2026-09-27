@@ -10,38 +10,36 @@ namespace Veerdonk.ProjectileSystem
     public sealed class HomingCatalog
     {
         readonly List<(TargetId id, Vector3 position)> poses = new List<(TargetId id, Vector3 position)>();
+        readonly Dictionary<TargetId, int> indexById = new Dictionary<TargetId, int>();
+        bool hasDeadSlots;
 
         /// <summary>Number of published poses.</summary>
-        public int Count => poses.Count;
+        public int Count => indexById.Count;
 
         /// <summary>Publishes or moves a candidate pose.</summary>
         public void Set(TargetId id, Vector3 position)
         {
-            for (int i = 0; i < poses.Count; i++)
+            if (indexById.TryGetValue(id, out int index))
             {
-                if (!poses[i].id.Equals(id))
-                    continue;
-
-                poses[i] = (id, position);
+                poses[index] = (id, position);
                 return;
             }
 
+            indexById.Add(id, poses.Count);
             poses.Add((id, position));
         }
 
         /// <summary>Drops a previously published pose.</summary>
         public void Remove(TargetId id)
         {
-            for (int i = poses.Count - 1; i >= 0; i--)
-            {
-                if (poses[i].id.Equals(id))
-                    poses.RemoveAt(i);
-            }
+            if (indexById.Remove(id))
+                hasDeadSlots = true;
         }
 
         /// <summary>Indexed read for acquisition. False when <paramref name="index"/> is out of range.</summary>
         public bool TryGet(int index, out TargetId id, out Vector3 position)
         {
+            Compact();
             if (index < 0 || index >= poses.Count)
             {
                 id = default;
@@ -64,17 +62,40 @@ namespace Veerdonk.ProjectileSystem
                 return false;
             }
 
-            for (int i = 0; i < poses.Count; i++)
+            if (!indexById.TryGetValue(target.Id, out int index))
             {
-                if (!poses[i].id.Equals(target.Id))
-                    continue;
-
-                position = poses[i].position;
-                return true;
+                position = default;
+                return false;
             }
 
-            position = default;
-            return false;
+            position = poses[index].position;
+            return true;
+        }
+
+        void Compact()
+        {
+            if (!hasDeadSlots)
+                return;
+
+            int write = 0;
+            for (int read = 0; read < poses.Count; read++)
+            {
+                (TargetId id, Vector3 position) pose = poses[read];
+                // A slot is live only while the index points at it; a removed and re-set id owns a later slot.
+                if (!indexById.TryGetValue(pose.id, out int index) || index != read)
+                    continue;
+
+                if (write != read)
+                {
+                    poses[write] = pose;
+                    indexById[pose.id] = write;
+                }
+
+                write++;
+            }
+
+            poses.RemoveRange(write, poses.Count - write);
+            hasDeadSlots = false;
         }
     }
 
