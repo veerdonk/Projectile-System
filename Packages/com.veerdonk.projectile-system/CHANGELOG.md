@@ -5,6 +5,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-09-27
+
+### Changed
+
+- `SetHitTarget`, `RemoveHitTarget`, and `SetHomingCandidate` / `RemoveHomingCandidate` look ids up in a dictionary instead of scanning the published list. Republishing every living enemy each frame no longer costs N²/2 comparisons. Removals are deferred and compacted in one pass before the next hit or homing query, so a mass despawn no longer costs one list shift per id. Hits, homing picks, and catalog order are unchanged. No public API change.
+
 ## [0.1.4] - 2026-09-26
 
 ### Added

@@ -6,9 +6,11 @@ namespace Veerdonk.ProjectileSystem
     sealed class HitTargetCatalog
     {
         readonly List<Volume> volumes = new List<Volume>();
+        readonly Dictionary<TargetId, int> indexById = new Dictionary<TargetId, int>();
         readonly Dictionary<ProjectileId, TargetId> ignored = new Dictionary<ProjectileId, TargetId>();
+        bool hasDeadSlots;
 
-        public int Count => volumes.Count;
+        public int Count => indexById.Count;
 
         public void Set(TargetId id, Vector3 position, float radius, ProtectionLevel protection = ProtectionLevel.None)
         {
@@ -18,20 +20,20 @@ namespace Veerdonk.ProjectileSystem
                 return;
             }
 
-            for (int i = 0; i < volumes.Count; i++)
+            var volume = new Volume(id, position, radius, protection);
+            if (indexById.TryGetValue(id, out int index))
             {
-                if (!volumes[i].Id.Equals(id))
-                    continue;
-
-                volumes[i] = new Volume(id, position, radius, protection);
+                volumes[index] = volume;
                 return;
             }
 
-            volumes.Add(new Volume(id, position, radius, protection));
+            indexById.Add(id, volumes.Count);
+            volumes.Add(volume);
         }
 
         public bool TryGet(int index, out TargetId id, out Vector3 position)
         {
+            Compact();
             if (index < 0 || index >= volumes.Count)
             {
                 id = default;
@@ -64,11 +66,8 @@ namespace Veerdonk.ProjectileSystem
 
         public void Remove(TargetId id)
         {
-            for (int i = volumes.Count - 1; i >= 0; i--)
-            {
-                if (volumes[i].Id.Equals(id))
-                    volumes.RemoveAt(i);
-            }
+            if (indexById.Remove(id))
+                hasDeadSlots = true;
         }
 
         public void ReleaseIfSeparated(ProjectileId instanceId, Vector3 origin, float radius)
@@ -105,6 +104,7 @@ namespace Veerdonk.ProjectileSystem
             out float travel,
             out float closeness)
         {
+            Compact();
             hit = default;
             travel = 0f;
             closeness = 0f;
@@ -143,6 +143,7 @@ namespace Veerdonk.ProjectileSystem
             if (radius <= 0f || results == null)
                 return;
 
+            Compact();
             for (int i = 0; i < volumes.Count; i++)
             {
                 Volume volume = volumes[i];
@@ -163,6 +164,7 @@ namespace Veerdonk.ProjectileSystem
             if (radius <= 0f || results == null)
                 return;
 
+            Compact();
             for (int i = 0; i < volumes.Count; i++)
             {
                 Volume volume = volumes[i];
@@ -182,17 +184,40 @@ namespace Veerdonk.ProjectileSystem
 
         bool TryFind(TargetId id, out Volume volume)
         {
-            for (int i = 0; i < volumes.Count; i++)
+            if (!indexById.TryGetValue(id, out int index))
             {
-                if (!volumes[i].Id.Equals(id))
-                    continue;
-
-                volume = volumes[i];
-                return true;
+                volume = default;
+                return false;
             }
 
-            volume = default;
-            return false;
+            volume = volumes[index];
+            return true;
+        }
+
+        void Compact()
+        {
+            if (!hasDeadSlots)
+                return;
+
+            int write = 0;
+            for (int read = 0; read < volumes.Count; read++)
+            {
+                Volume volume = volumes[read];
+                // A slot is live only while the index points at it; a removed and re-set id owns a later slot.
+                if (!indexById.TryGetValue(volume.Id, out int index) || index != read)
+                    continue;
+
+                if (write != read)
+                {
+                    volumes[write] = volume;
+                    indexById[volume.Id] = write;
+                }
+
+                write++;
+            }
+
+            volumes.RemoveRange(write, volumes.Count - write);
+            hasDeadSlots = false;
         }
 
         static HitInfo BuildOverlap(ProjectileId instanceId, Vector3 center, Volume volume, Vector3 delta)

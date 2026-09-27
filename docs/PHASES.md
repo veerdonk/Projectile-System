@@ -669,7 +669,7 @@ The first homing target should be the published candidate closest to the world p
 **In scope**
 
 - `HitTargetCatalog`: keep `List<Volume>` as `TryGet` / sweep / overlap order. Add `Dictionary<TargetId, int>` id → index. `Set` of an existing id overwrites that slot (O(1) average). First `Set` of an id still **appends**. `Contains` / `TryGetPosition` / pierce-overlap `TryFind` use the dictionary
-- `Remove` (and `radius <= 0`): dictionary lookup, `RemoveAt`, then decrement stored indices **after** that hole so remaining order matches today’s compact-left list. Do **not** swap-with-last
+- `Remove` (and `radius <= 0`): drop the id from the dictionary and leave a dead slot. The next list read compacts once (stable, live entries slide left, indices rewritten), so order matches today’s compact-left list and a mass despawn is one pass, not one pass per id. Do **not** swap-with-last
 - Same index map on `HomingCatalog` (`Set` / `Remove` / `TryGetPosition` by id). `TryGet(index)` order unchanged
 - Sweep, `AppendSphere`, `AppendDisk` still iterate the list (one pass per query). Do not add a spatial hash in this phase
 - `HitTargetCatalog` stays internal. `IProjectileWorld.SetHitTarget` / `RemoveHitTarget` signatures unchanged. `TargetId` is already a dictionary key (`IEquatable` + `GetHashCode`)
