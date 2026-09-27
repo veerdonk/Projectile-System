@@ -68,6 +68,7 @@ Always: enter Play Mode from the imported `Yard.unity`, fire once, confirm the p
 | 26 | Edit Mode published volumes | Homing acquires from `SetHitTarget` only. ApplyStatus on a published Target. Basic/Strong published protection. OnTick AreaEffect Hits each Tick; occupancy enter once then exit. Yard collider presets unchanged |
 | 27 | Edit Mode compose + Create menu | `Compose` Straight + Pierce kit pierces two dummies. Illegal stage throws. **Create > Projectile > Modifier Kit** exists. `Samples~/Yard/Recipes/PierceKit.asset` is Pierce(2) on OnHit. Yard Straight asset unchanged |
 | 28 | Homing + DummyBounce click | Homing preset, click DummyBounce, fire — first lock is DummyBounce. Pierce+Homing still retargets with travel-direction after the pierce |
+| 29 | Edit Mode catalog index | Re-Set of existing ids keeps `TryGet` order and Count. Remove compact-left. Yard unchanged |
 
 AreaEffect, GroundField, Recipe gravity, barrel pitch, and needed-arc `BallisticAim` (Cannonball) are sample presets.
 

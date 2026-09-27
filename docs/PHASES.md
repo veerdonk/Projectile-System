@@ -660,6 +660,26 @@ The first homing target should be the published candidate closest to the world p
 
 **Proof:** Edit Mode aim-point vs travel tests above. Play Mode Homing: click DummyBounce (off-lane) and fire — the shot turns toward DummyBounce first, not DummyTarget. Pierce+Homing: click the first dummy in the line, pierce it, then travel-acquire DummyBounce as today.
 
+**Stop.** Indexed hit-target publish (`SetHitTarget` must not scan the whole list per call) is **phase 29**. Do not start it in the same session.
+
+## Phase 29 — Constant-time hit-target publish
+
+`SetHitTarget` / `RemoveHitTarget` (and the same shape on `HomingCatalog`) must not walk the whole list to find an id. Games publish every living enemy once per frame; linear `Set` is ~N²/2 and was measured at ~9 ms for 1000 already-present targets. Hits, homing, and `TryGet(index)` order stay the same. ADR-034. No public API change.
+
+**In scope**
+
+- `HitTargetCatalog`: keep `List<Volume>` as `TryGet` / sweep / overlap order. Add `Dictionary<TargetId, int>` id → index. `Set` of an existing id overwrites that slot (O(1) average). First `Set` of an id still **appends**. `Contains` / `TryGetPosition` / pierce-overlap `TryFind` use the dictionary
+- `Remove` (and `radius <= 0`): dictionary lookup, `RemoveAt`, then decrement stored indices **after** that hole so remaining order matches today’s compact-left list. Do **not** swap-with-last
+- Same index map on `HomingCatalog` (`Set` / `Remove` / `TryGetPosition` by id). `TryGet(index)` order unchanged
+- Sweep, `AppendSphere`, `AppendDisk` still iterate the list (one pass per query). Do not add a spatial hash in this phase
+- `HitTargetCatalog` stays internal. `IProjectileWorld.SetHitTarget` / `RemoveHitTarget` signatures unchanged. `TargetId` is already a dictionary key (`IEquatable` + `GetHashCode`)
+- Edit Mode tests: Set A,B,C then update B’s pose — `TryGet` 0,1,2 is still A,B,C with B’s new position; Remove B — remaining order is A,C; `Contains` / `TryGetPosition` after Set; `radius <= 0` removes; 32 already-present `SetHitTarget` calls do not grow `Count`. Existing published-hit / Homing tests stay green
+- Docs: [ECS.md](ECS.md) catalog row, [REQUIREMENTS.md](REQUIREMENTS.md) scenario, `CHANGELOG` **0.1.5**. Bump `package.json` to **0.1.5**. Do not create a git tag in the phase session
+
+**Out of scope:** exposing `HitTargetCatalog` or `IHitQuery`; changing hit/homing results; spatial partitioning of sweeps; occupancy list scans; applying HP; Unity Physics; Entities Graphics
+
+**Proof:** Edit Mode order / update / remove tests above. Re-Set of 1000 existing ids is no longer a linear scan per id (implementation uses the dictionary). Yard unchanged.
+
 **Stop.**
 
 ## Later (not scheduled)
