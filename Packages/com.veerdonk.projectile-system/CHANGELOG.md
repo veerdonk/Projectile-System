@@ -5,6 +5,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2026-09-27
+
+### Added
+
+- `Delivery` on `Recipe` and `RecipeAsset` (`Straight` default, `Arc`, `Hitscan`). Straight is the existing kinematic SphereCast and ignores gravity. Arc applies gravity; when `SpawnRequest.HomingAcquirePointSet` is true, `Spawn` calls `BallisticAim.TrySolve` before OnSpawn and writes that loft into launch velocity. Unreachable returns the default `ProjectileId` and does not raise `Expired`. Hitscan is one `Radius` polyline of SphereCasts (PhysX and published volumes) inside `Spawn`, then the instance is pooled. There is no view. Unbounded length is 10 km. World ends the polyline unless Bounce reflects. `Pierce(n)` still dies on hit n+1. Homing `n` on Hitscan is the maximum kink in degrees per segment. Direct queries still honor `SpawnRequest.IgnoreCollider`.
+
 ## [0.1.6] - 2026-09-27
 
 ### Added

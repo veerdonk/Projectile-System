@@ -140,6 +140,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 speed: speed,
                 lifetime: 5f,
                 gravity: gravity);
+            recipe.Delivery = Delivery.Arc;
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {

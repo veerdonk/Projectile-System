@@ -8,7 +8,14 @@ namespace Veerdonk.ProjectileSystem
     /// </summary>
     public interface IProjectileWorld
     {
-        /// <summary>Rents an instance from the pool and starts it from <paramref name="request"/>.</summary>
+        /// <summary>
+        /// Rents an instance from the pool and starts it from <paramref name="request"/>.
+        /// <see cref="Delivery.Arc"/> with <see cref="SpawnRequest.HomingAcquirePointSet"/> calls
+        /// <see cref="BallisticAim.TrySolve"/> before OnSpawn. Unreachable returns <c>default</c>
+        /// and does not raise <see cref="Expired"/>.
+        /// <see cref="Delivery.Hitscan"/> runs its polyline inside this call and returns the instance
+        /// to the pool before returning, after <see cref="Hit"/> and <see cref="Expired"/> have been raised.
+        /// </summary>
         ProjectileId Spawn(in SpawnRequest request);
 
         /// <summary>Advances all live instances by <paramref name="dt"/> seconds.</summary>

@@ -4307,6 +4307,9 @@ MonoBehaviour:
   - label: Cannonball Gravity(2)
     asset: {fileID: 11400000, guid: 8bf28183db9a9bf41af7cde1d5b69745, type: 2}
     useBallisticAim: 0
+  - label: Hitscan
+    asset: {fileID: 11400000, guid: c31d4e5f60718293a4b5c6d7e8f90123, type: 2}
+    useBallisticAim: 0
   - label: OnHit GroundField
     asset: {fileID: 11400000, guid: 6e472988c230cf94395f8557437e9352, type: 2}
     useBallisticAim: 0

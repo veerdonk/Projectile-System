@@ -6,7 +6,9 @@ namespace Veerdonk.ProjectileSystem
 {
     /// <summary>
     /// OnTick: steer toward a homing target. <see cref="TurnRateDegreesPerSecond"/> is the maximum turn in
-    /// degrees per second — Homing(100) turns at 100°/s, Homing(10) at 10°/s. If spawn did not assign a target,
+    /// degrees per second — Homing(100) turns at 100°/s, Homing(10) at 10°/s.
+    /// On Hitscan the same value is the maximum kink in degrees per polyline segment (the query is instant,
+    /// so it is not degrees per second). If spawn did not assign a target,
     /// the first lock is <see cref="ClosestToPointAcquisition"/> when <see cref="SpawnRequest.HomingAcquirePointSet"/>
     /// is true, and <see cref="Acquisition"/> otherwise. After that first lock, empty locks use <see cref="Acquisition"/>.
     /// Candidates are <see cref="IProjectileWorld.SetHomingCandidate"/> poses and published hit-target positions.
@@ -34,7 +36,10 @@ namespace Veerdonk.ProjectileSystem
             this.acquisition = acquisition ?? new ClosestInTravelDirectionAcquisition();
         }
 
-        /// <summary>Maximum turn in degrees per second.</summary>
+        /// <summary>
+        /// Maximum turn in degrees per second on Straight and Arc.
+        /// On Hitscan, maximum kink in degrees per polyline segment.
+        /// </summary>
         public float TurnRateDegreesPerSecond
         {
             get => turnRateDegreesPerSecond;

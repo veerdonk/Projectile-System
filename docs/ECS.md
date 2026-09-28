@@ -9,7 +9,7 @@ How this package uses DOTS. Not a Unity ECS tutorial. Read this if you already k
 | **DOTS** | A stack of libraries, not one feature | Entities + Burst + Collections + Mathematics. We use a slice. |
 | **`World`** | Unit of work / a private database, **not** the scene | Created and disposed by `ProjectileWorld`. Isolated from Unity’s default ECS world. Not in the Player Loop. |
 | **Entity** | A row id | One live (or pooled) instance. Not a GameObject. |
-| **`IComponentData`** | Columns on that row; structs in contiguous chunks | `Projectile` (including remaining pierce/bounce, `ElapsedSeconds`, `IntervalSeconds`, multiply generations left, the homing lock id, combat stats copied from the Recipe: `Damage`, `CriticalChance`, `ManaCost`, `EffectRadius`, `Spread` copied from the Recipe's `Multiply` modifiers, `Gravity` copied from `Recipe.Gravity`, and `Delivery` / Beam pulse clock when those phases ship), `ProjectilePosition`, `ProjectileVelocity`, `ProjectileCandidate` |
+| **`IComponentData`** | Columns on that row; structs in contiguous chunks | `Projectile` (including remaining pierce/bounce, `ElapsedSeconds`, `IntervalSeconds`, multiply generations left, the homing lock id, combat stats copied from the Recipe: `Damage`, `CriticalChance`, `ManaCost`, `EffectRadius`, `Spread` copied from the Recipe's `Multiply` modifiers, `Gravity` copied from `Recipe.Gravity`, and `Delivery`). Beam pulse clock is phase 32. `ProjectilePosition`, `ProjectileVelocity`, `ProjectileCandidate` |
 | **`Disabled`** | Soft-deleted / pooled row | Default queries skip it. Rent = enable; return = disable. No `Destroy` on despawn. |
 | **System** | A pipeline stage over a query, not `Update` on each object | `LifetimeSystem` (Burst) then `ProjectileSimulationSystem` (managed) |
 | **Burst** | AOT compiler for jobs over those structs (no GC, no managed refs) | Lifetime decrement + kinematic integrate (gravity then `pos + vel * dt`) |
@@ -65,7 +65,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 
 | File | Role |
 | --- | --- |
-| `Runtime/ProjectileWorld.cs` | Façade: owns the ECS `World`, `Tick`, `Spawn`, `Dispose`. Phase 31 adds `Despawn`. Arc Spawn calls `BallisticAim.TrySolve`. Hitscan resolves inside `Spawn` |
+| `Runtime/ProjectileWorld.cs` | Façade: owns the ECS `World`, `Tick`, `Spawn`, `Dispose`. Arc Spawn calls `BallisticAim.TrySolve` before OnSpawn. Hitscan resolves inside `Spawn`. Phase 32 adds `Despawn` |
 | `Runtime/Ecs/ProjectileComponents.cs` | Component structs + delta-time singleton. `Delivery` (and Beam pulse clock) live on the `Projectile` row when those phases ship |
 | `Runtime/Ecs/RecipeStore.cs` | RecipeIndex ↔ Recipe. Keyed by `Recipe.Id`; a later `Spawn` with the same id **replaces** the slot (live instances read the new lists). Phase 27 compositions must pass a new id |
 | `Runtime/ModifierKit.cs` | ScriptableObject layers (`RecipeStage` + modifiers) appended onto a cloned base Recipe (ADR-032). Not a second façade |

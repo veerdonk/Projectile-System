@@ -33,20 +33,17 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 30 — ignore firing collider (built); 31–33 Delivery / Beam / debug still queued**
+**Phase 31 — Delivery Straight / Arc / Hitscan (built); 32–33 Beam / debug still queued**
 
-- `SpawnRequest.IgnoreCollider` is seeded in `SpawnCore` after `CopyIgnore` and before `RunSpawnStages`, via `IHitQuery.SetIgnore` into `PhysicsHitQuery.ignoreColliderByInstance`. `ScriptedHitQuery.SetIgnore` is a no-op. `RememberOrClearIgnore` still drops the one slot. Do not add a second ignore for Hitscan/Beam — they must call the same `SetIgnore` / skip.
-- Package is **0.1.6**. No git tag in the phase session; the `main` workflow creates `v0.1.6`.
-- Play Mode proofs are in `PhysicsHitPlayModeTests` (`IgnoreCollider_*`). Yard turret stays collider-less.
-- Next is phase 31 (0.1.7). Hitscan/Beam must honor this skip.
-- `HomingAcquirePoint` is the Arc loft target, Hitscan/Beam aim, and Homing first lock. Do **not** add `AimPoint`.
-- Gravity Burst is Arc-only. Existing Gravity Edit Mode tests and Cannonball **must** set `Delivery.Arc` or they fly straight.
-- Hitscan Homing `n` is degrees of kink, not °/s. Pierce is still n+1 (`Pierce(2)` dies on the third published volume).
-- Hitscan / Beam must test **published volumes** (ADR-030), not only colliders. No gizmos in 31 or 32 (that is phase 33, sample-side).
-- Beam: `LifetimeSeconds` still caps while held. Pierce n+1 is **per pulse**; the instance stays until lifetime or `Despawn`. Polyline kinks toward targets in one pulse; max bend is Homing degrees. World clips a pulse. Runtime primitive cylinders; sample red via `PresentationId`. Hold-to-fire is sample-only (press Spawn, release Despawn). Re-aim while held is Later.
-- Arc Spawn is `BallisticAim.TrySolve` from the aim point. `BallisticClearance` extra loft stays sample barrel visual.
-- No git tag in a phase session; `.github/workflows/release-package.yml` on `main` tags `v{version}`.
-- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until a later phase touches those files.
+- `Recipe.Delivery` default Straight. Arc loft is `BallisticAim.TrySolve` in `SpawnCore` **before** rent when `HomingAcquirePointSet`; unreachable returns `default` without `nextId++` or `Expired`. Aim unset keeps `SpawnRequest.Direction` and still integrates gravity. Burst gravity is `projectile.Delivery == Delivery.Arc` in `IntegrateJob`.
+- Hitscan: `ProjectileSimulationSystem.ResolveHitscan` after `RunSpawnStages`, inside `Spawn`. Polyline uses `IHitQuery.TryCast` (published volumes + the phase 30 ignore slot). Homing on `OnTick` is applied with `dt = 1` so `n` is degrees of kink, not °/s. OnTick / OnInterval do not otherwise run. No view (`ProjectilePool.Rent` / `Prewarm` skip Hitscan views). 10 km cap, 32 segment cap. Pierce n+1 and Bounce reuse `Despawn`.
+- Do **not** add `Delivery.Beam`, `BeamPulseSeconds`, or `Despawn` here. That is phase 32. No gizmos (phase 33).
+- Package is **0.1.7**. No git tag in the phase session; the `main` workflow creates `v0.1.7`.
+- Yard: Cannonball and Cannonball Gravity(2) are `Delivery.Arc`. `SampleLab.Fire` copies `lastAimPoint` and does not write `TrySolve` onto `Direction`. Barrel pitch still uses `BallisticClearance`. Hitscan preset is `Samples~/Yard/Recipes/Hitscan.asset` (guid `c31d4e5f60718293a4b5c6d7e8f90123`), listed in `Yard.unity` after Cannonball Gravity(2). Turret stays collider-less.
+- Do **not** run **Projectile Lab > Rebuild** just to refresh presets after a `package.json` bump. Rebuild writes `Assets/Samples/<version>/` and copies that scene back over `Samples~/Yard/Scenes/Yard.unity`, which swaps recipe guids. The editor compiles the gitignored import under `Assets/Samples/.../0.1.0`, not `Samples~`. Copy changed sample scripts into that import (or reimport) before expecting Play Mode to match.
+- `HomingAcquirePoint` is still the only aim point. Do **not** add `AimPoint`.
+- Beam (phase 32): live instance, `BeamPulseSeconds`, polyline per pulse, Pierce n+1 **per pulse** does not kill the instance, `Despawn`, primitive cylinder per segment, sample hold-to-fire. Reuse `ResolveHitscan` / the same kink and `TryCast` skip rather than a second query.
+- No git tag in a phase session. Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until a later phase touches those files.
 
 ## Do not
 

@@ -6,8 +6,9 @@ namespace Veerdonk.ProjectileSystem
     /// Fire-time launch direction so a given speed and gravity pass through a point.
     /// Uses world down (0,-1,0). Always the shorter-time (flatter) root: extra speed
     /// flattens toward the line of sight; a level shot at minimum speed leaves at about 45°.
-    /// Does not simulate; copy the direction into <see cref="SpawnRequest.Direction"/>.
-    /// Flight still uses the phase 14 Burst integrate.
+    /// Does not simulate. <see cref="Delivery.Arc"/> calls this from <see cref="IProjectileWorld.Spawn"/>
+    /// when <see cref="SpawnRequest.HomingAcquirePointSet"/> is true. Games may still call it to pitch a barrel.
+    /// Arc flight still uses the Burst integrate. Straight ignores gravity.
     /// </summary>
     public static class BallisticAim
     {
