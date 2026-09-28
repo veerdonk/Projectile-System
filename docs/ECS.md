@@ -73,14 +73,16 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Ecs/ProjectileSimulationSystem.cs` | Stages, hits, pool return, views; one live snapshot after expire |
 | `Runtime/Pierce.cs` | `OnHit` Target: consume remaining pierce, cancel despawn |
 | `Runtime/Bounce.cs` | `OnHit` World or Target: consume remaining bounce, reflect velocity, cancel despawn; `Hit` still fires |
-| `Runtime/Multiply.cs` | Explicit child Recipe; OnHit / OnExpire / OnInterval. Positions from `IMultiplyPattern` (default `SquarePattern`); children keep travel or hit-normal direction. `Spread` is meters between pips (0 stacks). Children multiply again only if `Recipe.MultiplyGenerations` pays for it |
+| `Runtime/Multiply.cs` | Explicit child Recipe; OnHit / OnExpire / OnInterval. Positions from `IMultiplyPattern` (default `SquarePattern`). Procedural patterns keep travel or hit-normal direction; `Spread` is meters between pips (0 stacks). Authored grid also aims via `GetDirection` (`Spread` is cone degrees; placement is Spacing). Children multiply again only if `Recipe.MultiplyGenerations` pays for it |
 | `Runtime/ChainBudget.cs` | The counted-down "how many more generations" value both chaining modifiers ride on |
 | `Runtime/Multicast.cs` | `OnSpawn`: total instances is `n`; extras use an explicit sibling Recipe and only multicast again if `Recipe.MulticastGenerations` pays for it |
 | `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math |
-| `Runtime/IMultiplyPattern.cs` | Where Multiply child offsets come from. Plane is perpendicular to travel or the hit normal; local +X right, +Y up |
-| `Runtime/SquarePattern.cs` | Dice pips through 9, then odd-sized grids. Default Multiply pattern |
+| `Runtime/IMultiplyPattern.cs` | Where Multiply child offsets (and grid aim) come from. Plane is perpendicular to travel or the hit normal; local +X right, +Y up. `GetOffset` / `GetDirection` / `ResolveCount` (ADR-038) |
+| `Runtime/SquarePattern.cs` | Dice pips through 9, then odd-sized grids. Default Multiply pattern. Place-only; Spread is meters |
 | `Runtime/CirclePattern.cs` | Triangle, then center + ring, then inner hexagon and outer rings |
 | `Runtime/RandomCirclePattern.cs` | Uniform disk of radius Spread; uses the world seed; rejects samples closer than the child diameter |
+| `Runtime/GridMultiplyPattern.cs` | Serializable copy of a `MultiplyPatternAsset`: Spacing + numbered cells. Places from geometric center; aims a cone with `Multiply.Spread` as degrees |
+| `Runtime/MultiplyPatternAsset.cs` | ScriptableObject grid (`Create > Projectile > Multiply Pattern`). Not on the live Recipe; pick copies onto `GridMultiplyPattern` |
 | `Runtime/Homing.cs` | Straight / Arc `OnTick`: steer at n degrees/second toward a lock. Hitscan: n is max degrees of kink per polyline segment (ADR-035). Beam: the same degrees/second, stepped by distance / speed (ADR-036). First acquire may use `SpawnRequest.HomingAcquirePoint` (`ClosestToPointAcquisition`, ADR-033). Later empty locks use `IHomingAcquisition` (default travel). A Target hit drops the lock (`Homing.ReleaseLockOnTargetHit` after `OnHit`) |
 | `Runtime/Speed.cs` | Scale current speed by n, keep travel direction. `OnTravel` start scale, `OnInterval` progressive, `OnHit` after bounce/pierce. Scale <= 0 is a no-op |
 | `Runtime/Gravity.cs` | Scale instance gravity by n. Same stages as `Speed`. Does not add `g * dt`; Burst still integrates, and only when `Delivery` is Arc |
@@ -89,7 +91,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Critical.cs` | Scale instance critical chance by n, then clamp to [0, 1]. Same stages as `Speed`. Does not roll a crit |
 | `Runtime/Mana.cs` | Scale the instance mana-cost copy by n. Same stages as `Speed`. Does not change `Recipe.ManaCost` or spend mana |
 | `Runtime/Size.cs` | Scale instance `Radius` by n. Same stages as `Speed`. SphereCast and the view follow the new radius |
-| `Runtime/Spread.cs` | Scale the instance copy of `Multiply.Spread` by n. Same stages as `Speed`. Does not jitter the original shot |
+| `Runtime/Spread.cs` | Scale the instance copy of `Multiply.Spread` by n (meters on Square / Circle / RandomCircle, cone degrees on a grid). Same stages as `Speed`. Does not jitter the original shot or scale grid Spacing |
 | `Runtime/EffectRadius.cs` | Scale instance effect radius by n. Same stages as `Speed`. Does not run an overlap query |
 | `Runtime/Interval.cs` | `OnSpawn`: seconds between `OnInterval` runs, onto `Projectile.IntervalSeconds`. One period per instance drives the whole list |
 | `Runtime/ApplyStatus.cs` | `OnHit` Target: request an `IStatusEffect`. Each request on the list is flushed as Direct `StatusApplied` after the list, in order, unless suppressed. World hits do nothing |

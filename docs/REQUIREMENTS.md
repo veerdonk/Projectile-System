@@ -27,8 +27,9 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Damage** — authored hit amount copied onto the instance and `HitInfo`. The package does not apply HP
 - **Critical chance** — probability 0–1 on the instance and `HitInfo`. The package does not roll a crit
 - **Mana cost** — authored fire-time cost on the Recipe. Phase 10 copies it onto the instance so `Mana(n)` can scale that copy; the package does not spend mana
-- **Spread** — meters between adjacent child pips when `Multiply` creates more than one instance. Authored on `Multiply`, not on the Recipe. Consumed by `IMultiplyPattern`. 0 stacks children on the same point
-- **Multiply pattern** — layout of those child spawn points in the plane perpendicular to travel or the hit normal (`SquarePattern`, `CirclePattern`, `RandomCirclePattern` in v1)
+- **Spread** — `Multiply.Spread`, not a Recipe stat. Square / Circle / RandomCircle: meters between adjacent pips (`0` stacks). Authored grid: cone half-angle in degrees of the farthest numbered cell from the geometric center (`0` keeps children parallel). Consumed by `IMultiplyPattern`. `Spread(n)` scales the instance copy
+- **Spacing** — meters between adjacent cell centers on an authored Multiply grid (`MultiplyPatternAsset` / `GridMultiplyPattern`). Pattern data, not `Multiply.Spread`. `<= 0` stacks every pip at the origin
+- **Multiply pattern** — layout of those child spawn points in the plane perpendicular to travel or the hit normal. v1 ships `SquarePattern`, `CirclePattern`, `RandomCirclePattern`, and authored `GridMultiplyPattern` (from `MultiplyPatternAsset`). The grid also aims children; the other three do not
 - **Effect radius** — authored radius of an `AreaEffect` overlap sphere, copied onto the instance. Distinct from projectile `Radius`. `EffectRadius(n)` scales the instance copy; phase 13 queries it
 - **Area effect** — overlap sphere around a spawn, hit point, or flying instance that applies area damage and optional status to Targets inside. Not a lingering ground field
 - **Ground field** — flat lingering disk planted by `GroundField`. Has its own size, lifetime, damage, optional status, and pulse period. Stays after the projectile despawns. Not a Recipe and not an `AreaEffect` aura
@@ -42,7 +43,8 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Strength** for homing: degrees per second on Straight / Arc and along a Beam pulse (`distance / speed`); **degrees of kink** per segment on Hitscan (ADR-035, ADR-036)
   - **Scale** for speed, damage, critical chance, mana cost, multiply spread, effect radius, size, and gravity (multiplier: `Speed(2)` doubles, `Speed(0.5)` halves; same for `Damage`, `Critical`, `Mana`, `Spread`, `EffectRadius`, `Size`, `Gravity`)
   - **Seconds** for interval (`Interval(0.5)` runs `OnInterval` every half second), for `GroundField` lifetime / pulse period, and for `Recipe.BeamPulseSeconds` (phase 32)
-  - **Distance** for multiply spread (`Multiply` `Spread` is meters between adjacent pips on the multiply pattern)
+  - **Distance** for multiply Spacing (authored grid) and for Square / Circle / RandomCircle `Multiply.Spread` (meters between adjacent pips)
+  - **Angle** for authored-grid `Multiply.Spread` (cone half-angle in degrees of the farthest numbered cell)
 
 ### Named modifiers (v1)
 
@@ -50,13 +52,13 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Bounce(n)** — `OnHit`: reflect off `n` `World` or `Target` hits; despawn on hit `n+1`. `Hit` still fires on `Target`, so dummy HP still drops
 - **Homing(n)** — Straight / Arc `OnTick`: steer toward a homing target; higher `n` turns faster (°/s). Hitscan: max degrees each polyline segment may kink toward a lock (ADR-035). Beam: the same °/s, stepped along the pulse by distance / speed, so the beam curves (ADR-036). A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel. Published hit volumes count as candidates (ADR-031); the same id in `SetHomingCandidate` is one candidate and the hit-target position wins. `SetHomingCandidate` remains for a pose that is not hittable. If `SpawnRequest.HomingAcquirePointSet`, the **first** lock is the candidate closest to that world point (ADR-033); retarget after a Target hit still uses travel direction. That same point is the Arc loft target and the Hitscan / Beam aim point (no second field)
 - **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
-- **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`). Optional `Spread` is meters between adjacent pips. Layout comes from an `IMultiplyPattern` (default `SquarePattern`)
+- **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`). Layout comes from an `IMultiplyPattern` (default `SquarePattern`). Optional `Spread` is meters between adjacent pips on Square / Circle / RandomCircle, or cone half-angle in degrees on an authored grid. Grid placement uses **Spacing**, not Spread
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
 - **Interval(n)** — `OnSpawn`: seconds between `OnInterval` runs for this instance. One period per Recipe drives every modifier on that list; without it `OnInterval` never runs (see [DECISIONS.md](DECISIONS.md) ADR-012)
 - **Damage(n)** — scale instance damage by `n`. Same stages as `Speed(n)`. Package still does not apply HP
 - **Critical(n)** — scale instance critical chance by `n`, then clamp to `[0, 1]`. Same stages as `Speed(n)`. Package still does not roll a crit
 - **Mana(n)** — scale the instance mana-cost copy by `n`. Same stages as `Speed(n)`. Does not change `Recipe.ManaCost` or spend mana
-- **Spread(n)** — scale the instance multiply-spread (pip spacing for `IMultiplyPattern`) by `n`. Same stages as `Speed(n)`. Does not jitter the original shot
+- **Spread(n)** — scale the instance copy of `Multiply.Spread` by `n` (pip meters or cone degrees, depending on the pattern). Same stages as `Speed(n)`. Does not jitter the original shot and does not scale grid Spacing
 - **EffectRadius(n)** — scale instance effect radius by `n`. Same stages as `Speed(n)`. Phase 13 uses the result as the `AreaEffect` overlap radius
 - **Size(n)** — scale `Radius` by `n`. Same stages as `Speed(n)`. There is no separate size field
 - **ApplyStatus** — `OnHit` + `Target`: request one or more `IStatusEffect`s on the hit Target. The package does not simulate the effects (see [DECISIONS.md](DECISIONS.md) ADR-011)
@@ -746,7 +748,31 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** remaining lifetime reaches 0
 - **Then:** `OnExpire` / `Expired` run and the instance returns to the pool even if the game is still holding fire
 
-### Phase 33 — Hitscan debug line
+### Phase 33 — Grid Multiply uses numbered cells 1..n
+
+- **Given:** a 3×3 `MultiplyPatternAsset` with cells numbered 1 (center), 2 (right of center), 3 (above center), and `Multiply(2)` using that pattern
+- **When:** the parent multiplies
+- **Then:** two children spawn at cells 1 and 2 only (`Multiply(5)` on the same asset still only uses the three numbered cells)
+
+### Phase 33 — Grid Spacing places, Spread aims
+
+- **Given:** that same grid, Spacing 2, `Multiply.Spread` 20
+- **When:** the parent multiplies along +Z
+- **Then:** adjacent numbered pips are 2 m apart in the Multiply plane; the farthest numbered cell’s child is aimed 20° off parent forward toward its offset. Spread 0 keeps every child parallel. Spacing 0 stacks every pip at the origin
+
+### Phase 33 — Empty grid spawns nothing
+
+- **Given:** a `MultiplyPatternAsset` with no numbered cells and `Multiply(4)`
+- **When:** the parent multiplies
+- **Then:** zero children spawn
+
+### Phase 33 — Square still meters and parallel
+
+- **Given:** `Multiply` with `SquarePattern` and `Spread` 2
+- **When:** the parent multiplies
+- **Then:** children stay on parent forward (or hit normal); Spread is still meters between pips, not degrees
+
+### Phase 34 — Hitscan debug line
 
 - **Given:** Play Mode, Hitscan preset, debug overlay on
 - **When:** fire at the dummy line
