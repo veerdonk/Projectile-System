@@ -44,6 +44,7 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 - Package is **0.1.8**. No git tag in the phase session; the `main` workflow creates `v0.1.8`.
 - Yard Laser preset: hold mouse / Space / Fire; the held beam follows the current muzzle aim (`AimBeam` each frame). Release `Despawn`. Do **not** add gizmos (phase 33).
 - Do **not** run **Projectile Lab > Rebuild** just to refresh presets after a `package.json` bump. Rebuild writes `Assets/Samples/<version>/` and copies that scene back over `Samples~/Yard/Scenes/Yard.unity`, which swaps recipe guids. The editor compiles the gitignored import, not `Samples~`. Copy changed sample scripts into that import (or reimport) before expecting Play Mode to match.
+- Modifier Kit Multiply Pattern is package **0.1.9** on a branch from `main`. `ModifierKitEditor` uses `RecipeAssetEditor.Patterns()` (no empty choice). A null or unknown value shows Square Pattern and is not written until the popup index changes.
 - `HomingAcquirePoint` is still the only aim point. Do **not** add `AimPoint`.
 - No git tag in a phase session. Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until a later phase touches those files.
 
