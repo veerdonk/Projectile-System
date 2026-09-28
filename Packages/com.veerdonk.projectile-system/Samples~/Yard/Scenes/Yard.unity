@@ -4310,6 +4310,9 @@ MonoBehaviour:
   - label: Hitscan
     asset: {fileID: 11400000, guid: c31d4e5f60718293a4b5c6d7e8f90123, type: 2}
     useBallisticAim: 0
+  - label: Laser
+    asset: {fileID: 11400000, guid: b7e4a1c28f0d4e6a9c3b5d7e1f204863, type: 2}
+    useBallisticAim: 0
   - label: OnHit GroundField
     asset: {fileID: 11400000, guid: 6e472988c230cf94395f8557437e9352, type: 2}
     useBallisticAim: 0

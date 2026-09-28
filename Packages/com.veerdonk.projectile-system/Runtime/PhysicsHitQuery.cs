@@ -11,12 +11,19 @@ namespace Veerdonk.ProjectileSystem
         readonly Collider[] overlapBuffer = new Collider[BufferSize];
         readonly RaycastHit[] castBuffer = new RaycastHit[BufferSize];
         readonly Dictionary<ProjectileId, Collider> ignoreColliderByInstance = new Dictionary<ProjectileId, Collider>();
+        readonly HashSet<ProjectileId> holdIgnore = new HashSet<ProjectileId>();
 
         public HitTargetCatalog HitTargets { get; set; }
 
         public bool TryCast(ProjectileId instanceId, Vector3 origin, Vector3 direction, float distance, float radius, out HitInfo hit)
         {
+            bool hold = holdIgnore.Remove(instanceId);
             HitTargets?.ReleaseIfSeparated(instanceId, origin, radius);
+            if (!hold
+                && ignoreColliderByInstance.TryGetValue(instanceId, out Collider stored)
+                && (stored == null || !stored.enabled || !Overlaps(stored, origin, radius)))
+                ignoreColliderByInstance.Remove(instanceId);
+
             ignoreColliderByInstance.TryGetValue(instanceId, out Collider ignore);
 
             int overlapCount = Physics.OverlapSphereNonAlloc(
@@ -84,6 +91,19 @@ namespace Veerdonk.ProjectileSystem
             if (collider == null)
                 return;
             ignoreColliderByInstance[instanceId] = collider;
+        }
+
+        public void ClearIgnore(ProjectileId instanceId)
+        {
+            ignoreColliderByInstance.Remove(instanceId);
+            holdIgnore.Remove(instanceId);
+            HitTargets?.ClearIgnore(instanceId);
+        }
+
+        public void HoldIgnore(ProjectileId instanceId)
+        {
+            holdIgnore.Add(instanceId);
+            HitTargets?.HoldIgnore(instanceId);
         }
 
         public void Overlap(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
@@ -232,7 +252,7 @@ namespace Veerdonk.ProjectileSystem
             for (int i = 0; i < count; i++)
             {
                 Collider collider = overlapBuffer[i];
-                if (collider == null || !collider.enabled || collider == ignore)
+                if (collider == null || !collider.enabled || collider == ignore || IsPresentation(collider))
                     continue;
 
                 Vector3 point = collider.ClosestPoint(origin);
@@ -268,7 +288,7 @@ namespace Veerdonk.ProjectileSystem
             {
                 RaycastHit rayHit = castBuffer[i];
                 Collider collider = rayHit.collider;
-                if (collider == null || !collider.enabled || collider == ignore)
+                if (collider == null || !collider.enabled || collider == ignore || IsPresentation(collider))
                     continue;
 
                 if (rayHit.distance >= travel)
@@ -309,6 +329,11 @@ namespace Veerdonk.ProjectileSystem
             }
 
             return false;
+        }
+
+        static bool IsPresentation(Collider collider)
+        {
+            return collider.GetComponentInParent<ProjectileView>() != null;
         }
 
         static bool Overlaps(Collider collider, Vector3 origin, float radius)

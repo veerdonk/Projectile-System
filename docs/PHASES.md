@@ -732,15 +732,15 @@ A Beam is a live Recipe instance that pulses a Homing-kinked polyline until `Lif
 **In scope**
 
 - `Delivery.Beam`. `Recipe.BeamPulseSeconds` (default 0.1; `<= 0` pulses every `Tick`). `RecipeAsset` / `ToRecipe` / inspector / sheet copy both
-- Live instance at spawn pose (origin + first-segment direction do not follow the mouse). Burst integrate skipped; lifetime still ticks. `LifetimeSeconds` expires the Beam **even if the fire button is held**
-- Each pulse: polyline as Hitscan (published volumes, World clips unless Bounce, Homing kink = degrees, Pierce n+1 **per pulse**, `IgnoreCollider` skip). Pierce/Bounce remaining reset from the Recipe at the start of each pulse; the instance is **not** killed by Pierce. Contacts are synthetic Direct `OnHit` so Pierce / Bounce / `ApplyStatus` run. First pulse at spawn (or first Tick — pick one and test it). OnInterval is not the pulse clock
+- Live instance. Origin and direction start at the muzzle. `AimBeam` updates them and redraws without raising `Hit` (the yard calls it each frame while held, from the turret that already aims at the mouse). Runtime does not read the mouse. Burst integrate skipped; lifetime still ticks. `LifetimeSeconds` expires the Beam **even if the fire button is held**
+- Each pulse: polyline (published volumes, World clips unless Bounce, Homing on Beam curves at degrees per second along the path via `distance / speed`, the first step leaves along the muzzle before the turn, Hitscan stays a per-segment kink, Pierce n+1 **per pulse**, `IgnoreCollider` skip). The homing lock is kept across redraws while that target stays in front of the muzzle. Without Pierce the pulse stops on the first Target and the next pulse can hit that Target again. Pierce/Bounce remaining reset from the Recipe at the start of each pulse; the instance is **not** killed by Pierce. Contacts are synthetic Direct `OnHit` so Pierce / Bounce / `ApplyStatus` run. First pulse inside `Spawn`. OnInterval is not the pulse clock. The cylinder mesh stays up between pulses and is not a collider
 - `IProjectileWorld.Despawn(ProjectileId)`: `OnExpire`, pool, `Expired`. Unknown / already-pooled is a no-op. Works on any live instance
 - View: Runtime primitive cylinder **per polyline segment**, scaled to `Radius`. Sample **Laser** preset, red via `PresentationId`. Hits stay the SphereCast
 - Yard hold-to-fire: press Spawn, hold keeps that one instance, release `Despawn`. Runtime does not read the mouse. No debug gizmo
 - Edit Mode tests: Beam pulse hits a published volume as Direct `Hit`; Pierce(2) on one pulse passes two published volumes and the third contact ends that pulse, instance still live for the next pulse; next pulse can hit again; World clips a pulse; `LifetimeSeconds` expires a Beam with no `Despawn`; `Despawn` raises `Expired` and `OnExpire`; ApplyStatus on a pulsed Target; Strong published eats a pulse with no `Hit`. Existing Hitscan / Arc tests stay green
 - Docs: sketch, `Despawn`, [SANDBOX.md](SANDBOX.md) hold-to-fire, package `AGENTS.md` / `README.md` / `Documentation/index.md`, `CHANGELOG` **0.1.8**, XML. Bump `package.json` to **0.1.8**. Do not create a git tag in the phase session
 
-**Out of scope:** re-aim while held (Later); Play Mode debug overlay (**phase 33**); gizmos in this phase; WASD; orbit camera; save-to-asset; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
+**Out of scope:** Play Mode debug overlay (**phase 33**); gizmos in this phase; WASD; orbit camera; save-to-asset; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
 
 **Proof:** Edit Mode pulse / Pierce-per-pulse / Despawn tests above. Play Mode Laser: hold — red cylinder segments, DummyTarget ticks each pulse; release — beam gone; keep holding past `LifetimeSeconds` — beam ends anyway.
 
@@ -756,7 +756,7 @@ Bare phase. Hitscan has no mesh; Beam segments are easy to miss. Add Play Mode d
 - Start **sample-side** (`Samples~/Yard`). Do not add Runtime types unless review asks. Toggle or always-on in Play Mode is fine for the first cut; refine colors, thickness, and what is drawn after review
 - Docs: [SANDBOX.md](SANDBOX.md) how to see it. No `package.json` bump if nothing ships in Runtime
 
-**Out of scope:** new deliveries; hold-to-fire (phase 32); re-aim while held; WASD; orbit camera; Unity Physics; Entities Graphics; a second world / debug façade
+**Out of scope:** new deliveries; hold-to-fire (phase 32); WASD; orbit camera; Unity Physics; Entities Graphics; a second world / debug façade
 
 **Proof:** Play Mode Hitscan — a debug line shows the query through the dummy line. Laser — pulse segments are obvious with the overlay on.
 
@@ -772,4 +772,3 @@ Bare phase. Hitscan has no mesh; Beam segments are easy to miss. Add Play Mode d
 - Authored `Range` / `Range(n)` / an OnExpire-at-distance fuse (ballistic reach stays Speed + Gravity, ADR-028)
 - Convert remaining sandbox C# Recipes
 - WASD turret move; orbit camera
-- Re-aim a live Beam while held (v1 locks spawn pose; Runtime still must not read the mouse)

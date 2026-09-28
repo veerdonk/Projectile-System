@@ -23,6 +23,17 @@ namespace Veerdonk.ProjectileSystem
             if (recipe == null)
                 throw new System.ArgumentNullException(nameof(recipe));
 
+            if (recipe.Delivery == Delivery.Beam)
+            {
+                var root = new GameObject("Beam");
+                if (poolParent != null)
+                    root.transform.SetParent(poolParent, false);
+
+                var beamView = root.AddComponent<ProjectileView>();
+                beamView.ScaleToRadius = false;
+                return beamView;
+            }
+
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             if (poolParent != null)
                 go.transform.SetParent(poolParent, false);

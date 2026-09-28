@@ -19,9 +19,16 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>
         /// How the shot is delivered. Default Straight keeps existing Recipes level.
         /// Arc applies gravity and, when the aim point is set, lofts at <see cref="IProjectileWorld.Spawn"/>.
-        /// Hitscan is one polyline query inside Spawn. Homing <c>n</c> on Hitscan is degrees of kink per segment.
+        /// Hitscan is one polyline query inside Spawn. Homing <c>n</c> on Hitscan and Beam is degrees of kink per segment.
+        /// Beam stays at the spawn pose and pulses that polyline until lifetime or <see cref="IProjectileWorld.Despawn"/>.
         /// </summary>
         public Delivery Delivery { get; set; }
+
+        /// <summary>
+        /// Seconds between Beam pulses. Default 0.1. Values &lt;= 0 pulse on every <see cref="IProjectileWorld.Tick"/>
+        /// as well as the pulse inside <see cref="IProjectileWorld.Spawn"/>. Not the <see cref="Interval"/> clock.
+        /// </summary>
+        public float BeamPulseSeconds { get; set; } = 0.1f;
 
         /// <summary>Launch speed in meters per second. Copied onto the instance at spawn.</summary>
         public float Speed { get; set; }
@@ -103,6 +110,7 @@ namespace Veerdonk.ProjectileSystem
             {
                 Id = Id,
                 Delivery = Delivery,
+                BeamPulseSeconds = BeamPulseSeconds,
                 Speed = Speed,
                 Radius = Radius,
                 LifetimeSeconds = LifetimeSeconds,

@@ -201,6 +201,16 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         {
         }
 
+        public void ClearIgnore(ProjectileId instanceId)
+        {
+            hitTargets?.ClearIgnore(instanceId);
+        }
+
+        public void HoldIgnore(ProjectileId instanceId)
+        {
+            hitTargets?.HoldIgnore(instanceId);
+        }
+
         struct OverlapBody
         {
             public HitKind Kind;

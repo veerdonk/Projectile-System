@@ -29,5 +29,14 @@ namespace Veerdonk.ProjectileSystem
         /// Same one slot as <see cref="CopyIgnore"/>. Null does nothing.
         /// </summary>
         void SetIgnore(ProjectileId instanceId, Collider collider);
+
+        /// <summary>Drops the one-slot collider skip and the published-target skip for this instance.</summary>
+        void ClearIgnore(ProjectileId instanceId);
+
+        /// <summary>
+        /// The next cast keeps the current skip even if the body has left the surface.
+        /// Used so a beam does not immediately hit the same wall or dummy again.
+        /// </summary>
+        void HoldIgnore(ProjectileId instanceId);
     }
 }

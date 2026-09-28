@@ -21,7 +21,7 @@ Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectil
 
 ## Public types
 
-**Façade:** `IProjectileWorld` (`Spawn`, `Tick`, `SetHitTarget`, `RemoveHitTarget`, `SetHomingCandidate`, `RemoveHomingCandidate`), `ProjectileWorld`, `Recipe`, `Delivery`, `SpawnRequest`, `HitInfo`, `HitKind`, `HitSource`, `ProtectionLevel`, `StatusInfo`, `ExpireInfo`, `ProjectileId`, `TargetId`, `HomingTarget`
+**Façade:** `IProjectileWorld` (`Spawn`, `Tick`, `Despawn`, `SetHitTarget`, `RemoveHitTarget`, `SetHomingCandidate`, `RemoveHomingCandidate`), `ProjectileWorld`, `Recipe`, `Delivery`, `SpawnRequest`, `HitInfo`, `HitKind`, `HitSource`, `ProtectionLevel`, `StatusInfo`, `ExpireInfo`, `ProjectileId`, `TargetId`, `HomingTarget`
 
 **Hits and protection:** `SpawnRequest.IgnoreCollider` skips that collider on Direct overlap and sweep until the shot body no longer overlaps it (not a hit; a later contact is normal). `IDamageable` on colliders. `SetHitTarget(id, position, radius, protection)` publishes a sphere with no collider (`HitKind.Target`). `protection` defaults to `None`; `Basic` and `Strong` match `IProjectileProtection`. `radius <= 0` or `RemoveHitTarget` drops it. Direct casts, `AreaEffect` (including `OnTick`), `GroundField`, and Homing all read that catalog. `occupancy` on `AreaEffect` / `GroundField` raises `HitSource.OccupancyEnter` and `OccupancyExit` instead of pulses. `IProjectileProtection`. Hit queries stay inside the package.
 
@@ -31,7 +31,7 @@ Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectil
 
 **Status:** `IStatusEffect`, `DummyStatusEffect`, `IStatusReceiver`
 
-**Delivery:** `Recipe.Delivery`. `Straight` (default) is a kinematic SphereCast and ignores `Gravity`. `Arc` applies gravity; `Spawn` calls `BallisticAim.TrySolve` when `HomingAcquirePointSet` (unreachable returns default `ProjectileId`, no `Expired`). `Hitscan` is one `Radius` polyline inside `Spawn` (10 km max), then the instance is pooled. No view. World ends the ray unless Bounce. Pierce is n+1. Homing `n` is degrees of kink per segment. Direct queries honor `IgnoreCollider`.
+**Delivery:** `Recipe.Delivery`. `Straight` (default) is a kinematic SphereCast and ignores `Gravity`. `Arc` applies gravity; `Spawn` calls `BallisticAim.TrySolve` when `HomingAcquirePointSet` (unreachable returns default `ProjectileId`, no `Expired`). `Hitscan` is one `Radius` polyline inside `Spawn` (10 km max), then the instance is pooled. No view. World ends the ray unless Bounce. Pierce is n+1. Homing `n` is degrees of kink per segment. `Beam` stays live at the spawn pose and repeats a polyline. The first pulse is inside `Spawn`; `Recipe.BeamPulseSeconds` (default 0.1, `<= 0` every `Tick`) times the rest. Homing `n` on a Beam is degrees per second along that pulse (`distance / speed`). Without Pierce a pulse stops on the first Target and the next pulse can hit it again. Pierce n+1 is per pulse and does not despawn the Beam. `Despawn` or `LifetimeSeconds` does. `AimBeam` redraws a live Beam without raising `Hit`. The view is a cylinder per segment and stays up between pulses. The root material is copied onto those cylinders, and the texture's length coordinate runs from the first point to the last. Direct queries honor `IgnoreCollider`.
 
 **Aim:** `BallisticAim.TrySolve` — flatter (needed) arc only. Arc `Spawn` calls it when the aim point is set. Games may still call it for a barrel preview. Unreachable returns false.
 

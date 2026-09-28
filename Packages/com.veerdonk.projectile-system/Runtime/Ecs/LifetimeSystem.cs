@@ -30,6 +30,7 @@ namespace Veerdonk.ProjectileSystem
         {
             projectile.RemainingLifetime -= Dt;
             projectile.ElapsedSeconds += Dt;
+            projectile.BeamPulseElapsed += Dt;
         }
     }
 }

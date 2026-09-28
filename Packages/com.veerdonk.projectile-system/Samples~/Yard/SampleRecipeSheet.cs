@@ -30,6 +30,7 @@ namespace Veerdonk.ProjectileSystem.Samples
             scroll = GUILayout.BeginScrollView(scroll);
             GUILayout.Label("Recipe sheet");
             recipe.Delivery = DeliveryField(recipe.Delivery);
+            recipe.BeamPulseSeconds = FloatField("beam", "Beam pulse", recipe.BeamPulseSeconds);
             recipe.Speed = FloatField("speed", "Speed", recipe.Speed);
             recipe.Radius = FloatField("radius", "Radius", recipe.Radius);
             recipe.LifetimeSeconds = FloatField("life", "Lifetime", recipe.LifetimeSeconds);
@@ -300,7 +301,7 @@ namespace Veerdonk.ProjectileSystem.Samples
             return Mathf.Clamp(value, min, max);
         }
 
-        static readonly string[] DeliveryLabels = { "Straight", "Arc", "Hitscan" };
+        static readonly string[] DeliveryLabels = { "Straight", "Arc", "Hitscan", "Beam" };
 
         static Delivery DeliveryField(Delivery value)
         {
