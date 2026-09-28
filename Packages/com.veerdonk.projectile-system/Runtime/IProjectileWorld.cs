@@ -15,11 +15,26 @@ namespace Veerdonk.ProjectileSystem
         /// and does not raise <see cref="Expired"/>.
         /// <see cref="Delivery.Hitscan"/> runs its polyline inside this call and returns the instance
         /// to the pool before returning, after <see cref="Hit"/> and <see cref="Expired"/> have been raised.
+        /// <see cref="Delivery.Beam"/> runs the first pulse inside this call and stays live.
         /// </summary>
         ProjectileId Spawn(in SpawnRequest request);
 
-        /// <summary>Advances all live instances by <paramref name="dt"/> seconds.</summary>
+        /// <summary>Advances all live instances by <paramref name="dt"/> seconds. Beam pulses that are due run here.</summary>
         void Tick(float dt);
+
+        /// <summary>
+        /// Runs OnExpire, returns the instance to the pool, and raises <see cref="Expired"/>.
+        /// Unknown or already pooled ids do nothing. Allowed on any live instance, including Beam.
+        /// </summary>
+        void Despawn(ProjectileId id);
+
+        /// <summary>
+        /// Moves a live Beam's origin and direction and redraws the polyline. Does not raise
+        /// <see cref="Hit"/>. Damage still follows <see cref="Recipe.BeamPulseSeconds"/>.
+        /// Other deliveries and unknown ids do nothing. The package does not read the mouse;
+        /// the caller copies the current muzzle pose.
+        /// </summary>
+        void AimBeam(ProjectileId id, Vector3 position, Vector3 direction);
 
         /// <summary>Publishes a live pose Homing can lock onto and steer toward. Call again to move it.</summary>
         void SetHomingCandidate(TargetId id, Vector3 position);

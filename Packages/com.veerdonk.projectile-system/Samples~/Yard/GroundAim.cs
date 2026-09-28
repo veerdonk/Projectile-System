@@ -22,12 +22,31 @@ namespace Veerdonk.ProjectileSystem.Samples
             return true;
         }
 
+        static readonly RaycastHit[] aimHits = new RaycastHit[32];
+
         public static bool TryAimPoint(Ray cameraRay, out Vector3 point, out Collider collider)
         {
-            if (Physics.Raycast(cameraRay, out RaycastHit hit, AimRayLength) && hit.collider != null)
+            int count = Physics.RaycastNonAlloc(cameraRay, aimHits, AimRayLength);
+            float best = float.MaxValue;
+            RaycastHit chosen = default;
+            bool found = false;
+            for (int i = 0; i < count; i++)
             {
-                point = hit.point;
-                collider = hit.collider;
+                Collider candidate = aimHits[i].collider;
+                if (candidate == null || candidate.GetComponentInParent<ProjectileView>() != null)
+                    continue;
+                if (aimHits[i].distance >= best)
+                    continue;
+
+                best = aimHits[i].distance;
+                chosen = aimHits[i];
+                found = true;
+            }
+
+            if (found)
+            {
+                point = chosen.point;
+                collider = chosen.collider;
                 return true;
             }
 

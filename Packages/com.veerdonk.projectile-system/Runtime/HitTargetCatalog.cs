@@ -8,6 +8,7 @@ namespace Veerdonk.ProjectileSystem
         readonly List<Volume> volumes = new List<Volume>();
         readonly Dictionary<TargetId, int> indexById = new Dictionary<TargetId, int>();
         readonly Dictionary<ProjectileId, TargetId> ignored = new Dictionary<ProjectileId, TargetId>();
+        readonly HashSet<ProjectileId> holdRelease = new HashSet<ProjectileId>();
         bool hasDeadSlots;
 
         public int Count => indexById.Count;
@@ -70,8 +71,16 @@ namespace Veerdonk.ProjectileSystem
                 hasDeadSlots = true;
         }
 
+        public void HoldIgnore(ProjectileId instanceId)
+        {
+            holdRelease.Add(instanceId);
+        }
+
         public void ReleaseIfSeparated(ProjectileId instanceId, Vector3 origin, float radius)
         {
+            if (holdRelease.Remove(instanceId))
+                return;
+
             if (!ignored.TryGetValue(instanceId, out TargetId id))
                 return;
 
@@ -82,6 +91,12 @@ namespace Veerdonk.ProjectileSystem
         public void NoteHit(ProjectileId instanceId, TargetId id)
         {
             ignored[instanceId] = id;
+        }
+
+        public void ClearIgnore(ProjectileId instanceId)
+        {
+            ignored.Remove(instanceId);
+            holdRelease.Remove(instanceId);
         }
 
         public void CopyIgnore(ProjectileId from, ProjectileId to)

@@ -15,6 +15,7 @@ namespace Veerdonk.ProjectileSystem
         SerializedProperty speed;
         SerializedProperty radius;
         SerializedProperty lifetimeSeconds;
+        SerializedProperty beamPulseSeconds;
         SerializedProperty delivery;
         SerializedProperty gravity;
         SerializedProperty damage;
@@ -82,6 +83,7 @@ namespace Veerdonk.ProjectileSystem
             speed = serializedObject.FindProperty("speed");
             radius = serializedObject.FindProperty("radius");
             lifetimeSeconds = serializedObject.FindProperty("lifetimeSeconds");
+            beamPulseSeconds = serializedObject.FindProperty("beamPulseSeconds");
             gravity = serializedObject.FindProperty("gravity");
             damage = serializedObject.FindProperty("damage");
             criticalChance = serializedObject.FindProperty("criticalChance");
@@ -119,6 +121,7 @@ namespace Veerdonk.ProjectileSystem
             EditorGUILayout.PropertyField(speed);
             EditorGUILayout.PropertyField(radius);
             EditorGUILayout.PropertyField(lifetimeSeconds);
+            EditorGUILayout.PropertyField(beamPulseSeconds);
             EditorGUILayout.PropertyField(gravity);
             EditorGUILayout.PropertyField(damage);
             EditorGUILayout.PropertyField(criticalChance);

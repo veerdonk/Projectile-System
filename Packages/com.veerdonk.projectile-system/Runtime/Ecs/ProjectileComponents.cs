@@ -29,6 +29,12 @@ namespace Veerdonk.ProjectileSystem
         public float3 HomingAcquirePoint;
         public bool HomingAimPointUsed;
         public Delivery Delivery;
+        public float BeamPulseElapsed;
+        public float3 BeamOrigin;
+        public float3 BeamDirection;
+        public bool BeamHomingLockSet;
+        public TargetId BeamHomingLockId;
+        public bool HomingAssignedAtSpawn;
     }
 
     struct ProjectilePosition : IComponentData

@@ -163,6 +163,27 @@ namespace Veerdonk.ProjectileSystem
         }
 
         /// <inheritdoc />
+        public void Despawn(ProjectileId id)
+        {
+            ThrowIfDisposed();
+            if (!TryGetLiveEntity(id, out Entity entity))
+                return;
+
+            simulation.DespawnInstance(entity);
+            FlushPendingSpawns();
+        }
+
+        /// <inheritdoc />
+        public void AimBeam(ProjectileId id, Vector3 position, Vector3 direction)
+        {
+            ThrowIfDisposed();
+            if (!TryGetLiveEntity(id, out Entity entity))
+                return;
+
+            simulation.AimBeam(entity, position, direction);
+        }
+
+        /// <inheritdoc />
         public void Tick(float dt)
         {
             ThrowIfDisposed();
@@ -202,6 +223,31 @@ namespace Veerdonk.ProjectileSystem
         {
             ThrowIfDisposed();
             hitTargets.Remove(id);
+        }
+
+        bool TryGetLiveEntity(ProjectileId id, out Entity entity)
+        {
+            EntityManager em = ecsWorld.EntityManager;
+            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
+            try
+            {
+                for (int i = 0; i < entities.Length; i++)
+                {
+                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
+                    if (new ProjectileId(projectile.Id) != id)
+                        continue;
+
+                    entity = entities[i];
+                    return true;
+                }
+            }
+            finally
+            {
+                entities.Dispose();
+            }
+
+            entity = Entity.Null;
+            return false;
         }
 
         internal bool TryGetState(ProjectileId id, out Vector3 position, out Vector3 velocity, out Recipe recipe)
@@ -548,7 +594,11 @@ namespace Veerdonk.ProjectileSystem
                     ? new float3(request.HomingAcquirePoint.x, request.HomingAcquirePoint.y, request.HomingAcquirePoint.z)
                     : default,
                 HomingAimPointUsed = false,
-                Delivery = recipe.Delivery
+                Delivery = recipe.Delivery,
+                BeamPulseElapsed = 0f,
+                BeamOrigin = position,
+                BeamDirection = new float3(direction.x, direction.y, direction.z),
+                HomingAssignedAtSpawn = request.HomingTarget.IsAssigned
             });
             em.SetComponentData(entity, new ProjectilePosition { Value = position });
             em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });
@@ -569,6 +619,12 @@ namespace Veerdonk.ProjectileSystem
             {
                 Projectile spawned = em.GetComponentData<Projectile>(entity);
                 view.Bind(request.Position, spawned.Radius);
+            }
+
+            if (recipe.Delivery == Delivery.Beam)
+            {
+                simulation.AnchorBeam(entity);
+                simulation.PulseBeam(entity);
             }
 
             return id;

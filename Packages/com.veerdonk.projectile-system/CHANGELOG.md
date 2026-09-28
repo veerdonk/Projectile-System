@@ -5,6 +5,18 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-09-28
+
+### Added
+
+- `Delivery.Beam`. A Beam is a live instance at the spawn pose. The first pulse runs inside `Spawn`; later pulses follow `Recipe.BeamPulseSeconds` (default 0.1; `<= 0` pulses every `Tick`). Each pulse is a polyline (published volumes, World clips unless Bounce). Homing on a Beam curves at `n` degrees per second of travel (`distance / speed`). Hitscan stays a per-segment kink. `Pierce(n)` is n+1 per pulse and does not despawn the instance; without Pierce a pulse stops on the first Target and the next pulse can hit that Target again. `LifetimeSeconds` still expires it. The view is a primitive cylinder per segment, scaled to `Radius`, and stays up between pulses. Each segment keeps its own mesh copy so the texture's length coordinate runs from 0 at the first point to 1 at the last.
+- `IProjectileWorld.Despawn(ProjectileId)`. Runs OnExpire, returns the instance to the pool, and raises `Expired`. Unknown or already pooled ids do nothing. Works on any live instance. The yard Laser preset holds one Beam while Fire is down, calls `AimBeam` each frame from the current muzzle pose, and calls `Despawn` on release.
+- `IProjectileWorld.AimBeam(ProjectileId, position, direction)`. Redraws a live Beam from that pose without raising `Hit`. Damage stays on the pulse clock. Other deliveries and unknown ids do nothing.
+
+### Fixed
+
+- A homing beam's first step leaves along the muzzle direction, and the lock is kept across redraws while that target stays in front of the muzzle. A silent redraw drops the lock on a Target hit the same way the damage pulse does. Beam segment cylinders have no colliders and are not hit. Their world size stays put when the view root is scaled. A continuing beam does not immediately strike the same surface again.
+
 ## [0.1.7] - 2026-09-27
 
 ### Changed

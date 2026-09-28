@@ -147,6 +147,14 @@ namespace Veerdonk.ProjectileSystem.Samples.Editor
                     asset.Delivery = Delivery.Hitscan;
                     ClearStages(asset);
                 })),
+                Preset("Laser", Upsert("Laser", asset =>
+                {
+                    ConfigureBase(asset, "laser", 20f, 2f, 0.15f);
+                    asset.Delivery = Delivery.Beam;
+                    asset.BeamPulseSeconds = 0.1f;
+                    asset.PresentationId = "laser";
+                    ClearStages(asset);
+                })),
                 Preset("OnHit GroundField", Upsert("GroundOnHit", asset =>
                 {
                     ConfigureBase(asset, "ground-onhit", 20f, 5f);

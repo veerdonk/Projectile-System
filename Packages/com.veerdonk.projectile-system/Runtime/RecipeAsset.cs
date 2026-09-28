@@ -16,6 +16,7 @@ namespace Veerdonk.ProjectileSystem
         [SerializeField] float speed;
         [SerializeField] float radius = 0.25f;
         [SerializeField] float lifetimeSeconds;
+        [SerializeField] float beamPulseSeconds = 0.1f;
         [SerializeField] float gravity;
         [SerializeField] float damage = 1f;
         [SerializeField] float criticalChance;
@@ -65,6 +66,13 @@ namespace Veerdonk.ProjectileSystem
         {
             get => lifetimeSeconds;
             set => lifetimeSeconds = value;
+        }
+
+        /// <inheritdoc cref="Recipe.BeamPulseSeconds"/>
+        public float BeamPulseSeconds
+        {
+            get => beamPulseSeconds;
+            set => beamPulseSeconds = value;
         }
 
         /// <inheritdoc cref="Recipe.Gravity"/>
@@ -186,6 +194,7 @@ namespace Veerdonk.ProjectileSystem
                 Speed = speed,
                 Radius = radius,
                 LifetimeSeconds = lifetimeSeconds,
+                BeamPulseSeconds = beamPulseSeconds,
                 Gravity = gravity,
                 Damage = damage,
                 CriticalChance = criticalChance,

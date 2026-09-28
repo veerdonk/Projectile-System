@@ -29,6 +29,7 @@ namespace Veerdonk.ProjectileSystem.Samples
 
         [SerializeField] Preset[] presets;
         [SerializeField] GameObject cubeViewPrefab;
+        GameObject laserViewPrefab;
         [SerializeField] SandboxSpawnPoint muzzle;
         [SerializeField] Transform turret;
         [SerializeField] Transform gun;
@@ -44,6 +45,8 @@ namespace Veerdonk.ProjectileSystem.Samples
         Vector3 lastAimPoint;
         Collider lastAimCollider;
         LastFire lastFire;
+        ProjectileId heldBeam;
+        bool fireButtonHeld;
         Rect sheetRect = new Rect(12f, 12f, 430f, 700f);
 
         void Awake()
@@ -59,6 +62,14 @@ namespace Veerdonk.ProjectileSystem.Samples
         void OnDestroy()
         {
             TearDownWorld();
+            if (laserViewPrefab == null)
+                return;
+
+            if (Application.isPlaying)
+                Destroy(laserViewPrefab);
+            else
+                DestroyImmediate(laserViewPrefab);
+            laserViewPrefab = null;
         }
 
         void Update()
@@ -67,13 +78,19 @@ namespace Veerdonk.ProjectileSystem.Samples
             if (!overUi)
                 AimTurret();
 
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
-                Fire();
+            if (IsBeamRecipe())
+                UpdateHeldBeam(overUi);
+            else
+            {
+                ReleaseHeldBeam();
+                Keyboard keyboard = Keyboard.current;
+                if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
+                    Fire();
 
-            Mouse mouse = Mouse.current;
-            if (mouse != null && mouse.leftButton.wasPressedThisFrame && !overUi)
-                Fire();
+                Mouse mouse = Mouse.current;
+                if (mouse != null && mouse.leftButton.wasPressedThisFrame && !overUi)
+                    Fire();
+            }
 
             if (world != null)
             {
@@ -90,7 +107,9 @@ namespace Veerdonk.ProjectileSystem.Samples
             GUILayout.Label("Projectile sample");
             DrawPresetDropdown();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Fire", GUILayout.Height(28f)))
+            if (IsBeamRecipe())
+                fireButtonHeld = GUILayout.RepeatButton("Fire", GUILayout.Height(28f));
+            else if (GUILayout.Button("Fire", GUILayout.Height(28f)))
                 Fire();
             if (GUILayout.Button("Reset", GUILayout.Height(28f)))
                 ResetLab();
@@ -157,6 +176,7 @@ namespace Veerdonk.ProjectileSystem.Samples
 
         void SelectPreset(int index)
         {
+            ReleaseHeldBeam();
             selectedPreset = index;
             lastFire = LastFire.None;
             LoadWorkingCopy();
@@ -270,11 +290,23 @@ namespace Veerdonk.ProjectileSystem.Samples
         [ContextMenu("Fire")]
         public void Fire()
         {
+            if (IsBeamRecipe())
+            {
+                if (heldBeam == default)
+                    heldBeam = SpawnShot();
+                return;
+            }
+
+            SpawnShot();
+        }
+
+        ProjectileId SpawnShot()
+        {
             BindChildren();
             if (world == null || working == null || muzzle == null)
             {
                 Debug.LogWarning("SampleLab: world, recipe, or muzzle missing; cannot fire.", this);
-                return;
+                return default;
             }
 
             Vector3 position = SampleYard.SpawnPosition(muzzle.Position, working);
@@ -282,7 +314,7 @@ namespace Veerdonk.ProjectileSystem.Samples
             {
                 Recipe = working,
                 Position = position,
-                Direction = GroundAim.Flatten(muzzle.Direction)
+                Direction = ShotDirection()
             };
             if (hasGroundPoint && (UsesAimPointHoming() || UsesBallisticAim()))
             {
@@ -295,15 +327,82 @@ namespace Veerdonk.ProjectileSystem.Samples
                 if (!hasGroundPoint)
                 {
                     lastFire = LastFire.Unreachable;
-                    return;
+                    return default;
                 }
 
                 ProjectileId id = world.Spawn(request);
                 lastFire = id == default ? LastFire.Unreachable : LastFire.Solved;
+                return id;
+            }
+
+            return world.Spawn(request);
+        }
+
+        bool IsBeamRecipe()
+        {
+            return working != null && working.Delivery == Delivery.Beam;
+        }
+
+        void UpdateHeldBeam(bool overUi)
+        {
+            if (!BeamWanted(overUi))
+            {
+                ReleaseHeldBeam();
                 return;
             }
 
-            world.Spawn(request);
+            if (heldBeam != default)
+            {
+                AimHeldBeam();
+                return;
+            }
+
+            heldBeam = SpawnShot();
+        }
+
+        void AimHeldBeam()
+        {
+            if (world == null || muzzle == null || working == null)
+                return;
+
+            Vector3 position = SampleYard.SpawnPosition(muzzle.Position, working);
+            world.AimBeam(heldBeam, position, ShotDirection());
+        }
+
+        Vector3 ShotDirection()
+        {
+            if (muzzle == null)
+                return Vector3.forward;
+
+            if (IsBeamRecipe())
+            {
+                Vector3 barrel = muzzle.Direction;
+                return barrel.sqrMagnitude > 1e-8f ? barrel.normalized : Vector3.forward;
+            }
+
+            return GroundAim.Flatten(muzzle.Direction);
+        }
+
+        bool BeamWanted(bool overUi)
+        {
+            Mouse mouse = Mouse.current;
+            Keyboard keyboard = Keyboard.current;
+            bool pointer = mouse != null && mouse.leftButton.isPressed && !overUi;
+            bool space = keyboard != null && keyboard.spaceKey.isPressed;
+            return pointer || space || fireButtonHeld;
+        }
+
+        void ReleaseHeldBeam()
+        {
+            if (heldBeam == default || world == null)
+            {
+                heldBeam = default;
+                return;
+            }
+
+            ProjectileId id = heldBeam;
+            heldBeam = default;
+            world.Despawn(id);
         }
 
         [ContextMenu("Reset")]
@@ -314,6 +413,8 @@ namespace Veerdonk.ProjectileSystem.Samples
                 dummies[i]?.Restore();
             SampleYard.ResetTurretPose(transform);
             lastFire = LastFire.None;
+            heldBeam = default;
+            fireButtonHeld = false;
             LoadWorkingCopy();
             CreateWorld();
         }
@@ -366,10 +467,31 @@ namespace Veerdonk.ProjectileSystem.Samples
             GameObject cubePrefab = cubeViewPrefab != null
                 ? cubeViewPrefab
                 : CreateRuntimeViewPrefab(PrimitiveType.Cube, "RuntimeCubeView");
+            if (laserViewPrefab == null)
+            {
+                laserViewPrefab = CreateRuntimeViewPrefab(PrimitiveType.Cylinder, "RuntimeLaserView");
+                TintLaser(laserViewPrefab);
+            }
+
             return new PrefabViewFactory(new Dictionary<string, GameObject>
             {
-                ["cube"] = cubePrefab
+                ["cube"] = cubePrefab,
+                ["laser"] = laserViewPrefab
             });
+        }
+
+        static void TintLaser(GameObject view)
+        {
+            Renderer renderer = view.GetComponent<Renderer>();
+            if (renderer == null || renderer.sharedMaterial == null)
+                return;
+
+            Material tinted = new Material(renderer.sharedMaterial);
+            if (tinted.HasProperty("_BaseColor"))
+                tinted.SetColor("_BaseColor", Color.red);
+            if (tinted.HasProperty("_Color"))
+                tinted.SetColor("_Color", Color.red);
+            renderer.sharedMaterial = tinted;
         }
 
         GameObject CreateRuntimeViewPrefab(PrimitiveType primitive, string objectName)
