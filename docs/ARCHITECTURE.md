@@ -88,7 +88,7 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Prewarm:** `Prewarm(recipe, count)` also prewarms the Recipes those modifiers chain into, using the same generations ([DECISIONS.md](DECISIONS.md) ADR-008). Do not hand-prewarm the children as well. Directions for all `n` slots, the original included, come from an `IMulticastPattern` ([DECISIONS.md](DECISIONS.md) ADR-006); v1 ships `RandomConePattern`.
 
-**Multiply spread:** `Multiply` authors `Spread` as meters between adjacent pips on an `IMultiplyPattern` ([DECISIONS.md](DECISIONS.md) ADR-015). Default `SquarePattern`. `Spread = 0` stacks. Children keep travel / hit-normal direction. `Spread(n)` scales the instance copy of that spacing (phase 12). The original shot is not jittered.
+**Multiply spread:** `Multiply` authors `Spread`. Square / Circle / RandomCircle read it as **meters** between adjacent pips (`0` stacks); children keep travel / hit-normal direction ([DECISIONS.md](DECISIONS.md) ADR-015). An authored grid (`GridMultiplyPattern` from `MultiplyPatternAsset`) places with its own **Spacing** (meters between cell centers; `<= 0` stacks) and reads `Spread` as the cone **half-angle in degrees** of the farthest numbered cell from the geometric center (`<= 0` keeps every child parallel) (ADR-038). `Spread(n)` scales the instance copy of `Multiply.Spread` (meters or degrees, depending on the pattern). The original shot is not jittered.
 
 **Views:** the pool asks `IProjectileViewFactory` for a GameObject view from `Recipe.PresentationId` ([DECISIONS.md](DECISIONS.md) ADR-021). Default is a sphere primitive. Hits stay SphereCast of `Radius`; the mesh is not the collider. Hitscan creates **no** view (ADR-035). Beam uses a primitive **cylinder per polyline segment** (ADR-036); sample red via `PresentationId`. Ground-field disks use a separate `IGroundFieldViewFactory` (ADR-026); default is a thin cylinder. A game prefab is not rescaled.
 
@@ -187,8 +187,26 @@ interface IStatusReceiver { void Apply(IStatusEffect effect); }
 interface IMultiplyPattern
 {
     // World offset from parent/hit for child index of count.
-    // Plane perpendicular to forward. spread=0 → zero.
+    // Plane perpendicular to forward.
+    // Procedural: spread is meters (0 → zero offset). Grid: uses Spacing; spread unused here.
     Vector3 GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count);
+
+    // Child travel direction. Procedural: return forward.
+    // Grid: rotate toward that cell so the farthest numbered cell is `spread` degrees off forward (0 → forward).
+    Vector3 GetDirection(ModifierContext context, Vector3 forward, float spread, int index, int count);
+
+    // How many children Multiply actually spawns. Procedural: requested. Grid: min(requested, numbered cells).
+    int ResolveCount(int requested);
+}
+
+class MultiplyPatternAsset : ScriptableObject
+{
+    // Create > Projectile > Multiply Pattern. Square N×N (default 3, min 2). Numbered cells 1..k. Spacing meters.
+}
+
+class GridMultiplyPattern : IMultiplyPattern
+{
+    // Serializable copy of an asset (Spacing + cell numbers). Live Recipe does not alias the SO.
 }
 
 static class BallisticAim
@@ -267,7 +285,7 @@ Sandbox fire button / sample turret calls `Spawn`. A single sandbox driver calls
 Packages/com.veerdonk.projectile-system/
   Runtime/     façade, recipes, modifiers, pooling, PhysX query  (asmdef `Veerdonk.ProjectileSystem`)
   Runtime/Ecs/ internal components, RecipeStore, systems
-  Editor/      RecipeAsset inspector (ADR-023); ModifierKit inspector (ADR-032)
+  Editor/      RecipeAsset inspector (ADR-023); ModifierKit inspector (ADR-032); MultiplyPatternAsset grid (ADR-038)
   Tests/Runtime
   Tests/Editor
   Samples~/Yard/   UPM sample (ADR-029): turret yard, presets, dummy HP. Hidden until Import
@@ -276,7 +294,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.8 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), and `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036).
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 

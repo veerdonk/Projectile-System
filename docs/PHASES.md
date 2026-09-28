@@ -719,7 +719,7 @@ A spawn can name the collider that fired. Direct overlap and sweep skip it until
 - Edit Mode tests: Arc with aim point meets a reachable dummy (same idea as phase 16); unreachable Arc does not spawn; Straight with `Gravity > 0` stays level; Hitscan vs a published sphere (no collider) raises Target `Hit`; Pierce(2) through two published volumes then dies on the third; World wall ends Hitscan even with Pierce remaining; Bounce(1) reflects Hitscan off World; Homing kinks Hitscan after a pierce toward a second published volume (bend ≤ `n` degrees); Hitscan miss (empty catalog, no wall) expires with no `Hit`; Strong published volume eats Hitscan with no `Hit`. Existing Straight / collider tests stay green
 - Docs: [ARCHITECTURE.md](ARCHITECTURE.md) `Delivery` / Arc Spawn / Hitscan, [REQUIREMENTS.md](REQUIREMENTS.md), [SANDBOX.md](SANDBOX.md), [ECS.md](ECS.md), package `AGENTS.md` / `README.md` / `Documentation/index.md`, `CHANGELOG` **0.1.7**, XML on `Delivery`. Bump `package.json` to **0.1.7**. Do not create a git tag in the phase session
 
-**Out of scope:** `Delivery.Beam`, hold-to-fire, `Despawn`, `BeamPulseSeconds` (**phase 32**); Play Mode debug lines (**phase 33**); gizmos; `Recipe.Range`; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
+**Out of scope:** `Delivery.Beam`, hold-to-fire, `Despawn`, `BeamPulseSeconds` (**phase 32**); Play Mode debug lines (**phase 34**); gizmos; `Recipe.Range`; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
 
 **Proof:** Edit Mode Arc / Hitscan tests above. Play Mode Cannonball still hits DummyTarget with the barrel lofted; Spawn is what solved. Hitscan preset fires along the barrel and hits DummyTarget with no flying mesh.
 
@@ -740,13 +740,35 @@ A Beam is a live Recipe instance that pulses a Homing-kinked polyline until `Lif
 - Edit Mode tests: Beam pulse hits a published volume as Direct `Hit`; Pierce(2) on one pulse passes two published volumes and the third contact ends that pulse, instance still live for the next pulse; next pulse can hit again; World clips a pulse; `LifetimeSeconds` expires a Beam with no `Despawn`; `Despawn` raises `Expired` and `OnExpire`; ApplyStatus on a pulsed Target; Strong published eats a pulse with no `Hit`. Existing Hitscan / Arc tests stay green
 - Docs: sketch, `Despawn`, [SANDBOX.md](SANDBOX.md) hold-to-fire, package `AGENTS.md` / `README.md` / `Documentation/index.md`, `CHANGELOG` **0.1.8**, XML. Bump `package.json` to **0.1.8**. Do not create a git tag in the phase session
 
-**Out of scope:** Play Mode debug overlay (**phase 33**); gizmos in this phase; WASD; orbit camera; save-to-asset; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
+**Out of scope:** Play Mode debug overlay (**phase 34**); gizmos in this phase; WASD; orbit camera; save-to-asset; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
 
 **Proof:** Edit Mode pulse / Pierce-per-pulse / Despawn tests above. Play Mode Laser: hold — red cylinder segments, DummyTarget ticks each pulse; release — beam gone; keep holding past `LifetimeSeconds` — beam ends anyway.
 
-**Stop.** Play Mode debug tooling is **phase 33**. Do not start it in the same session.
+**Stop.** Authored Multiply grid patterns are **phase 33**. Do not start them in the same session.
 
-## Phase 33 — Play Mode debug tooling
+## Phase 33 — Authored Multiply grid pattern
+
+A ScriptableObject grid authors Multiply pip order. `Spacing` is how far apart children spawn; `Multiply.Spread` is the cone half-angle. Square / Circle / RandomCircle stay. ADR-038.
+
+**In scope**
+
+- `MultiplyPatternAsset` (`Create > Projectile > Multiply Pattern`). Square grid, default **3×3**, minimum **2×2**. Plane is the existing Multiply plane (along travel / hit normal, +X right, +Y up). Offsets from the **geometric center** of the N×N cells
+- **Spacing** (meters between adjacent cell centers, default 2). `<= 0` stacks every pip at the origin. This is pattern data, not `Multiply.Spread`
+- **Spread** on `Multiply` for this pattern is cone **half-angle in degrees** of the farthest numbered cell from that center. `<= 0` keeps every child parallel to parent forward / hit normal. Square / Circle / RandomCircle still use `Spread` as meters and do not aim
+- `IMultiplyPattern.GetDirection(...)` (procedural types return `forward`) and `ResolveCount(requested)` (grid = `min(requested, numbered)`; others = `requested`). `Multiply` spawns that many children and passes `GetDirection` into `RequestMultiplyChild`
+- Grid UI on the asset Inspector: left-click empty cell → next integer (`1`, `2`, …); left-click occupied → no-op; right-click → remove that number and compact so remaining are `1..k`. **+** grows N→N+1 (new row at the bottom, new column on the right). **−** shrinks to N−1 (not below 2), drops the last row and column, compact-renumbers. `Multiply(n)` uses cells `1..n`. No numbers → spawn nothing
+- RecipeAsset and ModifierKit Pattern dropdowns: Square / Circle / RandomCircle **plus every `MultiplyPatternAsset` in the project** (same `Patterns()` catalog, plus assets). Picking an asset copies grid + Spacing onto a serializable `GridMultiplyPattern` (do not alias the SO; `ToRecipe` / kit clone must copy fields, not `Activator` an empty type)
+- One example asset in `Samples~/Yard` and one Multiply preset that uses it. Sample sheet pattern picker uses the same catalog. No Play Mode grid editor. Multicast unchanged
+- Edit Mode tests: 3×3 with cells 1 (center), 2 (right of center), 3 (above center) — `Multiply(2)` uses only 1 and 2; `Multiply(5)` still only the numbered count (3); Spacing 2 places adjacent pips 2 m apart; Spread 20 aims the farthest numbered cell 20° off forward; Spread 0 is parallel; Spacing 0 stacks; right-click compact; grow 3→4 keeps existing numbers; shrink 3→2 drops off-grid numbers and compact; empty grid spawns 0; Square / Circle tests stay green (Spread still meters, still parent forward)
+- Docs: [ARCHITECTURE.md](ARCHITECTURE.md) `IMultiplyPattern`, [REQUIREMENTS.md](REQUIREMENTS.md), [SANDBOX.md](SANDBOX.md), [ECS.md](ECS.md), package `AGENTS.md` / `README.md` / `Documentation/index.md`, `CHANGELOG` **0.1.10**, XML. Bump `package.json` to **0.1.10**. Do not create a git tag in the phase session
+
+**Out of scope:** Play Mode debug overlay (**phase 34**); Play Mode grid editing; line / arc / cross / triangle procedural patterns; aiming Square / Circle / RandomCircle; changing Multicast; putting input on `IProjectileWorld`; applying HP; Unity Physics; Entities Graphics
+
+**Proof:** Edit Mode grid / cone / compact tests above. Play Mode: pick the sample grid preset, fire — children spawn on the numbered cells and fan by Spread; Square preset still looks like today.
+
+**Stop.** Play Mode debug tooling is **phase 34**. Do not start it in the same session.
+
+## Phase 34 — Play Mode debug tooling
 
 Bare phase. Hitscan has no mesh; Beam segments are easy to miss. Add Play Mode debug drawing and refine it after the human sees it. Do not invent a second façade. Depends on phase 32.
 
@@ -756,7 +778,7 @@ Bare phase. Hitscan has no mesh; Beam segments are easy to miss. Add Play Mode d
 - Start **sample-side** (`Samples~/Yard`). Do not add Runtime types unless review asks. Toggle or always-on in Play Mode is fine for the first cut; refine colors, thickness, and what is drawn after review
 - Docs: [SANDBOX.md](SANDBOX.md) how to see it. No `package.json` bump if nothing ships in Runtime
 
-**Out of scope:** new deliveries; hold-to-fire (phase 32); WASD; orbit camera; Unity Physics; Entities Graphics; a second world / debug façade
+**Out of scope:** new deliveries; hold-to-fire (phase 32); authored Multiply grids (phase 33); WASD; orbit camera; Unity Physics; Entities Graphics; a second world / debug façade
 
 **Proof:** Play Mode Hitscan — a debug line shows the query through the dummy line. Laser — pulse segments are obvious with the overlay on.
 
@@ -765,7 +787,7 @@ Bare phase. Hitscan has no mesh; Beam segments are easy to miss. Add Play Mode d
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
-- Multiply patterns: line, arc, cross, triangle; a pattern editor that authors an `IMultiplyPattern`
+- Multiply patterns: line, arc, cross, triangle (procedural `IMultiplyPattern`s; the grid editor is phase 33)
 - GroundField plant pose: v1 snaps Y to the world ground plane (`0`). Revisit spawn process and positioning (terrain / ground raycast, sloped floors, a chosen ground height) without changing the disk overlap or pulse contract
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Save Play Mode tweaks to `RecipeAsset`
