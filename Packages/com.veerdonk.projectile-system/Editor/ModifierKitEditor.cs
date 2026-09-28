@@ -6,7 +6,9 @@ namespace Veerdonk.ProjectileSystem
 {
     /// <summary>
     /// Inspector for <see cref="ModifierKit"/>: one stage dropdown and a filtered Add menu per layer.
-    /// <see cref="IStatusEffect"/> fields use the same shipped-type dropdown as <see cref="RecipeAsset"/>.
+    /// <see cref="IStatusEffect"/> and <see cref="IMultiplyPattern"/> fields use the same shipped-type
+    /// dropdowns as <see cref="RecipeAsset"/>. Pattern has no empty choice; a missing pattern shows
+    /// <see cref="SquarePattern"/>.
     /// </summary>
     [CustomEditor(typeof(ModifierKit))]
     public sealed class ModifierKitEditor : UnityEditor.Editor
@@ -150,6 +152,8 @@ namespace Veerdonk.ProjectileSystem
             {
                 if (IsStatusEffectField(child))
                     DrawStatusPopup(child);
+                else if (IsMultiplyPatternField(child))
+                    DrawPatternPopup(child);
                 else
                     EditorGUILayout.PropertyField(child, true);
                 if (!child.NextVisible(false))
@@ -159,12 +163,21 @@ namespace Veerdonk.ProjectileSystem
 
         static bool IsStatusEffectField(SerializedProperty property)
         {
+            return IsManagedReference(property, ".IStatusEffect");
+        }
+
+        static bool IsMultiplyPatternField(SerializedProperty property)
+        {
+            return IsManagedReference(property, ".IMultiplyPattern");
+        }
+
+        static bool IsManagedReference(SerializedProperty property, string typeSuffix)
+        {
             if (property.propertyType != SerializedPropertyType.ManagedReference)
                 return false;
 
             string typeName = property.managedReferenceFieldTypename;
-            return typeName != null
-                && typeName.EndsWith(".IStatusEffect", StringComparison.Ordinal);
+            return typeName != null && typeName.EndsWith(typeSuffix, StringComparison.Ordinal);
         }
 
         static void DrawStatusPopup(SerializedProperty property)
@@ -189,6 +202,20 @@ namespace Veerdonk.ProjectileSystem
                 AssignStatusEffect(property, next);
         }
 
+        static void DrawPatternPopup(SerializedProperty property)
+        {
+            Type[] types = RecipeAssetEditor.Patterns();
+            var labels = new string[types.Length];
+            for (int i = 0; i < types.Length; i++)
+                labels[i] = ObjectNames.NicifyVariableName(types[i].Name);
+
+            object currentValue = property.managedReferenceValue;
+            int current = PatternPopupIndex(currentValue);
+            int next = EditorGUILayout.Popup("Pattern", current, labels);
+            if (next != current)
+                AssignMultiplyPattern(property, next);
+        }
+
         /// <summary>
         /// Writes a shipped <see cref="IStatusEffect"/> onto a SerializeReference field.
         /// Index 0 clears it. Later indexes follow <see cref="RecipeAssetEditor.StatusEffects"/>.
@@ -210,6 +237,40 @@ namespace Veerdonk.ProjectileSystem
                 throw new ArgumentOutOfRangeException(nameof(index));
 
             property.managedReferenceValue = Activator.CreateInstance(types[typeIndex]);
+        }
+
+        /// <summary>
+        /// Popup index for a Multiply pattern. Indexes follow <see cref="RecipeAssetEditor.Patterns"/>.
+        /// A null or unknown value is <see cref="SquarePattern"/>, and the inspector does not write that
+        /// stand-in until the popup index changes.
+        /// </summary>
+        public static int PatternPopupIndex(object currentValue)
+        {
+            Type[] types = RecipeAssetEditor.Patterns();
+            int square = IndexOf(types, typeof(SquarePattern));
+            if (square < 0)
+                square = 0;
+            if (currentValue == null)
+                return square;
+
+            int found = IndexOf(types, currentValue.GetType());
+            return found >= 0 ? found : square;
+        }
+
+        /// <summary>
+        /// Writes a shipped <see cref="IMultiplyPattern"/> onto a SerializeReference field.
+        /// Indexes follow <see cref="RecipeAssetEditor.Patterns"/>. There is no empty choice.
+        /// </summary>
+        public static void AssignMultiplyPattern(SerializedProperty property, int index)
+        {
+            if (property == null)
+                throw new ArgumentNullException(nameof(property));
+
+            Type[] types = RecipeAssetEditor.Patterns();
+            if (index < 0 || index >= types.Length)
+                throw new ArgumentOutOfRangeException(nameof(index));
+
+            property.managedReferenceValue = Activator.CreateInstance(types[index]);
         }
 
         static int IndexOf(Type[] types, Type match)

@@ -237,6 +237,59 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             Assert.IsInstanceOf<DummyStatusEffect>(((ApplyStatus)pierceKit.Layers[0].Modifiers[0]).Effect);
         }
 
+        [Test]
+        public void Multiply_PatternDropdown_SelectsShippedPatterns_UnsetShowsSquare()
+        {
+            pierceKit = Kit(RecipeStage.OnHit, new Multiply(3, new Recipe()));
+            var serialized = new SerializedObject(pierceKit);
+            SerializedProperty pattern = StatusProperty(serialized, "pattern");
+            Assert.IsInstanceOf<SquarePattern>(pattern.managedReferenceValue);
+
+            Type[] catalog = RecipeAssetEditor.Patterns();
+            int square = -1;
+            int circle = -1;
+            int random = -1;
+            for (int i = 0; i < catalog.Length; i++)
+            {
+                if (catalog[i] == typeof(SquarePattern))
+                    square = i;
+                else if (catalog[i] == typeof(CirclePattern))
+                    circle = i;
+                else if (catalog[i] == typeof(RandomCirclePattern))
+                    random = i;
+            }
+
+            Assert.GreaterOrEqual(square, 0);
+            Assert.GreaterOrEqual(circle, 0);
+            Assert.GreaterOrEqual(random, 0);
+            Assert.AreEqual("Circle Pattern", ObjectNames.NicifyVariableName(nameof(CirclePattern)));
+            Assert.AreEqual("Random Circle Pattern", ObjectNames.NicifyVariableName(nameof(RandomCirclePattern)));
+            Assert.AreEqual("Square Pattern", ObjectNames.NicifyVariableName(nameof(SquarePattern)));
+            Assert.AreEqual(square, ModifierKitEditor.PatternPopupIndex(pattern.managedReferenceValue));
+            Assert.AreEqual(square, ModifierKitEditor.PatternPopupIndex(null));
+            Assert.AreEqual(square, ModifierKitEditor.PatternPopupIndex(new object()));
+
+            ModifierKitEditor.AssignMultiplyPattern(pattern, circle);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            Assert.IsInstanceOf<CirclePattern>(((Multiply)pierceKit.Layers[0].Modifiers[0]).Pattern);
+
+            serialized.Update();
+            pattern = StatusProperty(serialized, "pattern");
+            ModifierKitEditor.AssignMultiplyPattern(pattern, random);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            Assert.IsInstanceOf<RandomCirclePattern>(((Multiply)pierceKit.Layers[0].Modifiers[0]).Pattern);
+
+            serialized.Update();
+            pattern = StatusProperty(serialized, "pattern");
+            ModifierKitEditor.AssignMultiplyPattern(pattern, square);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            Assert.IsInstanceOf<SquarePattern>(((Multiply)pierceKit.Layers[0].Modifiers[0]).Pattern);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                ModifierKitEditor.AssignMultiplyPattern(pattern, catalog.Length));
+            Assert.Throws<ArgumentNullException>(() => ModifierKitEditor.AssignMultiplyPattern(null, square));
+        }
+
         static SerializedProperty StatusProperty(SerializedObject serialized, string field)
         {
             SerializedProperty modifiers = serialized.FindProperty("layers").GetArrayElementAtIndex(0)
