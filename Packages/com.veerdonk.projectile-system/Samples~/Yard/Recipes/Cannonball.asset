@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Cannonball
   m_EditorClassIdentifier: Veerdonk.ProjectileSystem::Veerdonk.ProjectileSystem.RecipeAsset
   id: cannonball
+  delivery: 1
   speed: 32
   radius: 0.25
   lifetimeSeconds: 5

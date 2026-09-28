@@ -56,16 +56,17 @@ namespace Veerdonk.ProjectileSystem
 
             EnsureBucket(recipeIndex);
             EntityManager em = world.EntityManager;
+            bool attachView = createViews && recipe.Delivery != Delivery.Hitscan;
             for (int i = 0; i < count; i++)
             {
                 free[recipeIndex].Push(em.CreateEntity(pooledArchetype));
                 available[recipeIndex]++;
-                if (createViews)
+                if (attachView)
                     viewStacks[recipeIndex].Push(CreateView(recipe));
             }
         }
 
-        public Entity Rent(int recipeIndex, Recipe recipe, out ProjectileView view)
+        public Entity Rent(int recipeIndex, Recipe recipe, out ProjectileView view, bool attachView = true)
         {
             if (recipe == null)
                 throw new ArgumentNullException(nameof(recipe));
@@ -79,7 +80,7 @@ namespace Veerdonk.ProjectileSystem
             em.SetEnabled(entity, true);
 
             view = null;
-            if (createViews)
+            if (createViews && attachView && recipe.Delivery != Delivery.Hitscan)
             {
                 Stack<ProjectileView> stack = viewStacks[recipeIndex];
                 view = stack.Count > 0 ? stack.Pop() : CreateView(recipe);

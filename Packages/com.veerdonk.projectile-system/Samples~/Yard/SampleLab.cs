@@ -278,34 +278,29 @@ namespace Veerdonk.ProjectileSystem.Samples
             }
 
             Vector3 position = SampleYard.SpawnPosition(muzzle.Position, working);
-            Vector3 direction;
+            var request = new SpawnRequest
+            {
+                Recipe = working,
+                Position = position,
+                Direction = GroundAim.Flatten(muzzle.Direction)
+            };
+            if (hasGroundPoint && (UsesAimPointHoming() || UsesBallisticAim()))
+            {
+                request.HomingAcquirePointSet = true;
+                request.HomingAcquirePoint = lastAimPoint;
+            }
+
             if (UsesBallisticAim())
             {
-                if (!hasGroundPoint || !TryBallisticDirection(position, lastAimPoint, out direction))
+                if (!hasGroundPoint)
                 {
                     lastFire = LastFire.Unreachable;
                     return;
                 }
 
-                lastFire = LastFire.Solved;
-                if (gun != null)
-                    gun.rotation = Quaternion.LookRotation(direction, Vector3.up);
-            }
-            else
-            {
-                direction = GroundAim.Flatten(muzzle.Direction);
-            }
-
-            var request = new SpawnRequest
-            {
-                Recipe = working,
-                Position = position,
-                Direction = direction
-            };
-            if (hasGroundPoint && UsesAimPointHoming())
-            {
-                request.HomingAcquirePointSet = true;
-                request.HomingAcquirePoint = lastAimPoint;
+                ProjectileId id = world.Spawn(request);
+                lastFire = id == default ? LastFire.Unreachable : LastFire.Solved;
+                return;
             }
 
             world.Spawn(request);

@@ -29,6 +29,7 @@ namespace Veerdonk.ProjectileSystem.Samples
 
             scroll = GUILayout.BeginScrollView(scroll);
             GUILayout.Label("Recipe sheet");
+            recipe.Delivery = DeliveryField(recipe.Delivery);
             recipe.Speed = FloatField("speed", "Speed", recipe.Speed);
             recipe.Radius = FloatField("radius", "Radius", recipe.Radius);
             recipe.LifetimeSeconds = FloatField("life", "Lifetime", recipe.LifetimeSeconds);
@@ -297,6 +298,17 @@ namespace Veerdonk.ProjectileSystem.Samples
                 value++;
             GUILayout.EndHorizontal();
             return Mathf.Clamp(value, min, max);
+        }
+
+        static readonly string[] DeliveryLabels = { "Straight", "Arc", "Hitscan" };
+
+        static Delivery DeliveryField(Delivery value)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Delivery", GUILayout.Width(140f));
+            int next = GUILayout.Toolbar((int)value, DeliveryLabels);
+            GUILayout.EndHorizontal();
+            return (Delivery)next;
         }
 
         static float FloatField(string key, string label, float value)

@@ -16,6 +16,13 @@ namespace Veerdonk.ProjectileSystem
         /// </summary>
         public string Id { get; set; }
 
+        /// <summary>
+        /// How the shot is delivered. Default Straight keeps existing Recipes level.
+        /// Arc applies gravity and, when the aim point is set, lofts at <see cref="IProjectileWorld.Spawn"/>.
+        /// Hitscan is one polyline query inside Spawn. Homing <c>n</c> on Hitscan is degrees of kink per segment.
+        /// </summary>
+        public Delivery Delivery { get; set; }
+
         /// <summary>Launch speed in meters per second. Copied onto the instance at spawn.</summary>
         public float Speed { get; set; }
 
@@ -26,8 +33,9 @@ namespace Veerdonk.ProjectileSystem
         public float LifetimeSeconds { get; set; }
 
         /// <summary>
-        /// Downward acceleration in m/s². Default 0 is a straight shot. Copied onto the instance at spawn.
-        /// Burst integrates it each tick using world down (0,-1,0), not <c>Physics.gravity</c>.
+        /// Downward acceleration in m/s². Default 0. Copied onto the instance at spawn.
+        /// Burst integrates it each tick only when <see cref="Delivery"/> is Arc,
+        /// using world down (0,-1,0), not <c>Physics.gravity</c>.
         /// Values &lt;= 0 keep the straight <c>position + velocity * dt</c> path.
         /// </summary>
         public float Gravity { get; set; }
@@ -94,6 +102,7 @@ namespace Veerdonk.ProjectileSystem
             return new Recipe
             {
                 Id = Id,
+                Delivery = Delivery,
                 Speed = Speed,
                 Radius = Radius,
                 LifetimeSeconds = LifetimeSeconds,

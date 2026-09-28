@@ -9,6 +9,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         public void Gravity0_StaysLevelOverSeveralTicks()
         {
             Recipe recipe = SimulationTestHelper.CreateRecipe("gravity-zero", speed: 10f, lifetime: 10f, gravity: 0f);
+            recipe.Delivery = Delivery.Arc;
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
@@ -43,6 +44,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 speed: speed,
                 lifetime: 10f,
                 gravity: gravity);
+            recipe.Delivery = Delivery.Arc;
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
@@ -79,6 +81,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         {
             Recipe recipe = SimulationTestHelper.CreateRecipe("gravity-negative", speed: 10f, lifetime: 10f);
             recipe.Gravity = -20f;
+            recipe.Delivery = Delivery.Arc;
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
@@ -104,6 +107,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         public void Gravity_IsCopiedOntoTheInstance_AndLeavesTheRecipeUnchanged()
         {
             Recipe recipe = SimulationTestHelper.CreateRecipe("gravity-copy", speed: 10f, lifetime: 10f, gravity: 12f);
+            recipe.Delivery = Delivery.Arc;
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
@@ -135,6 +139,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 lifetime: 10f,
                 gravity: 7f,
                 onTravel: new IModifier[] { probe });
+            recipe.Delivery = Delivery.Arc;
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
@@ -162,6 +167,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 lifetime: 10f,
                 gravity: recipeGravity,
                 onTravel: new IModifier[] { new Gravity(2f) });
+            recipe.Delivery = Delivery.Arc;
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
@@ -208,6 +214,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 gravity: recipeGravity,
                 onSpawn: new IModifier[] { new Interval(dt) },
                 onInterval: new IModifier[] { new Gravity(0.5f) });
+            recipe.Delivery = Delivery.Arc;
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
@@ -248,6 +255,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 lifetime: 10f,
                 gravity: 10f,
                 onTravel: new IModifier[] { new Gravity(0f), new Gravity(-1f) });
+            recipe.Delivery = Delivery.Arc;
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
@@ -278,6 +286,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 lifetime: 5f,
                 gravity: 10f,
                 onHit: new IModifier[] { new Pierce(1), new Gravity(2f) });
+            recipe.Delivery = Delivery.Arc;
             (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
@@ -312,6 +321,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 lifetime: 5f,
                 gravity: gravity,
                 onHit: new IModifier[] { new Bounce(1) });
+            recipe.Delivery = Delivery.Arc;
             (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {

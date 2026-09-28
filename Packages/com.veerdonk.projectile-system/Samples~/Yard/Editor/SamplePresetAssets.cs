@@ -131,13 +131,21 @@ namespace Veerdonk.ProjectileSystem.Samples.Editor
                 Preset("Cannonball", Upsert("Cannonball", asset =>
                 {
                     ConfigureBase(asset, "cannonball", 32f, 5f, gravity: 80f);
+                    asset.Delivery = Delivery.Arc;
                     ClearStages(asset);
                 }), useBallisticAim: true),
                 Preset("Cannonball Gravity(2)", Upsert("CannonballGravity", asset =>
                 {
                     ConfigureBase(asset, "cannonball-gravity", 20f, 5f, gravity: 80f);
+                    asset.Delivery = Delivery.Arc;
                     ClearStages(asset);
                     asset.OnTravel = new IModifier[] { new Gravity(2f) };
+                })),
+                Preset("Hitscan", Upsert("Hitscan", asset =>
+                {
+                    ConfigureBase(asset, "hitscan", 20f, 5f, 0.25f);
+                    asset.Delivery = Delivery.Hitscan;
+                    ClearStages(asset);
                 })),
                 Preset("OnHit GroundField", Upsert("GroundOnHit", asset =>
                 {
@@ -219,6 +227,7 @@ namespace Veerdonk.ProjectileSystem.Samples.Editor
             float effectRadius = 0f)
         {
             asset.Id = id;
+            asset.Delivery = Delivery.Straight;
             asset.Speed = speed;
             asset.Radius = radius;
             asset.LifetimeSeconds = lifetime;

@@ -98,6 +98,96 @@ namespace Veerdonk.ProjectileSystem
             FlushGroundFields(entity);
         }
 
+        /// <summary>
+        /// One polyline of Radius SphereCasts, then pool. Homing on OnTick is max degrees of kink
+        /// per segment (applied with a one-second step so <see cref="Homing.TurnRateDegreesPerSecond"/>
+        /// is degrees, not degrees per second). Unbounded length is 10 km.
+        /// </summary>
+        internal void ResolveHitscan(Entity entity)
+        {
+            const float maxRange = 10000f;
+            const int maxSegments = 32;
+            float remaining = maxRange;
+            EntityManager em = EntityManager;
+
+            for (int segment = 0; segment < maxSegments && remaining > 1e-4f; segment++)
+            {
+                if (!em.Exists(entity) || !em.IsEnabled(entity))
+                    return;
+
+                Projectile projectile = em.GetComponentData<Projectile>(entity);
+                Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
+                KinkHitscan(entity, recipe);
+
+                projectile = em.GetComponentData<Projectile>(entity);
+                Vector3 origin = ToVector3(em.GetComponentData<ProjectilePosition>(entity).Value);
+                Vector3 velocity = ToVector3(em.GetComponentData<ProjectileVelocity>(entity).Value);
+                Vector3 direction = velocity.sqrMagnitude > 1e-12f ? velocity.normalized : Vector3.forward;
+
+                if (!Bridge.HitQuery.TryCast(
+                        new ProjectileId(projectile.Id),
+                        origin,
+                        direction,
+                        remaining,
+                        projectile.Radius,
+                        out HitInfo hit))
+                {
+                    Despawn(entity, runOnHit: false, default);
+                    return;
+                }
+
+                hit.Damage = projectile.Damage;
+                hit.CriticalChance = projectile.CriticalChance;
+                hit.EffectRadius = projectile.EffectRadius;
+                hit.Source = HitSource.Direct;
+                Despawn(entity, runOnHit: true, hit);
+                if (!em.Exists(entity) || !em.IsEnabled(entity))
+                    return;
+
+                float traveled = Vector3.Dot(hit.Point - origin, direction);
+                if (traveled < 0.01f)
+                    traveled = 0.01f;
+                remaining -= traveled;
+            }
+
+            if (em.Exists(entity) && em.IsEnabled(entity))
+                Despawn(entity, runOnHit: false, default);
+        }
+
+        void KinkHitscan(Entity entity, Recipe recipe)
+        {
+            IModifier[] onTick = recipe.OnTick;
+            if (onTick == null || onTick.Length == 0)
+                return;
+
+            bool any = false;
+            for (int i = 0; i < onTick.Length; i++)
+            {
+                if (onTick[i] is Homing)
+                {
+                    any = true;
+                    break;
+                }
+            }
+
+            if (!any)
+                return;
+
+            BindContext(entity, hasHit: false, default, dt: 1f);
+            for (int i = 0; i < onTick.Length; i++)
+            {
+                if (onTick[i] is Homing homing)
+                    homing.Apply(Bridge.ModifierContext);
+            }
+
+            EntityManager em = EntityManager;
+            Projectile projectile = em.GetComponentData<Projectile>(entity);
+            ProjectileVelocity velocity = em.GetComponentData<ProjectileVelocity>(entity);
+            Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
+            em.SetComponentData(entity, projectile);
+            em.SetComponentData(entity, velocity);
+        }
+
         void TryMoveOrHit(Entity entity)
         {
             EntityManager em = EntityManager;
@@ -528,7 +618,7 @@ namespace Veerdonk.ProjectileSystem
             ref ProjectileVelocity velocity,
             ref ProjectileCandidate candidate)
         {
-            if (projectile.Gravity > 0f)
+            if (projectile.Delivery == Delivery.Arc && projectile.Gravity > 0f)
                 velocity.Value += new float3(0f, -1f, 0f) * projectile.Gravity * Dt;
 
             candidate.Value = position.Value + velocity.Value * Dt;

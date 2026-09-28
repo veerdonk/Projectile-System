@@ -5,6 +5,17 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2026-09-27
+
+### Changed
+
+- Gravity applies only when `Recipe.Delivery` is `Arc`. The default is `Straight`, so a Recipe that already sets `Gravity` flies level until you set `Delivery.Arc` on the Recipe or `RecipeAsset`. `Gravity(n)` still scales the instance value; the integrate step uses it only for Arc.
+- Arc shots no longer need `BallisticAim.TrySolve` copied onto `SpawnRequest.Direction`. Set `Delivery.Arc`, set `HomingAcquirePointSet`, and copy the world aim point into `HomingAcquirePoint`. `Spawn` lofts before OnSpawn. If that point cannot be reached, `Spawn` returns the default `ProjectileId` and does not raise `Expired`. `TrySolve` stays available for a barrel preview. If the aim point is unset, Arc uses `Direction` as an already-solved loft and still applies gravity in flight.
+
+### Added
+
+- `Delivery` on `Recipe` and `RecipeAsset`: `Straight` (default), `Arc`, and `Hitscan`. Hitscan is one `Radius` polyline of SphereCasts (PhysX and published volumes) inside `Spawn`, then the instance is pooled. There is no view. Unbounded length is 10 km. World ends the polyline unless Bounce reflects. `Pierce(n)` still dies on hit n+1. Homing `n` on Hitscan is the maximum kink in degrees per segment, not degrees per second. Direct queries still honor `SpawnRequest.IgnoreCollider`.
+
 ## [0.1.6] - 2026-09-27
 
 ### Added

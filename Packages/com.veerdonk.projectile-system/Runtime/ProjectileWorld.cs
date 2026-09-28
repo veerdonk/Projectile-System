@@ -493,8 +493,25 @@ namespace Veerdonk.ProjectileSystem
             else
                 direction.Normalize();
 
+            if (recipe.Delivery == Delivery.Arc && request.HomingAcquirePointSet)
+            {
+                if (!BallisticAim.TrySolve(
+                        request.Position,
+                        request.HomingAcquirePoint,
+                        recipe.Speed,
+                        recipe.Gravity,
+                        out direction))
+                    return default;
+
+                if (direction.sqrMagnitude < 1e-12f)
+                    direction = Vector3.forward;
+                else
+                    direction.Normalize();
+            }
+
             int recipeIndex = recipes.GetOrAdd(recipe);
-            Entity entity = pool.Rent(recipeIndex, recipe, out ProjectileView view);
+            bool attachView = recipe.Delivery != Delivery.Hitscan;
+            Entity entity = pool.Rent(recipeIndex, recipe, out ProjectileView view, attachView);
             int idValue = nextId++;
             ReadHitRemaining(recipe, out int remainingPierce, out int remainingBounce);
             int multicastLeft = request.MulticastChain.Resolve(recipe.MulticastGenerations);
@@ -530,7 +547,8 @@ namespace Veerdonk.ProjectileSystem
                 HomingAcquirePoint = request.HomingAcquirePointSet
                     ? new float3(request.HomingAcquirePoint.x, request.HomingAcquirePoint.y, request.HomingAcquirePoint.z)
                     : default,
-                HomingAimPointUsed = false
+                HomingAimPointUsed = false,
+                Delivery = recipe.Delivery
             });
             em.SetComponentData(entity, new ProjectilePosition { Value = position });
             em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });
@@ -541,6 +559,12 @@ namespace Veerdonk.ProjectileSystem
             if (request.IgnoreCollider != null)
                 hitQuery.SetIgnore(id, request.IgnoreCollider);
             simulation.RunSpawnStages(entity, multicastLeft);
+            if (recipe.Delivery == Delivery.Hitscan)
+            {
+                simulation.ResolveHitscan(entity);
+                return id;
+            }
+
             if (view != null)
             {
                 Projectile spawned = em.GetComponentData<Projectile>(entity);

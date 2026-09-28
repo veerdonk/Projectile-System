@@ -34,7 +34,7 @@ The package is already embedded. Open the project in Unity 6 LTS. Import sample 
 
 1. `new ProjectileWorld` (optional view factories for meshes).
 2. Author a `Recipe` in code, or **Create > Projectile > Recipe** and call `ToRecipe()`. Extras at fire time are **Create > Projectile > Modifier Kit**, then `Recipe.Compose`.
-3. `Spawn(new SpawnRequest { Recipe, Position, Direction })`.
+3. `Spawn(new SpawnRequest { Recipe, Position, Direction })`. `Recipe.Delivery` is `Straight` (default, no gravity), `Arc`, or `Hitscan`. Arc with `HomingAcquirePointSet` lofts inside `Spawn` (`BallisticAim.TrySolve`); unreachable returns default `ProjectileId` and does not raise `Expired`. Hitscan is one radius polyline inside `Spawn`, then the instance is pooled. There is no view. Homing `n` on Hitscan is degrees of kink per segment.
 4. `Tick(dt)` once per frame from one driver.
 5. To spawn overlapping the shooter, set `SpawnRequest.IgnoreCollider` to that collider. Direct casts skip it until the shot has left; a later touch is a normal hit. Area and ground queries are unchanged.
 6. Listen to `Hit` to apply HP in your game. Put `IDamageable` on colliders that should count as targets. A target with no collider is `SetHitTarget(id, position, radius, protection)` (`RemoveHitTarget` to drop it; `radius <= 0` removes). Homing also steers toward that pose. `protection` is `None`, `Basic`, or `Strong`. To lock the candidate closest to a fire-time aim point, set `SpawnRequest.HomingAcquirePointSet` and copy the world point into `HomingAcquirePoint`. Later locks stay travel-direction. The package does not read the mouse.

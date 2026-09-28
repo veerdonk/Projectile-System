@@ -12,6 +12,7 @@ namespace Veerdonk.ProjectileSystem
     public sealed class RecipeAsset : ScriptableObject
     {
         [SerializeField] string id;
+        [SerializeField] Delivery delivery;
         [SerializeField] float speed;
         [SerializeField] float radius = 0.25f;
         [SerializeField] float lifetimeSeconds;
@@ -36,6 +37,13 @@ namespace Veerdonk.ProjectileSystem
         {
             get => id;
             set => id = value;
+        }
+
+        /// <inheritdoc cref="Recipe.Delivery"/>
+        public Delivery Delivery
+        {
+            get => delivery;
+            set => delivery = value;
         }
 
         /// <inheritdoc cref="Recipe.Speed"/>
@@ -174,6 +182,7 @@ namespace Veerdonk.ProjectileSystem
             Recipe recipe = new Recipe
             {
                 Id = id,
+                Delivery = delivery,
                 Speed = speed,
                 Radius = radius,
                 LifetimeSeconds = lifetimeSeconds,
