@@ -5,6 +5,15 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.10] - 2026-09-28
+
+### Added
+
+- `MultiplyPatternAsset` (`Create > Projectile > Multiply Pattern`). Square grid, default 3×3, minimum 2×2. `Spacing` is meters between cell centers (`<= 0` stacks). Left-click an empty cell for the next number; right-click removes it and compacts to `1..k`. + adds a bottom row and a right column. − drops those, not below 2×2, then compact-renumbers. The inspector draws a line between cells.
+- `GridMultiplyPattern`, the serializable copy a Recipe or Modifier Kit stores. `Multiply(n)` uses cells `1..n`. No numbers spawns nothing. `Multiply.Spread` on this pattern is the cone half-angle in degrees of the farthest numbered cell (`<= 0` keeps every child parallel). Square, Circle, and RandomCircle still read Spread as meters and still fly on parent forward / hit normal.
+- Recipe and Modifier Kit Pattern dropdowns list those three patterns plus every `MultiplyPatternAsset` in the project. Picking an asset copies Spacing and the cell numbers. `ToRecipe` and kit clone copy those fields. The live Recipe does not keep the asset. `Spread(n)` still scales `Multiply.Spread` only.
+- Projectile Yard preset **Multiply on hit (Grid)** and pattern asset `GridFan` (center, right, above; Spacing 2; Spread 20°). The sample sheet pattern button uses the same catalog.
+
 ## [0.1.9] - 2026-09-28
 
 ### Fixed

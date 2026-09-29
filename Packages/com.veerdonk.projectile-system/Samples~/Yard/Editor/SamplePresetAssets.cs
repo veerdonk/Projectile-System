@@ -8,6 +8,8 @@ namespace Veerdonk.ProjectileSystem.Samples.Editor
     {
         static string Folder => SampleSceneBuilder.RecipesFolder;
 
+        public static MultiplyPatternAsset GridPattern { get; private set; }
+
         public static SampleLab.Preset[] CreateOrUpdate()
         {
             SampleSceneBuilder.EnsureAssetFolder(Folder);
@@ -21,6 +23,15 @@ namespace Veerdonk.ProjectileSystem.Samples.Editor
             {
                 ConfigureBase(asset, "multicast-extra", 18f, 5f, 0.25f);
                 ClearStages(asset);
+            });
+            GridPattern = UpsertPattern("GridFan", asset =>
+            {
+                asset.AssignLayout(3, 2f, new[]
+                {
+                    0, 3, 0,
+                    0, 1, 2,
+                    0, 0, 0
+                });
             });
 
             var presets = new[]
@@ -47,6 +58,12 @@ namespace Veerdonk.ProjectileSystem.Samples.Editor
                     ConfigureBase(asset, "multiply-hit", 20f, 5f);
                     ClearStages(asset);
                     asset.OnHit = new IModifier[] { new Multiply(3, multiplyChild, 2f, new SquarePattern()) };
+                })),
+                Preset("Multiply on hit (Grid)", Upsert("MultiplyOnHitGrid", asset =>
+                {
+                    ConfigureBase(asset, "multiply-grid", 20f, 5f);
+                    ClearStages(asset);
+                    asset.OnHit = new IModifier[] { new Multiply(3, multiplyChild, 20f, GridPattern.ToPattern()) };
                 })),
                 Preset("Interval multiply", Upsert("IntervalMultiply", asset =>
                 {
@@ -208,6 +225,21 @@ namespace Veerdonk.ProjectileSystem.Samples.Editor
                 asset = asset,
                 useBallisticAim = useBallisticAim
             };
+        }
+
+        static MultiplyPatternAsset UpsertPattern(string assetName, System.Action<MultiplyPatternAsset> configure)
+        {
+            string path = $"{Folder}/{assetName}.asset";
+            MultiplyPatternAsset asset = AssetDatabase.LoadAssetAtPath<MultiplyPatternAsset>(path);
+            if (asset == null)
+            {
+                asset = ScriptableObject.CreateInstance<MultiplyPatternAsset>();
+                AssetDatabase.CreateAsset(asset, path);
+            }
+
+            configure(asset);
+            EditorUtility.SetDirty(asset);
+            return asset;
         }
 
         static RecipeAsset Upsert(string assetName, System.Action<RecipeAsset> configure)

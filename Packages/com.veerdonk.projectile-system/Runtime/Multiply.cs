@@ -6,9 +6,10 @@ namespace Veerdonk.ProjectileSystem
 {
     /// <summary>
     /// Spawns <see cref="Count"/> instances of an explicit child Recipe from OnHit, OnExpire, or OnInterval.
-    /// Children keep the parent travel direction, or the hit normal on a hit. Positions come from
-    /// <see cref="Pattern"/>. Pip spacing is the instance copy of
-    /// <see cref="Spread"/> (authored here, scaled by the Spread modifier). 0 stacks.
+    /// Positions come from <see cref="Pattern"/>. Square, Circle, and RandomCircle keep the parent
+    /// travel direction, or the hit normal on a hit, and read <see cref="Spread"/> as meters (0 stacks).
+    /// <see cref="GridMultiplyPattern"/> places with its own Spacing and aims a cone using
+    /// <see cref="Spread"/> as degrees. The Spread modifier scales that instance copy, not Spacing.
     /// On OnInterval the period comes from <see cref="Interval"/> on the Recipe's OnSpawn list.
     /// </summary>
     [Serializable]
@@ -57,7 +58,11 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Authored child asset. Resolved by <see cref="RecipeAsset.ToRecipe"/>.</summary>
         public RecipeAsset ChildAsset => childAsset;
 
-        /// <summary>Meters between pips. Copied onto the instance at spawn so the Spread modifier can scale it. 0 stacks.</summary>
+        /// <summary>
+        /// Square, Circle, and RandomCircle: meters between pips (0 stacks).
+        /// <see cref="GridMultiplyPattern"/>: cone half-angle in degrees (0 keeps every child parallel).
+        /// Copied onto the instance at spawn so the Spread modifier can scale it. That scale does not change grid Spacing.
+        /// </summary>
         public float Spread
         {
             get => spread;
@@ -83,11 +88,15 @@ namespace Veerdonk.ProjectileSystem
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
 
-            int n = Count;
+            if (Count <= 0)
+                return;
+
+            IMultiplyPattern layout = Pattern;
+            int n = layout.ResolveCount(Count);
             if (n <= 0)
                 return;
 
-            if (Pattern is RandomCirclePattern randomCircle)
+            if (layout is RandomCirclePattern randomCircle)
                 randomCircle.MinDistance = ChildRecipe.Radius * 2f;
 
             Vector3 origin;
@@ -105,10 +114,11 @@ namespace Veerdonk.ProjectileSystem
 
             for (int i = 0; i < n; i++)
             {
-                Vector3 spawnPosition = origin + Pattern.GetOffset(context, forward, context.Spread, i, n);
+                Vector3 spawnPosition = origin + layout.GetOffset(context, forward, context.Spread, i, n);
                 if (context.HasHit)
                     spawnPosition = OffsetOffSurface(spawnPosition, forward, ChildRecipe.Radius);
-                context.RequestMultiplyChild(ChildRecipe, spawnPosition, forward);
+                Vector3 direction = layout.GetDirection(context, forward, context.Spread, i, n);
+                context.RequestMultiplyChild(ChildRecipe, spawnPosition, direction);
             }
         }
 

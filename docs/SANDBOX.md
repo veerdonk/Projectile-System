@@ -73,7 +73,7 @@ Always: enter Play Mode from the imported `Yard.unity`, fire once, confirm the p
 | 31 | **Cannonball** (`Delivery.Arc`) | Aim at DummyTarget, fire — Spawn lofted the shot; barrel still shows the preview. Lower Speed until unreachable — no spawn |
 | 31 | **Hitscan** | No flying mesh; DummyTarget takes a Direct hit when you fire. Pierce Hitscan through the dummy line uses n+1 |
 | 32 | **Laser** | Hold Fire — red cylinder segments, DummyTarget ticks each pulse. Release — beam gone. Hold past lifetime — beam ends anyway |
-| 33 | Grid Multiply sample preset | Fire — children spawn on the numbered cells and fan by Spread. Square preset still looks like today |
+| 33 | **Multiply on hit (Grid)** | Children leave the hit on cells 1 (center), 2 (right), 3 (above), Spacing 2 m, fanned by Spread 20°. **Multiply on hit (Square)** still uses meters and parent forward |
 | 34 | Hitscan / Laser debug overlay | Play Mode overlay draws the Hitscan polyline and Beam segments |
 
 AreaEffect, GroundField, Recipe gravity, barrel pitch, needed-arc `BallisticAim` (Cannonball), Hitscan, and Laser are sample presets.

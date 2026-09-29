@@ -28,6 +28,7 @@ namespace Veerdonk.ProjectileSystem.Samples
         }
 
         [SerializeField] Preset[] presets;
+        [SerializeField] MultiplyPatternAsset[] multiplyPatterns = System.Array.Empty<MultiplyPatternAsset>();
         [SerializeField] GameObject cubeViewPrefab;
         GameObject laserViewPrefab;
         [SerializeField] SandboxSpawnPoint muzzle;
@@ -126,7 +127,7 @@ namespace Veerdonk.ProjectileSystem.Samples
             }
 
             GUILayout.Space(6f);
-            SampleRecipeSheet.Draw(working, presets);
+            SampleRecipeSheet.Draw(working, presets, multiplyPatterns);
             GUILayout.EndArea();
         }
 

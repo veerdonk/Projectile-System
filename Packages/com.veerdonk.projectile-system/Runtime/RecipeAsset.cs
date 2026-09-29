@@ -302,6 +302,8 @@ namespace Veerdonk.ProjectileSystem
         {
             if (pattern == null)
                 return new SquarePattern();
+            if (pattern is GridMultiplyPattern grid)
+                return grid.Clone();
             return Create<IMultiplyPattern>(pattern.GetType()) ?? new SquarePattern();
         }
 

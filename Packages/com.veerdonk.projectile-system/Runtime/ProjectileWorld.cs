@@ -699,13 +699,17 @@ namespace Veerdonk.ProjectileSystem
             float intervalSeconds = onInterval ? ReadIntervalSeconds(recipe) : 0f;
             for (int i = 0; i < modifiers.Length; i++)
             {
-                if (modifiers[i] is not Multiply multiply || multiply.Count <= 0)
+                if (modifiers[i] is not Multiply multiply)
+                    continue;
+
+                int childCount = multiply.Pattern.ResolveCount(multiply.Count);
+                if (childCount <= 0)
                     continue;
 
                 Recipe child = multiply.ChildRecipe;
                 int perParent = onInterval
-                    ? multiply.Count * IntervalSpawnsInFlight(recipe, child, intervalSeconds)
-                    : multiply.Count;
+                    ? childCount * IntervalSpawnsInFlight(recipe, child, intervalSeconds)
+                    : childCount;
                 PrewarmChain(
                     child,
                     count * perParent,

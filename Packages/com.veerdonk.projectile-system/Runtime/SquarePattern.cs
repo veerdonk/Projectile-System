@@ -18,6 +18,18 @@ namespace Veerdonk.ProjectileSystem
             return MultiplyPatternPlane.FromLocal(forward, Local(index, count, spread));
         }
 
+        /// <inheritdoc />
+        public Vector3 GetDirection(ModifierContext context, Vector3 forward, float spread, int index, int count)
+        {
+            return forward;
+        }
+
+        /// <inheritdoc />
+        public int ResolveCount(int requested)
+        {
+            return requested;
+        }
+
         static Vector2 Local(int index, int count, float s)
         {
             if (count <= 9)

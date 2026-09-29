@@ -83,6 +83,13 @@ namespace Veerdonk.ProjectileSystem.Samples.Editor
             if (cubePrefab != null)
                 so.FindProperty("cubeViewPrefab").objectReferenceValue = cubePrefab;
 
+            SerializedProperty grids = so.FindProperty("multiplyPatterns");
+            if (SamplePresetAssets.GridPattern != null && grids != null)
+            {
+                grids.arraySize = 1;
+                grids.GetArrayElementAtIndex(0).objectReferenceValue = SamplePresetAssets.GridPattern;
+            }
+
             so.ApplyModifiedPropertiesWithoutUndo();
 
             SampleYard.BuildIfNeeded(labGo.transform);
