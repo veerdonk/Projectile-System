@@ -11,6 +11,7 @@ namespace Veerdonk.ProjectileSystem
         readonly Collider[] overlapBuffer = new Collider[BufferSize];
         readonly RaycastHit[] castBuffer = new RaycastHit[BufferSize];
         readonly Dictionary<ProjectileId, Collider> ignoreColliderByInstance = new Dictionary<ProjectileId, Collider>();
+        readonly Dictionary<ProjectileId, Vector3> pierceExitByInstance = new Dictionary<ProjectileId, Vector3>();
         readonly HashSet<ProjectileId> holdIgnore = new HashSet<ProjectileId>();
 
         public HitTargetCatalog HitTargets { get; set; }
@@ -51,6 +52,7 @@ namespace Veerdonk.ProjectileSystem
                 && (!published || publishedTravel > 1e-4f || overlapClose <= publishedClose))
             {
                 ignoreColliderByInstance[instanceId] = hitCollider;
+                RememberPierceExit(instanceId, hitCollider, incoming);
                 return true;
             }
 
@@ -70,10 +72,23 @@ namespace Veerdonk.ProjectileSystem
                 && (!published || castTravel <= publishedTravel))
             {
                 ignoreColliderByInstance[instanceId] = hitCollider;
+                RememberPierceExit(instanceId, hitCollider, incoming);
                 return true;
             }
 
             return TakePublishedOrMiss(instanceId, origin, radius, ignore, castCount, published, publishedHit, ref hit);
+        }
+
+        public bool TryPierceExit(ProjectileId instanceId, Vector3 travel, out Vector3 surface)
+        {
+            if (pierceExitByInstance.TryGetValue(instanceId, out surface))
+                return true;
+
+            if (HitTargets != null && HitTargets.TryPierceExit(instanceId, travel, out surface))
+                return true;
+
+            surface = default;
+            return false;
         }
 
         public void CopyIgnore(ProjectileId from, ProjectileId to)
@@ -96,6 +111,7 @@ namespace Veerdonk.ProjectileSystem
         public void ClearIgnore(ProjectileId instanceId)
         {
             ignoreColliderByInstance.Remove(instanceId);
+            pierceExitByInstance.Remove(instanceId);
             holdIgnore.Remove(instanceId);
             HitTargets?.ClearIgnore(instanceId);
         }
@@ -223,12 +239,14 @@ namespace Veerdonk.ProjectileSystem
         {
             if (!published)
             {
+                pierceExitByInstance.Remove(instanceId);
                 RememberOrClearIgnore(instanceId, ignore, origin, radius, castCount);
                 hit = default;
                 return false;
             }
 
             HitTargets.NoteHit(instanceId, publishedHit.TargetId);
+            pierceExitByInstance.Remove(instanceId);
             RememberOrClearIgnore(instanceId, ignore, origin, radius, castCount);
             hit = publishedHit;
             return true;
@@ -301,6 +319,33 @@ namespace Veerdonk.ProjectileSystem
             }
 
             return found;
+        }
+
+        void RememberPierceExit(ProjectileId instanceId, Collider collider, Vector3 incoming)
+        {
+            if (collider == null)
+            {
+                pierceExitByInstance.Remove(instanceId);
+                return;
+            }
+
+            pierceExitByInstance[instanceId] = ExitSurface(collider, incoming);
+        }
+
+        static Vector3 ExitSurface(Collider collider, Vector3 incoming)
+        {
+            Vector3 dir = incoming.sqrMagnitude > 1e-12f ? incoming.normalized : Vector3.forward;
+            Bounds bounds = collider.bounds;
+            float reach = bounds.extents.magnitude + 1f;
+            Vector3 probe = bounds.center + dir * reach;
+            Vector3 surface = collider.ClosestPoint(probe);
+            if ((surface - probe).sqrMagnitude < 1e-8f)
+            {
+                probe = bounds.center + dir * (reach + bounds.size.magnitude + 1f);
+                surface = collider.ClosestPoint(probe);
+            }
+
+            return surface;
         }
 
         void RememberOrClearIgnore(ProjectileId instanceId, Collider ignore, Vector3 origin, float radius, int castCount)

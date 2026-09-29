@@ -39,6 +39,7 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 - `Patterns()` stays the procedural types (GridMultiplyPattern excluded). `PatternOptions()` appends every `MultiplyPatternAsset`. Picking an asset assigns `ToPattern()`, not the SO. `ClonePattern` copies grid fields.
 - Yard preset **Multiply on hit (Grid)** and `Samples~/Yard/Recipes/GridFan` (center 1, right 2, above 3, Spacing 2, Spread 20). `SampleLab.multiplyPatterns` feeds the sheet picker. Do **not** run **Projectile Lab > Rebuild** to refresh that preset: Rebuild writes `Assets/Samples/<version>/` and copies the scene back over `Samples~/Yard/Scenes/Yard.unity`, which swaps recipe guids. Copy changed sample scripts into the gitignored import (or reimport) before expecting Play Mode to match.
 - `HomingAcquirePoint` is still the only aim point. Do not add `AimPoint`.
+- OnHit Multiply keeps the hit normal unless Pierce still has charges on that Target or Basic hit. Then children spawn past the body along the travel direction from the start of the hit (list order does not matter). Spent charges, a World hit Pierce does not absorb, and no Pierce modifier keep the normal.
 - Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until a later phase touches those files.
 
 ## Do not

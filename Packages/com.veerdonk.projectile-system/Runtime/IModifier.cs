@@ -74,6 +74,30 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Pierce hits still available. Pierce decrements this and may cancel despawn.</summary>
         public int RemainingPierce { get; set; }
 
+        /// <summary>Pierce charges at the start of this stage, before <see cref="Pierce"/> decrements <see cref="RemainingPierce"/>.</summary>
+        internal int PierceAtContact { get; private set; }
+
+        /// <summary>Velocity when this stage was bound, before OnHit modifiers rewrite it.</summary>
+        internal Vector3 ContactVelocity { get; private set; }
+
+        /// <summary>True when this hit resolved a far surface for a pierce-through multiply.</summary>
+        internal bool PierceExitSet { get; private set; }
+
+        /// <summary>Far surface of the body just pierced, along travel. Meaningful when <see cref="PierceExitSet"/> is true.</summary>
+        internal Vector3 PierceExit { get; private set; }
+
+        internal void SetPierceExit(Vector3 surface)
+        {
+            PierceExit = surface;
+            PierceExitSet = true;
+        }
+
+        internal void ClearPierceExit()
+        {
+            PierceExitSet = false;
+            PierceExit = default;
+        }
+
         /// <summary>Bounce hits still available. Bounce decrements this and may cancel despawn.</summary>
         public int RemainingBounce { get; set; }
 
@@ -289,6 +313,9 @@ namespace Veerdonk.ProjectileSystem
             Gravity = state.Gravity;
             RemainingLifetime = state.RemainingLifetime;
             RemainingPierce = state.RemainingPierce;
+            PierceAtContact = state.RemainingPierce;
+            ContactVelocity = state.Velocity;
+            ClearPierceExit();
             RemainingBounce = state.RemainingBounce;
             Radius = state.Radius;
             Damage = state.Damage;

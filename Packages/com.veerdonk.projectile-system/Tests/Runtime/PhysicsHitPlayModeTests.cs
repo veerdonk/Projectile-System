@@ -184,6 +184,69 @@ namespace Veerdonk.ProjectileSystem.Tests
         }
 
         [UnityTest]
+        public IEnumerator Pierce1_Multiply_SpawnsChildPastDummyAlongTravel()
+        {
+            GameObject dummy = null;
+            GameObject poolRoot = null;
+            try
+            {
+                Vector3 center = new Vector3(0f, 0f, 4f);
+                dummy = CreateDummy(center, new TargetId(1));
+                poolRoot = new GameObject("TestPool");
+                var world = new ProjectileWorld(poolRoot.transform);
+                try
+                {
+                    Recipe child = CreateRecipe("pierce-child", speed: 8f, lifetime: 2f);
+                    Recipe parent = CreateRecipe("pierce-parent", speed: 20f, lifetime: 5f);
+                    parent.OnHit = new IModifier[] { new Pierce(1), new Multiply(1, child) };
+                    world.Prewarm(parent, 4);
+                    world.Prewarm(child, 4);
+
+                    int hitCount = 0;
+                    world.Hit += _ => hitCount++;
+
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = parent,
+                        Position = Vector3.zero,
+                        Direction = Vector3.forward
+                    });
+
+                    Physics.SyncTransforms();
+                    yield return null;
+
+                    TickUntil(world, 1f, w => hitCount > 0 && w.ActiveCount == 2);
+
+                    Assert.AreEqual(2, world.ActiveCount);
+                    Assert.AreEqual(1, hitCount);
+                    Assert.IsTrue(TryFindRecipe(world, child.Id, out Vector3 position, out Vector3 velocity));
+                    Vector3 exit = center + Vector3.forward * 0.5f;
+                    Vector3 expected = exit + Vector3.forward * (child.Radius + 0.01f);
+                    Assert.AreEqual(expected.x, position.x, 0.05f);
+                    Assert.AreEqual(expected.y, position.y, 0.05f);
+                    Assert.AreEqual(expected.z, position.z, 0.05f);
+                    Assert.Greater(Vector3.Dot(velocity.normalized, Vector3.forward), 0.9f);
+
+                    for (int i = 0; i < 12; i++)
+                        world.Tick(1f / 60f);
+
+                    Assert.AreEqual(1, hitCount);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
+            }
+            finally
+            {
+                if (dummy != null)
+                    Object.Destroy(dummy);
+                if (poolRoot != null)
+                    Object.Destroy(poolRoot);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator LifetimeOnly_ExpiresWithoutChild()
         {
             GameObject poolRoot = null;
@@ -929,6 +992,25 @@ namespace Veerdonk.ProjectileSystem.Tests
             cube.transform.position = position;
             cube.transform.localScale = Vector3.one * scale;
             return cube;
+        }
+
+        static bool TryFindRecipe(ProjectileWorld world, string recipeId, out Vector3 position, out Vector3 velocity)
+        {
+            for (int i = 0; ; i++)
+            {
+                if (!world.TryGetActiveAt(i, out _, out Vector3 at, out Vector3 vel, out Recipe recipe))
+                    break;
+                if (recipe.Id != recipeId)
+                    continue;
+
+                position = at;
+                velocity = vel;
+                return true;
+            }
+
+            position = default;
+            velocity = default;
+            return false;
         }
 
         static void TickUntilIdle(ProjectileWorld world, float maxSeconds)

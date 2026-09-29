@@ -7,7 +7,8 @@ namespace Veerdonk.ProjectileSystem
     /// <summary>
     /// Spawns <see cref="Count"/> instances of an explicit child Recipe from OnHit, OnExpire, or OnInterval.
     /// Positions come from <see cref="Pattern"/>. Square, Circle, and RandomCircle keep the parent
-    /// travel direction, or the hit normal on a hit, and read <see cref="Spread"/> as meters (0 stacks).
+    /// travel direction, or the hit normal when the hit is not pierced through, and read <see cref="Spread"/> as meters (0 stacks).
+    /// A Target or Basic hit with <see cref="Pierce"/> charges still left spawns children past that body along travel.
     /// <see cref="GridMultiplyPattern"/> places with its own Spacing and aims a cone using
     /// <see cref="Spread"/> as degrees. The Spread modifier scales that instance copy, not Spacing.
     /// On OnInterval the period comes from <see cref="Interval"/> on the Recipe's OnSpawn list.
@@ -101,7 +102,12 @@ namespace Veerdonk.ProjectileSystem
 
             Vector3 origin;
             Vector3 forward;
-            if (context.HasHit)
+            if (context.HasHit && ContinuesPastTarget(context))
+            {
+                forward = ContactTravel(context);
+                origin = context.PierceExitSet ? context.PierceExit : context.Hit.Point;
+            }
+            else if (context.HasHit)
             {
                 origin = context.Hit.Point;
                 forward = context.Hit.Normal;
@@ -120,6 +126,24 @@ namespace Veerdonk.ProjectileSystem
                 Vector3 direction = layout.GetDirection(context, forward, context.Spread, i, n);
                 context.RequestMultiplyChild(ChildRecipe, spawnPosition, direction);
             }
+        }
+
+        static bool ContinuesPastTarget(ModifierContext context)
+        {
+            if (context.PierceAtContact <= 0)
+                return false;
+
+            HitInfo hit = context.Hit;
+            return hit.Kind == HitKind.Target || hit.Protection == ProtectionLevel.Basic;
+        }
+
+        static Vector3 ContactTravel(ModifierContext context)
+        {
+            if (context.ContactVelocity.sqrMagnitude > 1e-12f)
+                return context.ContactVelocity;
+            if (context.Velocity.sqrMagnitude > 1e-12f)
+                return context.Velocity;
+            return Vector3.forward;
         }
 
         static Vector3 OffsetOffSurface(Vector3 point, Vector3 direction, float radius)

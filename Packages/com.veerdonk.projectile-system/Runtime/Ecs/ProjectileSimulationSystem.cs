@@ -912,6 +912,8 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             BindContext(entity, hasHit, hit, dt);
+            if (hasHit)
+                RecordPierceExit(hit);
 
             for (int i = 0; i < modifiers.Length; i++)
             {
@@ -981,6 +983,19 @@ namespace Veerdonk.ProjectileSystem
                 HomingAimPointUsed = projectile.HomingAimPointUsed
             };
             Bridge.ModifierContext.Bind(state, hasHit, hit, dt);
+        }
+
+        void RecordPierceExit(in HitInfo hit)
+        {
+            ModifierContext context = Bridge.ModifierContext;
+            if (context.PierceAtContact <= 0)
+                return;
+            if (hit.Kind != HitKind.Target && hit.Protection != ProtectionLevel.Basic)
+                return;
+            if (Bridge.HitQuery == null)
+                return;
+            if (Bridge.HitQuery.TryPierceExit(context.InstanceId, context.ContactVelocity, out Vector3 surface))
+                context.SetPierceExit(surface);
         }
 
         static Vector3 ToVector3(float3 value)

@@ -27,7 +27,7 @@ Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectil
 
 **Modifiers:** `Pierce`, `Bounce`, `Multiply`, `Multicast`, `Homing`, `Interval`, `Speed`, `Damage`, `Critical`, `Mana`, `Size`, `Spread`, `EffectRadius`, `Gravity`, `ApplyStatus`, `AreaEffect`, `GroundField`
 
-**Patterns:** `IMultiplyPattern` (`SquarePattern`, `CirclePattern`, `RandomCirclePattern`, `GridMultiplyPattern`), `MultiplyPatternAsset` (`Create > Projectile > Multiply Pattern`), `IMulticastPattern` (`RandomConePattern`). Square / Circle / RandomCircle use `Multiply.Spread` as meters and keep parent direction. A grid copies onto the Recipe: `Spacing` places the numbered cells, and `Spread` is the cone half-angle in degrees.
+**Patterns:** `IMultiplyPattern` (`SquarePattern`, `CirclePattern`, `RandomCirclePattern`, `GridMultiplyPattern`), `MultiplyPatternAsset` (`Create > Projectile > Multiply Pattern`), `IMulticastPattern` (`RandomConePattern`). Square / Circle / RandomCircle use `Multiply.Spread` as meters and keep parent direction (hit normal on a hit; travel direction past the body when Pierce still has charges). A grid copies onto the Recipe: `Spacing` places the numbered cells, and `Spread` is the cone half-angle in degrees.
 
 **Status:** `IStatusEffect`, `DummyStatusEffect`, `IStatusReceiver`
 
