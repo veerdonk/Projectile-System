@@ -4265,6 +4265,9 @@ MonoBehaviour:
   - label: Multiply on hit (Square)
     asset: {fileID: 11400000, guid: b62c9849f3ca255478a5f567ee018c32, type: 2}
     useBallisticAim: 0
+  - label: Multiply on hit (Grid)
+    asset: {fileID: 11400000, guid: 6f1a5014085f3c24a80b79acf7c055ec, type: 2}
+    useBallisticAim: 0
   - label: Interval multiply
     asset: {fileID: 11400000, guid: 8db8a65075a7b82459809c723c755c7e, type: 2}
     useBallisticAim: 0
@@ -4322,6 +4325,8 @@ MonoBehaviour:
   - label: GroundField status
     asset: {fileID: 11400000, guid: 68d84852330d8274d98f5125aed9d830, type: 2}
     useBallisticAim: 0
+  multiplyPatterns:
+  - {fileID: 11400000, guid: 067f2ff05f608c64585eb22833aa4b02, type: 2}
   cubeViewPrefab: {fileID: 8771233872668593771, guid: f2d697f6e2ce7eb4ca74ae6e3f0628b7, type: 3}
   muzzle: {fileID: 779215590}
   turret: {fileID: 979134304}

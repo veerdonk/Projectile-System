@@ -33,16 +33,11 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 33 — authored Multiply grid (scheduled; implement this phase only)**
+**Phase 33 — authored Multiply grid (implemented; do not start phase 34)**
 
-- `origin/main` is **0.1.9** (`6b37226`). IgnoreCollider / Delivery / Beam are already on main (0.1.6–0.1.8). The leftover debug overlay is **phase 34**. Do not implement 34 in the same session.
-- `RecipeAsset.ClonePattern` is `Activator` by type. That wipes `GridMultiplyPattern` fields. Copy Spacing + the cell numbers (`ToRecipe` / kit clone the same way). Do not leave a `UnityEngine.Object` alias on the live Recipe.
-- `RecipeAssetEditor.Patterns()` is TypeCache of `IMultiplyPattern` types (ModifierKit uses it too). The Pattern dropdowns must also list every `MultiplyPatternAsset` in the project; picking an asset copies onto `GridMultiplyPattern`.
-- Grid places with **Spacing** (meters between cell centers). `Multiply.Spread` on a grid is cone **half-angle degrees** of the farthest numbered cell from the geometric center. Square / Circle / RandomCircle still read Spread as meters and `GetDirection` returns parent forward. `Spread(n)` still scales instance `Multiply.Spread` only — not Spacing.
-- Default grid 3×3, minimum 2×2. Grow N→N+1 adds a bottom row and a right column. Shrink drops the last row and column, then compact-renumbers. Empty (no numbers) → spawn 0. `Multiply(n)` uses cells `1..n`.
-- One sample asset in `Samples~/Yard` and one Multiply preset that uses it. No Play Mode grid editor. Multicast unchanged. Keep Square / Circle / RandomCircle as the default procedural patterns.
-- Bump `package.json` to **0.1.10**. No git tag in the phase session. Do **not** add gizmos (phase 34).
-- Do **not** run **Projectile Lab > Rebuild** just to refresh presets after a `package.json` bump. Rebuild writes `Assets/Samples/<version>/` and copies that scene back over `Samples~/Yard/Scenes/Yard.unity`, which swaps recipe guids. The editor compiles the gitignored import, not `Samples~`. Copy changed sample scripts into that import (or reimport) before expecting Play Mode to match.
+- Package version is **0.1.10**. No git tag in the phase session. Phase 34 is the Play Mode debug overlay. Do not add gizmos.
+- `Patterns()` stays the procedural types (GridMultiplyPattern excluded). `PatternOptions()` appends every `MultiplyPatternAsset`. Picking an asset assigns `ToPattern()`, not the SO. `ClonePattern` copies grid fields.
+- Yard preset **Multiply on hit (Grid)** and `Samples~/Yard/Recipes/GridFan` (center 1, right 2, above 3, Spacing 2, Spread 20). `SampleLab.multiplyPatterns` feeds the sheet picker. Do **not** run **Projectile Lab > Rebuild** to refresh that preset: Rebuild writes `Assets/Samples/<version>/` and copies the scene back over `Samples~/Yard/Scenes/Yard.unity`, which swaps recipe guids. Copy changed sample scripts into the gitignored import (or reimport) before expecting Play Mode to match.
 - `HomingAcquirePoint` is still the only aim point. Do not add `AimPoint`.
 - Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until a later phase touches those files.
 

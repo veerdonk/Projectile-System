@@ -53,6 +53,18 @@ namespace Veerdonk.ProjectileSystem
             return best;
         }
 
+        /// <inheritdoc />
+        public Vector3 GetDirection(ModifierContext context, Vector3 forward, float spread, int index, int count)
+        {
+            return forward;
+        }
+
+        /// <inheritdoc />
+        public int ResolveCount(int requested)
+        {
+            return requested;
+        }
+
         static Vector3 SampleDisk(ModifierContext context, Vector3 forward, float spread)
         {
             float radius = spread * Mathf.Sqrt(context.NextFloat(0f, 1f));

@@ -19,7 +19,7 @@ namespace Veerdonk.ProjectileSystem.Samples
             childMenuKey = null;
         }
 
-        public static void Draw(Recipe recipe, SampleLab.Preset[] presets)
+        public static void Draw(Recipe recipe, SampleLab.Preset[] presets, MultiplyPatternAsset[] patternAssets = null)
         {
             if (recipe == null)
             {
@@ -41,16 +41,21 @@ namespace Veerdonk.ProjectileSystem.Samples
             recipe.Gravity = FloatField("grav", "Gravity", recipe.Gravity);
             recipe.PresentationId = TextField("pres", "Presentation id", recipe.PresentationId ?? "");
 
-            DrawList("OnSpawn", recipe, RecipeStage.OnSpawn, presets);
-            DrawList("OnTravel", recipe, RecipeStage.OnTravel, presets);
-            DrawList("OnTick", recipe, RecipeStage.OnTick, presets);
-            DrawList("OnInterval", recipe, RecipeStage.OnInterval, presets);
-            DrawList("OnHit", recipe, RecipeStage.OnHit, presets);
-            DrawList("OnExpire", recipe, RecipeStage.OnExpire, presets);
+            DrawList("OnSpawn", recipe, RecipeStage.OnSpawn, presets, patternAssets);
+            DrawList("OnTravel", recipe, RecipeStage.OnTravel, presets, patternAssets);
+            DrawList("OnTick", recipe, RecipeStage.OnTick, presets, patternAssets);
+            DrawList("OnInterval", recipe, RecipeStage.OnInterval, presets, patternAssets);
+            DrawList("OnHit", recipe, RecipeStage.OnHit, presets, patternAssets);
+            DrawList("OnExpire", recipe, RecipeStage.OnExpire, presets, patternAssets);
             GUILayout.EndScrollView();
         }
 
-        static void DrawList(string title, Recipe recipe, RecipeStage stage, SampleLab.Preset[] presets)
+        static void DrawList(
+            string title,
+            Recipe recipe,
+            RecipeStage stage,
+            SampleLab.Preset[] presets,
+            MultiplyPatternAsset[] patternAssets)
         {
             GUILayout.Space(4f);
             GUILayout.BeginHorizontal();
@@ -77,7 +82,7 @@ namespace Veerdonk.ProjectileSystem.Samples
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.BeginVertical();
-                DrawModifier(title + i, list[i], recipe, stage, i, presets);
+                DrawModifier(title + i, list[i], recipe, stage, i, presets, patternAssets);
                 GUILayout.EndVertical();
                 if (GUILayout.Button("Remove", GUILayout.Width(64f), GUILayout.Height(22f)))
                 {
@@ -118,7 +123,8 @@ namespace Veerdonk.ProjectileSystem.Samples
             Recipe recipe,
             RecipeStage stage,
             int index,
-            SampleLab.Preset[] presets)
+            SampleLab.Preset[] presets,
+            MultiplyPatternAsset[] patternAssets)
         {
             switch (modifier)
             {
@@ -162,7 +168,7 @@ namespace Veerdonk.ProjectileSystem.Samples
                     GUILayout.Label($"  ApplyStatus {EffectName(apply.Effect)}");
                     break;
                 case Multiply multiply:
-                    DrawMultiply(key, multiply, recipe, stage, index, presets);
+                    DrawMultiply(key, multiply, recipe, stage, index, presets, patternAssets);
                     break;
                 case Multicast multicast:
                     DrawMulticast(key, multicast, recipe, stage, index, presets);
@@ -212,14 +218,16 @@ namespace Veerdonk.ProjectileSystem.Samples
             Recipe recipe,
             RecipeStage stage,
             int index,
-            SampleLab.Preset[] presets)
+            SampleLab.Preset[] presets,
+            MultiplyPatternAsset[] patternAssets)
         {
             multiply.Count = IntStepper(key + "n", "Multiply", multiply.Count, 0, 16);
-            multiply.Spread = FloatField(key + "s", "  Spread m", multiply.Spread);
+            string spreadLabel = multiply.Pattern is GridMultiplyPattern ? "  Spread °" : "  Spread m";
+            multiply.Spread = FloatField(key + "s", spreadLabel, multiply.Spread);
             GUILayout.BeginHorizontal();
             GUILayout.Label("  Pattern", GUILayout.Width(140f));
             if (GUILayout.Button(PatternName(multiply.Pattern), GUILayout.Height(22f)))
-                multiply.Pattern = NextPattern(multiply.Pattern);
+                multiply.Pattern = NextPattern(multiply.Pattern, patternAssets);
             GUILayout.EndHorizontal();
             DrawChildPicker(
                 key + "c",
@@ -348,6 +356,8 @@ namespace Veerdonk.ProjectileSystem.Samples
 
         static string PatternName(IMultiplyPattern pattern)
         {
+            if (pattern is GridMultiplyPattern grid)
+                return string.IsNullOrEmpty(grid.SourceName) ? "Grid" : grid.SourceName;
             if (pattern is CirclePattern)
                 return "Circle";
             if (pattern is RandomCirclePattern)
@@ -355,13 +365,52 @@ namespace Veerdonk.ProjectileSystem.Samples
             return "Square";
         }
 
-        static IMultiplyPattern NextPattern(IMultiplyPattern pattern)
+        static IMultiplyPattern NextPattern(IMultiplyPattern pattern, MultiplyPatternAsset[] patternAssets)
         {
-            if (pattern is SquarePattern)
-                return new CirclePattern();
-            if (pattern is CirclePattern)
-                return new RandomCirclePattern();
-            return new SquarePattern();
+            IMultiplyPattern[] catalog = PatternCatalog(patternAssets);
+            int index = 0;
+            for (int i = 0; i < catalog.Length; i++)
+            {
+                if (!SamePattern(catalog[i], pattern))
+                    continue;
+                index = i;
+                break;
+            }
+
+            return catalog[(index + 1) % catalog.Length];
+        }
+
+        static IMultiplyPattern[] PatternCatalog(MultiplyPatternAsset[] patternAssets)
+        {
+            var list = new List<IMultiplyPattern>
+            {
+                new SquarePattern(),
+                new CirclePattern(),
+                new RandomCirclePattern()
+            };
+            if (patternAssets == null)
+                return list.ToArray();
+
+            var assets = new List<MultiplyPatternAsset>();
+            for (int i = 0; i < patternAssets.Length; i++)
+            {
+                if (patternAssets[i] != null)
+                    assets.Add(patternAssets[i]);
+            }
+
+            assets.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            for (int i = 0; i < assets.Count; i++)
+                list.Add(assets[i].ToPattern());
+            return list.ToArray();
+        }
+
+        static bool SamePattern(IMultiplyPattern catalogEntry, IMultiplyPattern current)
+        {
+            if (catalogEntry == null || current == null)
+                return false;
+            if (catalogEntry is GridMultiplyPattern grid && current is GridMultiplyPattern other)
+                return grid.HasSameLayout(other);
+            return catalogEntry.GetType() == current.GetType();
         }
 
         static string RecipeName(Recipe recipe, RecipeAsset asset)

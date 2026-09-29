@@ -2,15 +2,35 @@ using UnityEngine;
 
 namespace Veerdonk.ProjectileSystem
 {
-    /// <summary>Places the children a <see cref="Multiply"/> produces. Does not aim them.</summary>
+    /// <summary>
+    /// Places the children a <see cref="Multiply"/> produces.
+    /// Square, Circle, and RandomCircle do not aim them. <see cref="GridMultiplyPattern"/> does.
+    /// </summary>
     public interface IMultiplyPattern
     {
         /// <summary>
         /// World-space offset from the parent or hit point for child <paramref name="index"/> of
         /// <paramref name="count"/>. The plane is perpendicular to <paramref name="forward"/>.
-        /// Local +X is right, +Y is up. <paramref name="spread"/> of 0 is a zero offset.
+        /// Local +X is right, +Y is up. Procedural patterns treat <paramref name="spread"/> as meters
+        /// (0 is a zero offset). <see cref="GridMultiplyPattern"/> uses its own Spacing and ignores
+        /// <paramref name="spread"/> here.
         /// </summary>
         Vector3 GetOffset(ModifierContext context, Vector3 forward, float spread, int index, int count);
+
+        /// <summary>
+        /// Travel direction for child <paramref name="index"/> of <paramref name="count"/>.
+        /// Procedural patterns return <paramref name="forward"/>.
+        /// <see cref="GridMultiplyPattern"/> rotates toward that cell so the farthest numbered cell
+        /// is <paramref name="spread"/> degrees off <paramref name="forward"/> (0 returns forward).
+        /// </summary>
+        Vector3 GetDirection(ModifierContext context, Vector3 forward, float spread, int index, int count);
+
+        /// <summary>
+        /// How many children <see cref="Multiply"/> spawns for <paramref name="requested"/>.
+        /// Procedural patterns return <paramref name="requested"/>.
+        /// <see cref="GridMultiplyPattern"/> returns the smaller of that and the numbered-cell count.
+        /// </summary>
+        int ResolveCount(int requested);
     }
 
     static class MultiplyPatternPlane

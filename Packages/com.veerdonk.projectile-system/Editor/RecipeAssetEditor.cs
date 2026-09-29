@@ -50,10 +50,126 @@ namespace Veerdonk.ProjectileSystem
             return result.ToArray();
         }
 
-        /// <summary>Shipped <see cref="IMultiplyPattern"/> implementations.</summary>
+        /// <summary>Shipped procedural <see cref="IMultiplyPattern"/> implementations. <see cref="GridMultiplyPattern"/> is omitted; assets supply that.</summary>
         public static Type[] Patterns()
         {
-            return ConcreteImplementations<IMultiplyPattern>();
+            Type[] all = ConcreteImplementations<IMultiplyPattern>();
+            var result = new List<Type>(all.Length);
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] == typeof(GridMultiplyPattern))
+                    continue;
+                result.Add(all[i]);
+            }
+
+            return result.ToArray();
+        }
+
+        /// <summary>One procedural type, or one <see cref="MultiplyPatternAsset"/> whose layout is copied onto <see cref="GridMultiplyPattern"/>.</summary>
+        public readonly struct PatternOption
+        {
+            public PatternOption(Type type, MultiplyPatternAsset asset)
+            {
+                Type = type;
+                Asset = asset;
+            }
+
+            public Type Type { get; }
+            public MultiplyPatternAsset Asset { get; }
+
+            public string Label =>
+                Asset != null ? Asset.name : ObjectNames.NicifyVariableName(Type.Name);
+        }
+
+        /// <summary><see cref="Patterns"/>, then every <see cref="MultiplyPatternAsset"/> in the project, by name.</summary>
+        public static PatternOption[] PatternOptions()
+        {
+            Type[] types = Patterns();
+            MultiplyPatternAsset[] assets = FindPatternAssets();
+            var options = new PatternOption[types.Length + assets.Length];
+            for (int i = 0; i < types.Length; i++)
+                options[i] = new PatternOption(types[i], null);
+            for (int i = 0; i < assets.Length; i++)
+                options[types.Length + i] = new PatternOption(null, assets[i]);
+            return options;
+        }
+
+        /// <summary>
+        /// Index into <see cref="PatternOptions"/>. Procedural types keep the <see cref="Patterns"/> indexes.
+        /// A grid that matches an asset selects that asset. An unmatched grid returns -1.
+        /// Null and unknown values are <see cref="SquarePattern"/>.
+        /// </summary>
+        public static int PatternOptionIndex(object currentValue)
+        {
+            PatternOption[] options = PatternOptions();
+            int square = 0;
+            for (int i = 0; i < options.Length; i++)
+            {
+                if (options[i].Type == typeof(SquarePattern))
+                {
+                    square = i;
+                    break;
+                }
+            }
+
+            if (currentValue == null)
+                return square;
+
+            if (currentValue is GridMultiplyPattern grid)
+            {
+                for (int i = 0; i < options.Length; i++)
+                {
+                    MultiplyPatternAsset asset = options[i].Asset;
+                    if (asset != null && asset.ToPattern().HasSameLayout(grid))
+                        return i;
+                }
+
+                return -1;
+            }
+
+            Type type = currentValue.GetType();
+            for (int i = 0; i < options.Length; i++)
+            {
+                if (options[i].Type == type)
+                    return i;
+            }
+
+            return square;
+        }
+
+        /// <summary>
+        /// Writes a procedural pattern, or a field copy of a <see cref="MultiplyPatternAsset"/>, onto a SerializeReference field.
+        /// Indexes follow <see cref="PatternOptions"/>.
+        /// </summary>
+        public static void AssignPatternOption(SerializedProperty property, int index)
+        {
+            if (property == null)
+                throw new ArgumentNullException(nameof(property));
+
+            PatternOption[] options = PatternOptions();
+            if (index < 0 || index >= options.Length)
+                throw new ArgumentOutOfRangeException(nameof(index));
+
+            PatternOption option = options[index];
+            property.managedReferenceValue = option.Asset != null
+                ? option.Asset.ToPattern()
+                : Activator.CreateInstance(option.Type);
+        }
+
+        static MultiplyPatternAsset[] FindPatternAssets()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:MultiplyPatternAsset");
+            var assets = new List<MultiplyPatternAsset>(guids.Length);
+            for (int i = 0; i < guids.Length; i++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                MultiplyPatternAsset asset = AssetDatabase.LoadAssetAtPath<MultiplyPatternAsset>(path);
+                if (asset != null)
+                    assets.Add(asset);
+            }
+
+            assets.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            return assets.ToArray();
         }
 
         /// <summary>Shipped <see cref="IStatusEffect"/> implementations.</summary>
@@ -292,7 +408,43 @@ namespace Veerdonk.ProjectileSystem
 
         static void DrawPattern(ref Rect line, SerializedProperty property)
         {
-            DrawTypePopup(ref line, property, "Pattern", Patterns(), includeNone: false);
+            if (property == null)
+                return;
+
+            BuildPatternPopup(property.managedReferenceValue, out string[] labels, out int current, out int optionCount);
+            int next = EditorGUI.Popup(line, "Pattern", current, labels);
+            if (next != current && next >= 0 && next < optionCount)
+                AssignPatternOption(property, next);
+            line.y += Line;
+        }
+
+        internal static void DrawPatternPopupLayout(SerializedProperty property)
+        {
+            if (property == null)
+                return;
+
+            BuildPatternPopup(property.managedReferenceValue, out string[] labels, out int current, out int optionCount);
+            int next = EditorGUILayout.Popup("Pattern", current, labels);
+            if (next != current && next >= 0 && next < optionCount)
+                AssignPatternOption(property, next);
+        }
+
+        static void BuildPatternPopup(object currentValue, out string[] labels, out int current, out int optionCount)
+        {
+            PatternOption[] options = PatternOptions();
+            optionCount = options.Length;
+            current = PatternOptionIndex(currentValue);
+            labels = new string[optionCount + (current < 0 ? 1 : 0)];
+            for (int i = 0; i < optionCount; i++)
+                labels[i] = options[i].Label;
+            if (current >= 0)
+                return;
+
+            string name = currentValue is GridMultiplyPattern grid && !string.IsNullOrEmpty(grid.SourceName)
+                ? grid.SourceName
+                : "Grid";
+            labels[optionCount] = name;
+            current = optionCount;
         }
 
         static void DrawStatus(ref Rect line, SerializedProperty property)

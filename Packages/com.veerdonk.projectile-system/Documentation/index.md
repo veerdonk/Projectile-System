@@ -27,7 +27,7 @@ Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectil
 
 **Modifiers:** `Pierce`, `Bounce`, `Multiply`, `Multicast`, `Homing`, `Interval`, `Speed`, `Damage`, `Critical`, `Mana`, `Size`, `Spread`, `EffectRadius`, `Gravity`, `ApplyStatus`, `AreaEffect`, `GroundField`
 
-**Patterns:** `IMultiplyPattern` (`SquarePattern`, `CirclePattern`, `RandomCirclePattern`), `IMulticastPattern` (`RandomConePattern`)
+**Patterns:** `IMultiplyPattern` (`SquarePattern`, `CirclePattern`, `RandomCirclePattern`, `GridMultiplyPattern`), `MultiplyPatternAsset` (`Create > Projectile > Multiply Pattern`), `IMulticastPattern` (`RandomConePattern`). Square / Circle / RandomCircle use `Multiply.Spread` as meters and keep parent direction. A grid copies onto the Recipe: `Spacing` places the numbered cells, and `Spread` is the cone half-angle in degrees.
 
 **Status:** `IStatusEffect`, `DummyStatusEffect`, `IStatusReceiver`
 
@@ -39,7 +39,7 @@ Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectil
 
 **Views:** `IProjectileViewFactory`, `PrimitiveViewFactory`, `PrefabViewFactory`, `IGroundFieldViewFactory`, `PrimitiveGroundFieldViewFactory`, `PrefabGroundFieldViewFactory`, `ProjectileView`
 
-**Authoring:** `RecipeAsset`, `ModifierKit`, `ModifierKitLayer`, `Recipe.Clone`, `Recipe.Append`, `Recipe.Compose`, `RecipeStage`, `ModifierStageAttribute`
+**Authoring:** `RecipeAsset`, `ModifierKit`, `ModifierKitLayer`, `MultiplyPatternAsset`, `GridMultiplyPattern`, `Recipe.Clone`, `Recipe.Append`, `Recipe.Compose`, `RecipeStage`, `ModifierStageAttribute`
 
 Internal ECS types under `Runtime/Ecs/` are not a consumer API.
 
@@ -71,7 +71,7 @@ Import **Projectile Yard** from Package Manager, then open `Scenes/Yard.unity` a
 | --- | --- |
 | `Runtime/` | Façade, Recipes, modifiers, pooling, PhysX query |
 | `Runtime/Ecs/` | Internal simulation components and systems |
-| `Editor/` | `RecipeAsset` inspector |
+| `Editor/` | `RecipeAsset`, Modifier Kit, and Multiply Pattern inspectors |
 | `Tests/` | Edit Mode and Play Mode tests |
 | `Samples~/Yard/` | Play Mode sample (hidden until Import) |
 | `Documentation/` | This file |

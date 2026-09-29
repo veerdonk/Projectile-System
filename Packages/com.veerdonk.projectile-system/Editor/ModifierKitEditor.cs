@@ -204,16 +204,7 @@ namespace Veerdonk.ProjectileSystem
 
         static void DrawPatternPopup(SerializedProperty property)
         {
-            Type[] types = RecipeAssetEditor.Patterns();
-            var labels = new string[types.Length];
-            for (int i = 0; i < types.Length; i++)
-                labels[i] = ObjectNames.NicifyVariableName(types[i].Name);
-
-            object currentValue = property.managedReferenceValue;
-            int current = PatternPopupIndex(currentValue);
-            int next = EditorGUILayout.Popup("Pattern", current, labels);
-            if (next != current)
-                AssignMultiplyPattern(property, next);
+            RecipeAssetEditor.DrawPatternPopupLayout(property);
         }
 
         /// <summary>
@@ -240,21 +231,21 @@ namespace Veerdonk.ProjectileSystem
         }
 
         /// <summary>
-        /// Popup index for a Multiply pattern. Indexes follow <see cref="RecipeAssetEditor.Patterns"/>.
-        /// A null or unknown value is <see cref="SquarePattern"/>, and the inspector does not write that
-        /// stand-in until the popup index changes.
+        /// Popup index for a Multiply pattern. Indexes follow <see cref="RecipeAssetEditor.PatternOptions"/>
+        /// for a procedural type or a grid that matches a project asset.
+        /// A null, unknown, or unmatched value reports <see cref="SquarePattern"/>. The inspector does not
+        /// write that stand-in until the popup index changes. Unmatched grids are drawn by
+        /// <see cref="RecipeAssetEditor.DrawPatternPopupLayout"/>, which keeps their label.
         /// </summary>
         public static int PatternPopupIndex(object currentValue)
         {
+            int index = RecipeAssetEditor.PatternOptionIndex(currentValue);
+            if (index >= 0)
+                return index;
+
             Type[] types = RecipeAssetEditor.Patterns();
             int square = IndexOf(types, typeof(SquarePattern));
-            if (square < 0)
-                square = 0;
-            if (currentValue == null)
-                return square;
-
-            int found = IndexOf(types, currentValue.GetType());
-            return found >= 0 ? found : square;
+            return square < 0 ? 0 : square;
         }
 
         /// <summary>
