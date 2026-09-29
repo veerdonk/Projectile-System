@@ -19,7 +19,7 @@ This file is not the pairing spec for the package repo.
 - Do not expect an OnInterval kit layer to pulse by itself. `Interval` has to be on the base, or on an OnSpawn layer. Kits do not insert it.
 - Do not invent wrap-the-next-spell, behaviour trees, or a graph. Extend with `IModifier` on those lists (`[ModifierStage]`).
 - Child shots need an **explicit** child `Recipe`. They do not inherit the parent’s lists.
-- Multiply layout is an `IMultiplyPattern`. Square, Circle, and RandomCircle read `Multiply.Spread` as meters and keep parent forward / hit normal. An authored grid is **Create > Projectile > Multiply Pattern**. Picking it copies Spacing and the cell numbers onto `GridMultiplyPattern`. Spread on that copy is cone degrees. Do not put the asset on the live Recipe. `Spread(n)` does not scale Spacing.
+- Multiply layout is an `IMultiplyPattern`. Square, Circle, and RandomCircle read `Multiply.Spread` as meters and keep parent forward, or the hit normal when the hit is not pierced through. A Target or Basic hit with Pierce charges still left spawns the children past that body along travel. Spent pierce charges keep the normal. An authored grid is **Create > Projectile > Multiply Pattern**. Picking it copies Spacing and the cell numbers onto `GridMultiplyPattern`. Spread on that copy is cone degrees. Do not put the asset on the live Recipe. `Spread(n)` does not scale Spacing.
 
 ## Hits and game objects
 

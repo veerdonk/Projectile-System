@@ -93,6 +93,19 @@ namespace Veerdonk.ProjectileSystem
             ignored[instanceId] = id;
         }
 
+        public bool TryPierceExit(ProjectileId instanceId, Vector3 travel, out Vector3 surface)
+        {
+            surface = default;
+            if (!ignored.TryGetValue(instanceId, out TargetId id))
+                return false;
+            if (!TryFind(id, out Volume volume))
+                return false;
+
+            Vector3 dir = travel.sqrMagnitude > 1e-12f ? travel.normalized : Vector3.forward;
+            surface = volume.Position + dir * volume.Radius;
+            return true;
+        }
+
         public void ClearIgnore(ProjectileId instanceId)
         {
             ignored.Remove(instanceId);

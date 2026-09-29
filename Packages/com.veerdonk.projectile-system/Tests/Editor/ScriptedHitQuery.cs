@@ -121,6 +121,15 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             return true;
         }
 
+        public bool TryPierceExit(ProjectileId instanceId, Vector3 travel, out Vector3 surface)
+        {
+            if (hitTargets != null && hitTargets.TryPierceExit(instanceId, travel, out surface))
+                return true;
+
+            surface = default;
+            return false;
+        }
+
         static float QueuedTravel(Vector3 origin, Vector3 direction, Vector3 point)
         {
             if (direction.sqrMagnitude <= 1e-12f)

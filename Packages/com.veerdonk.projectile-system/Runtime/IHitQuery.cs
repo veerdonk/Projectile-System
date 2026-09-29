@@ -13,6 +13,12 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>SphereCast along a move segment. False means no hit.</summary>
         bool TryCast(ProjectileId instanceId, Vector3 origin, Vector3 direction, float distance, float radius, out HitInfo hit);
 
+        /// <summary>
+        /// Far surface of the body this instance just hit, along <paramref name="travel"/>.
+        /// False when that hit has no collider and no published volume.
+        /// </summary>
+        bool TryPierceExit(ProjectileId instanceId, Vector3 travel, out Vector3 surface);
+
         /// <summary>Sphere overlap of Targets for AreaEffect. Ignores World and other projectiles. Skips Strong.</summary>
         void Overlap(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results);
 
