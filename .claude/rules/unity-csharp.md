@@ -1,0 +1,13 @@
+---
+paths:
+  - "**/*.cs"
+---
+
+# Unity C#
+
+- Package runtime code goes under `Packages/com.veerdonk.projectile-system/Runtime/` and its asmdef. Sandbox code stays in `Assets/`.
+- Simulation types: no `MonoBehaviour`, `GameObject`, or `UnityEngine.Object` fields.
+- No `UnityEditor` in runtime. No `FindObjectOfType`. No per-instance `Update`; tick via `IProjectileWorld.Tick`.
+- Spawn only through the pool. No `Instantiate`/`Destroy` for instances outside pooling.
+- No LINQ in `Tick` or hit/move hot paths.
+- XmlDoc on public package APIs.
