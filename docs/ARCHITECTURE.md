@@ -169,6 +169,10 @@ interface IProjectileWorld
     event Action<StatusInfo> StatusApplied; // after OnHit / area / ground-field flush (ADR-011, ADR-016, ADR-022)
     event Action<SpawnInfo> Spawned;        // ADR-039. Every live instance, game or package-made. Before its first HomingLocked / Hit / Expired
     event Action<HomingLockInfo> HomingLocked; // ADR-039. Assigned at spawn (after Spawned), acquired, re-acquired. Not while kept
+    event Action<GroundFieldInfo> GroundFieldPlanted;      // before the immediate pulse (ADR-040)
+    event Action<GroundFieldPulseInfo> GroundFieldPulsed;  // every pulse, empty or not, after that pulse's Area Hits
+    event Action<GroundFieldInfo> GroundFieldEnded;        // lifetime out (Expired) or world Dispose (Disposed)
+    event Action<AreaBurstInfo> AreaBurst;                 // every AreaEffect overlap, before its Area Hits; occupancy once
 }
 
 struct SpawnInfo { ProjectileId InstanceId; ProjectileId ParentId; SpawnCause Cause; Vector3 Position; Vector3 Direction; Recipe Recipe; }

@@ -801,6 +801,19 @@ Bare phase. Hitscan has no mesh; Beam segments are easy to miss. Add Play Mode d
 
 **Stop.**
 
+## Phase 35 — Ground field and area burst events
+
+Fields and `AreaEffect` bursts report to the game so it can play effects. ADR-040.
+
+**In scope**
+
+- `GroundFieldId`; events `GroundFieldPlanted`, `GroundFieldPulsed`, `GroundFieldEnded`, `AreaBurst` on `IProjectileWorld`. Pulsed is raised after that pulse's Area Hits, including empty pulses and the immediate pulse in `Plant`. Ended carries `Expired` or `Disposed`. AreaBurst is raised before its Area Hits; occupancy only when first made
+- Edit Mode tests in `FieldAreaEventTests`. Docs, CHANGELOG **0.2.0**, `package.json` bump. No git tag in the phase session
+
+**Out of scope:** view fade or pooling changes; Sandbox consumers; the debug overlay (phase 34)
+
+**Stop.**
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

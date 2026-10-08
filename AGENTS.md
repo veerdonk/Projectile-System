@@ -33,9 +33,16 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 33b — shot lifecycle events (implemented, all 278 tests pass; do not start phase 34)**
+**Phase 35 — ground field and area burst events (implemented; do not start phase 34)**
 
-- Package version is **0.1.12** (the `v0.1.11` tag already exists, `package.json` was still 0.1.10). No git tag in the phase session. Phase 34 is the Play Mode debug overlay. Do not add gizmos.
+- Package version is **0.2.0**. No git tag in the phase session. Phase 34 (Play Mode debug overlay) is still next; phase 35 was inserted for Trello card i9g6LSBf. Move the card list only when the human says so.
+- New files: `Runtime/GroundFieldEvents.cs`, `Tests/Editor/FieldAreaEventTests.cs`. New `.meta` files are made by Unity on import; check they are committed.
+- Events live on `IProjectileWorld` (ADR-040). `GroundFieldSet` takes optional planted/pulsed/ended callbacks; `SimulationBridge.AreaBurst` carries bursts. Pulsed comes after that pulse's Area Hits; AreaBurst comes before its Area Hits; occupancy burst only on first overlap.
+- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Do **not** run **Projectile Lab > Rebuild** to refresh presets (it overwrites `Samples~/Yard/Scenes/Yard.unity`). Catalog `Compact()` leftover from phase 29 still applies.
+
+**Also from phase 33b (shot lifecycle events, merged from main):**
+
+- That phase shipped as 0.1.12. No git tag in the phase session. Phase 34 is the Play Mode debug overlay. Do not add gizmos.
 - `Spawned` is raised in `SpawnCore` before `RunSpawnStages`, so `Direction` is the Arc-solved, pre-OnSpawn direction. Assigned `HomingLocked` follows it there. Acquired locks queue on `ModifierContext.AcquiredHomingLocks` and flush in `RunStage`, `RunIntervals`, and `KinkHitscan`.
 - `ExpireReason` is threaded through `Despawn(..., reason)`. A Hitscan ray that ends on a hit is `Hit`. `HitOutcome` compares Pierce / Bounce charges before and after the OnHit stage.
 - A Beam re-lock after a silent `AimBeam` redraw can raise `HomingLocked` again (Beam is outside the card's compositions). Ground field and area-effect events are a separate card.

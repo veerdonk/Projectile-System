@@ -2,7 +2,7 @@
 
 Use this package to spawn, simulate, and pool kinematic projectiles. Games own HP, camera, input, and the player. The runtime owns movement, hits, pooling, and Recipe composition.
 
-Call `IProjectileWorld.Spawn` with a `SpawnRequest` (Recipe, position, direction). Call `Tick` once per frame. Listen to `Hit`, `Expired`, and `StatusApplied`. For presentation, `Spawned` reports every live instance (game or package-made, with `ParentId` and `SpawnCause`), `HomingLocked` reports each new lock, `ExpireInfo` carries the last pose and an `ExpireReason`, and `HitInfo.Outcome` says whether a Direct hit ended, pierced, bounced, or continued. Do not tick instances yourself.
+Call `IProjectileWorld.Spawn` with a `SpawnRequest` (Recipe, position, direction). Call `Tick` once per frame. Listen to `Hit`, `Expired`, and `StatusApplied`. For presentation, `Spawned` reports every live instance (game or package-made, with `ParentId` and `SpawnCause`), `HomingLocked` reports each new lock, `ExpireInfo` carries the last pose and an `ExpireReason`, and `HitInfo.Outcome` says whether a Direct hit ended, pierced, bounced, or continued. For effects, listen to `GroundFieldPlanted`, `GroundFieldPulsed` (raised after that pulse's Area hits, even over an empty disk), `GroundFieldEnded`, and `AreaBurst` (before its Area hits; occupancy only when first made). Do not tick instances yourself.
 
 ## Recipe stage lists
 

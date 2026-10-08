@@ -9,7 +9,7 @@ This file is not the pairing spec for the package repo.
 - One `ProjectileWorld` per play session. `Tick(dt)` once per frame from **one** driver. Instances must not have their own `Update`.
 - `Spawn(new SpawnRequest { Recipe, Position, Direction })`. Do not add a second world type or a `Spawn` overload that aims for you.
 - `Dispose()` when the scene unloads. The world owns an isolated Entities `World` (not the default injection world).
-- Listen to `Hit`, `Expired`, `StatusApplied`. `Spawned` and `HomingLocked` are for presentation (ADR-039). The package does not subtract HP, spend mana, roll crits, or tick status DoT.
+- Listen to `Hit`, `Expired`, `StatusApplied`. `Spawned` and `HomingLocked` are for presentation (ADR-039). For effects also `GroundFieldPlanted` / `GroundFieldPulsed` / `GroundFieldEnded` and `AreaBurst` (ADR-040). The package does not subtract HP, spend mana, roll crits, or tick status DoT.
 
 ## Recipes
 

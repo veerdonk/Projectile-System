@@ -5,6 +5,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-10-08
+
+### Added
+
+- `IProjectileWorld` events `GroundFieldPlanted`, `GroundFieldPulsed`, `GroundFieldEnded`, and `AreaBurst`, with `GroundFieldId`, `GroundFieldInfo`, `GroundFieldPulseInfo`, `GroundFieldEndReason`, and `AreaBurstInfo` (ADR-039). Pulses over an empty disk and bursts with no target inside now raise. Additive; existing events and behavior are unchanged.
+
 ## [0.1.12] - 2026-10-08
 
 ### Added
