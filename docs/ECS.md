@@ -16,7 +16,7 @@ How this package uses DOTS. Not a Unity ECS tutorial. Read this if you already k
 | **`float3`** | `Vector3` for jobs (`Unity.Mathematics`) | Internal. Public API stays `Vector3`. |
 | **Recipe / `IModifier`** | Ordinary classes (definition layer) | Cannot live on `IComponentData`. Entity holds `RecipeIndex`; `RecipeStore` looks up the Recipe. |
 
-`IProjectileWorld` is still the façade. Sandbox, tests, and games call `Spawn` / `Tick` and listen to `Hit` / `Expired` / `StatusApplied`. They do not create entities.
+`IProjectileWorld` is still the façade. Sandbox, tests, and games call `Spawn` / `Tick` and listen to `Hit` / `Expired` / `StatusApplied` / `Spawned` / `HomingLocked`. They do not create entities.
 
 ## What we did not take
 

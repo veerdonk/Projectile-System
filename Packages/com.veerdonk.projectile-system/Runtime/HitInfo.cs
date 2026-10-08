@@ -87,5 +87,7 @@ namespace Veerdonk.ProjectileSystem
         public float CriticalChance;
         /// <summary>Instance effect radius at sample time.</summary>
         public float EffectRadius;
+        /// <summary>What happened to the shot after this Direct hit. <see cref="HitOutcome.None"/> for Area, occupancy, and ground hits.</summary>
+        public HitOutcome Outcome;
     }
 }

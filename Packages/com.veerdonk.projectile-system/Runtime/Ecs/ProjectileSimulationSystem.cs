@@ -16,6 +16,7 @@ namespace Veerdonk.ProjectileSystem
         public ModifierContext ModifierContext;
         public System.Action<HitInfo> Hit;
         public System.Action<ExpireInfo> Expired;
+        public System.Action<HomingLockInfo> HomingLocked;
         public System.Action<StatusInfo> StatusApplied;
         public GroundFieldSet GroundFields;
     }
@@ -54,7 +55,7 @@ namespace Veerdonk.ProjectileSystem
             }
 
             for (int i = 0; i < expire.Length; i++)
-                Despawn(expire[i], runOnHit: false, default);
+                Despawn(expire[i], runOnHit: false, default, reason: ExpireReason.Lifetime);
             expire.Dispose();
 
             var live = new NativeList<Entity>(Allocator.Temp);
@@ -110,7 +111,7 @@ namespace Veerdonk.ProjectileSystem
 
         internal void DespawnInstance(Entity entity)
         {
-            Despawn(entity, runOnHit: false, default);
+            Despawn(entity, runOnHit: false, default, reason: ExpireReason.Despawned);
         }
 
         /// <summary>
@@ -253,7 +254,7 @@ namespace Veerdonk.ProjectileSystem
                         FinishBeamPulse(entity);
                     }
                     else
-                        Despawn(entity, runOnHit: false, default);
+                        Despawn(entity, runOnHit: false, default, reason: ExpireReason.HitscanEnd);
 
                     return;
                 }
@@ -290,7 +291,7 @@ namespace Veerdonk.ProjectileSystem
             if (keepInstance)
                 FinishBeamPulse(entity);
             else
-                Despawn(entity, runOnHit: false, default);
+                Despawn(entity, runOnHit: false, default, reason: ExpireReason.HitscanEnd);
         }
 
         void AdvanceBeam(Entity entity, Vector3 position)
@@ -582,6 +583,7 @@ namespace Veerdonk.ProjectileSystem
             Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
             em.SetComponentData(entity, projectile);
             em.SetComponentData(entity, velocity);
+            FlushHomingLocks();
         }
 
         void TryMoveOrHit(Entity entity)
@@ -622,7 +624,12 @@ namespace Veerdonk.ProjectileSystem
                 view.SetPose(to, ToVector3(velocity.Value));
         }
 
-        bool Despawn(Entity entity, bool runOnHit, in HitInfo hit, bool expireInstance = true)
+        bool Despawn(
+            Entity entity,
+            bool runOnHit,
+            in HitInfo hit,
+            bool expireInstance = true,
+            ExpireReason reason = ExpireReason.Other)
         {
             EntityManager em = EntityManager;
             if (!em.Exists(entity) || !em.IsEnabled(entity))
@@ -634,7 +641,7 @@ namespace Veerdonk.ProjectileSystem
             if (runOnHit && hit.Protection == ProtectionLevel.Strong)
             {
                 if (expireInstance)
-                    ReturnToPool(entity, projectile);
+                    ReturnToPool(entity, projectile, ExpireReason.Absorbed);
                 return false;
             }
 
@@ -644,8 +651,10 @@ namespace Veerdonk.ProjectileSystem
                 Projectile afterHit = em.GetComponentData<Projectile>(entity);
                 Homing.ReleaseLockOnTargetHit(ref afterHit, hit);
                 em.SetComponentData(entity, afterHit);
+                HitInfo raised = hit;
+                raised.Outcome = ResolveOutcome(projectile, afterHit, Bridge.ModifierContext.CancelDespawn);
                 if (!Bridge.ModifierContext.DirectHitSuppressed)
-                    Bridge.Hit?.Invoke(hit);
+                    Bridge.Hit?.Invoke(raised);
                 if (!Bridge.ModifierContext.DirectStatusSuppressed)
                     FlushStatusApplied(hit);
                 FlushAreaOverlaps(entity, OccupancyOnHit);
@@ -663,16 +672,42 @@ namespace Veerdonk.ProjectileSystem
             RunStage(recipe.OnExpire, entity, hasHit: runOnHit, hit, dt: 0f);
             FlushGroundFields(entity);
 
-            ReturnToPool(entity, em.GetComponentData<Projectile>(entity));
+            ReturnToPool(
+                entity,
+                em.GetComponentData<Projectile>(entity),
+                runOnHit ? ExpireReason.Hit : reason);
             return false;
         }
 
-        void ReturnToPool(Entity entity, in Projectile projectile)
+        static HitOutcome ResolveOutcome(in Projectile before, in Projectile after, bool cancelDespawn)
         {
+            if (!cancelDespawn)
+                return HitOutcome.Ended;
+            if (after.RemainingPierce < before.RemainingPierce)
+                return HitOutcome.Pierced;
+            if (after.RemainingBounce < before.RemainingBounce)
+                return HitOutcome.Bounced;
+            return HitOutcome.Continued;
+        }
+
+        void ReturnToPool(Entity entity, in Projectile projectile, ExpireReason reason)
+        {
+            EntityManager em = EntityManager;
             var instanceId = new ProjectileId(projectile.Id);
+            Vector3 position = ToVector3(em.GetComponentData<ProjectilePosition>(entity).Value);
+            Vector3 velocity = ToVector3(em.GetComponentData<ProjectileVelocity>(entity).Value);
+            Vector3 direction = velocity.sqrMagnitude > 1e-12f
+                ? velocity.normalized
+                : ToVector3(projectile.BeamDirection);
             ClearOccupancy(instanceId);
             Bridge.Pool.Return(projectile.RecipeIndex, entity);
-            Bridge.Expired?.Invoke(new ExpireInfo { InstanceId = instanceId });
+            Bridge.Expired?.Invoke(new ExpireInfo
+            {
+                InstanceId = instanceId,
+                Position = position,
+                Direction = direction,
+                Reason = reason
+            });
         }
 
         void ContinueAfterHit(Entity entity, in HitInfo hit)
@@ -732,6 +767,7 @@ namespace Veerdonk.ProjectileSystem
                 Bridge.ModifierContext.ApplyTo(ref projectile, ref intervalVelocity);
                 em.SetComponentData(entity, projectile);
                 em.SetComponentData(entity, intervalVelocity);
+                FlushHomingLocks();
                 FlushAreaOverlaps(entity, OccupancyOnInterval);
             }
 
@@ -935,7 +971,16 @@ namespace Veerdonk.ProjectileSystem
             Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
             em.SetComponentData(entity, projectile);
             em.SetComponentData(entity, velocity);
+            FlushHomingLocks();
             SyncViewRadius(entity);
+        }
+
+        void FlushHomingLocks()
+        {
+            IReadOnlyList<HomingLockInfo> locks = Bridge.ModifierContext.AcquiredHomingLocks;
+            for (int i = 0; i < locks.Count; i++)
+                Bridge.HomingLocked?.Invoke(locks[i]);
+            Bridge.ModifierContext.ClearHomingLocks();
         }
 
         void SyncViewRadius(Entity entity)
