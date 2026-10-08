@@ -5,6 +5,21 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.12] - 2026-10-08
+
+### Added
+
+- `IProjectileWorld.Spawned` (`SpawnInfo`: `InstanceId`, `ParentId`, `SpawnCause` Game / Multicast / Multiply / Other, `Position`, `Direction`, `Recipe`). Raised once for every live instance, including package-made spawns and Hitscan (before its `Hit` and `Expired`). An unreachable Arc raises nothing.
+- `IProjectileWorld.HomingLocked` (`HomingLockInfo`). Raised for a lock assigned at spawn (right after `Spawned`) and for every acquire or re-acquire. Not raised while a lock is kept.
+- `ExpireInfo.Position`, `Direction`, and `Reason` (`ExpireReason`: Lifetime, Hit, Absorbed, Despawned, HitscanEnd, Other).
+- `HitInfo.Outcome` (`HitOutcome`: None, Ended, Pierced, Bounced, Continued). Area, occupancy, and ground hits stay `None`.
+- Event order a listener can rely on: `Spawned` before that instance's first `HomingLocked`, `Hit`, or `Expired`; a child's `Spawned` after the parent's `Hit`; `Hit` before the same instance's `Expired`.
+- Usage guide with a worked example: "Shot lifecycle events (presentation)" in `Documentation/index.md`.
+
+### Upgrading
+
+Nothing to change. No existing event, field, or behavior changed, and the new struct fields default to zero (`Reason = Lifetime`, `Outcome = None`). Code that constructs `HitInfo` or `ExpireInfo` with object initializers still compiles. Custom `IProjectileWorld` implementations (the package ships only `ProjectileWorld`) must add the two new events.
+
 ## [0.1.10] - 2026-09-28
 
 ### Added

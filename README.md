@@ -2,7 +2,7 @@
 
 Unity 6 LTS UPM package **`com.veerdonk.projectile-system`**. MIT licensed.
 
-Games spawn through `IProjectileWorld`, tick once per frame, and listen to `Hit` / `Expired` / `StatusApplied`. The package does not apply HP, spend mana, or own the player, camera, or input.
+Games spawn through `IProjectileWorld`, tick once per frame, and listen to `Hit` / `Expired` / `StatusApplied` (plus `Spawned` / `HomingLocked` for presentation). The package does not apply HP, spend mana, or own the player, camera, or input.
 
 ## Add the package to a Unity project
 

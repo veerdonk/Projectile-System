@@ -18,6 +18,7 @@ namespace Veerdonk.ProjectileSystem
     {
         readonly List<SpawnRequest> pendingSpawns;
         readonly List<IStatusEffect> requestedStatuses = new List<IStatusEffect>();
+        readonly List<HomingLockInfo> acquiredHomingLocks = new List<HomingLockInfo>();
         readonly List<AreaOverlapRequest> requestedAreas = new List<AreaOverlapRequest>();
         readonly List<GroundFieldPlantRequest> requestedGroundFields = new List<GroundFieldPlantRequest>();
         bool suppressDirectHit;
@@ -163,7 +164,7 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Queues an instance of an explicit child Recipe. Spawned after the current instance finishes this stage.</summary>
         public void RequestSpawn(Recipe recipe, Vector3 position, Vector3 direction)
         {
-            Enqueue(recipe, position, direction, default, default);
+            Enqueue(recipe, position, direction, default, default, SpawnCause.Other);
         }
 
         /// <summary>
@@ -227,6 +228,24 @@ namespace Veerdonk.ProjectileSystem
 
         internal IReadOnlyList<IStatusEffect> RequestedStatuses => requestedStatuses;
 
+        internal IReadOnlyList<HomingLockInfo> AcquiredHomingLocks => acquiredHomingLocks;
+
+        internal void NoteHomingAcquired(HomingTarget target)
+        {
+            acquiredHomingLocks.Add(new HomingLockInfo
+            {
+                InstanceId = InstanceId,
+                TargetId = target.Id,
+                Position = Position,
+                Kind = HomingLockKind.Acquired
+            });
+        }
+
+        internal void ClearHomingLocks()
+        {
+            acquiredHomingLocks.Clear();
+        }
+
         internal IReadOnlyList<AreaOverlapRequest> RequestedAreaOverlaps => requestedAreas;
 
         internal IReadOnlyList<GroundFieldPlantRequest> RequestedGroundFields => requestedGroundFields;
@@ -262,12 +281,12 @@ namespace Veerdonk.ProjectileSystem
 
         internal void RequestMulticastExtra(Recipe recipe, Vector3 position, Vector3 direction)
         {
-            Enqueue(recipe, position, direction, ChainBudget.Inherit(MulticastGenerationsForExtras), default, copyAimPoint: true);
+            Enqueue(recipe, position, direction, ChainBudget.Inherit(MulticastGenerationsForExtras), default, SpawnCause.Multicast, copyAimPoint: true);
         }
 
         internal void RequestMultiplyChild(Recipe recipe, Vector3 position, Vector3 direction)
         {
-            Enqueue(recipe, position, direction, default, ChainBudget.Inherit(MultiplyGenerationsLeft - 1));
+            Enqueue(recipe, position, direction, default, ChainBudget.Inherit(MultiplyGenerationsLeft - 1), SpawnCause.Multiply);
         }
 
         void Enqueue(
@@ -276,6 +295,7 @@ namespace Veerdonk.ProjectileSystem
             Vector3 direction,
             ChainBudget multicast,
             ChainBudget multiply,
+            SpawnCause cause,
             bool copyAimPoint = false)
         {
             if (recipe == null)
@@ -287,6 +307,8 @@ namespace Veerdonk.ProjectileSystem
                 Position = position,
                 Direction = direction,
                 InheritIgnoreFrom = InstanceId,
+                ParentId = InstanceId,
+                Cause = cause,
                 MulticastChain = multicast,
                 MultiplyChain = multiply,
                 HomingAcquirePointSet = copyAimPoint && HomingAcquirePointSet,
@@ -328,6 +350,7 @@ namespace Veerdonk.ProjectileSystem
             Hit = hit;
             CancelDespawn = false;
             requestedStatuses.Clear();
+            acquiredHomingLocks.Clear();
             requestedAreas.Clear();
             requestedGroundFields.Clear();
             suppressDirectHit = false;

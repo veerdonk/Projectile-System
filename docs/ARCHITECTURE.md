@@ -119,6 +119,7 @@ struct HitInfo
     float Damage;           // Direct: instance value sampled at contact. Area: AreaEffect.Damage or GroundField.Damage
     float CriticalChance;   // 0–1; package does not roll
     float EffectRadius;     // instance value; AreaEffect overlaps this radius (GroundField uses its own radius)
+    HitOutcome Outcome;     // ADR-039. Direct: Ended / Pierced / Bounced / Continued. Area, occupancy, ground: None
 }
 ```
 
@@ -166,7 +167,20 @@ interface IProjectileWorld
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
     event Action<StatusInfo> StatusApplied; // after OnHit / area / ground-field flush (ADR-011, ADR-016, ADR-022)
+    event Action<SpawnInfo> Spawned;        // ADR-039. Every live instance, game or package-made. Before its first HomingLocked / Hit / Expired
+    event Action<HomingLockInfo> HomingLocked; // ADR-039. Assigned at spawn (after Spawned), acquired, re-acquired. Not while kept
 }
+
+struct SpawnInfo { ProjectileId InstanceId; ProjectileId ParentId; SpawnCause Cause; Vector3 Position; Vector3 Direction; Recipe Recipe; }
+enum SpawnCause { Game, Multicast, Multiply, Other }
+
+struct ExpireInfo { ProjectileId InstanceId; Vector3 Position; Vector3 Direction; ExpireReason Reason; } // pose read before the view is released
+enum ExpireReason { Lifetime, Hit, Absorbed, Despawned, HitscanEnd, Other }
+
+enum HitOutcome { None, Ended, Pierced, Bounced, Continued }
+
+struct HomingLockInfo { ProjectileId InstanceId; TargetId TargetId; Vector3 Position; HomingLockKind Kind; }
+enum HomingLockKind { Assigned, Acquired }
 
 struct StatusInfo
 {

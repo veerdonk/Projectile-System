@@ -772,6 +772,30 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** the parent multiplies
 - **Then:** children stay on parent forward (or hit normal); Spread is still meters between pips, not degrees
 
+### Phase 33b — Spawned reports package-made shots
+
+- **Given:** a listener on `Spawned` and a parent with `Multiply(2)` on hit
+- **When:** the parent hits a World surface
+- **Then:** `Spawned` fires for the parent at `Spawn`, then for each child after the parent's `Hit`, with `ParentId` = parent and `Cause` = Multiply. A game spawn has a default `ParentId` and `Cause` Game. An unreachable Arc raises nothing
+
+### Phase 33b — Expire says why and where
+
+- **Given:** a listener on `Expired`
+- **When:** a shot ends by lifetime, a Direct hit, Strong protection, `Despawn(id)`, or a Hitscan miss
+- **Then:** `ExpireInfo.Reason` is Lifetime, Hit, Absorbed, Despawned, or HitscanEnd, and `Position` / `Direction` are the last simulated pose
+
+### Phase 33b — Hit says whether the shot went on
+
+- **Given:** a shot with `Pierce(1)` then `Bounce(1)` variants, and another with a modifier that cancels the despawn
+- **When:** each contacts a Target or World
+- **Then:** `HitInfo.Outcome` is Pierced, Bounced, Continued, or Ended. Area, occupancy, and ground hits are None
+
+### Phase 33b — HomingLocked fires per new lock
+
+- **Given:** a Homing shot with a lock assigned at spawn, and another that acquires
+- **When:** they fly, one drops its lock on a Target hit and re-acquires
+- **Then:** `HomingLocked` fires once for the assigned lock (after `Spawned`), once per acquire and re-acquire, and not on later ticks while the lock is kept
+
 ### Phase 34 — Hitscan debug line
 
 - **Given:** Play Mode, Hitscan preset, debug overlay on

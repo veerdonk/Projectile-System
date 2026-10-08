@@ -33,11 +33,13 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 33 — authored Multiply grid (implemented; do not start phase 34)**
+**Phase 33b — shot lifecycle events (implemented, all 278 tests pass; do not start phase 34)**
 
-- Package version is **0.1.10**. No git tag in the phase session. Phase 34 is the Play Mode debug overlay. Do not add gizmos.
-- `Patterns()` stays the procedural types (GridMultiplyPattern excluded). `PatternOptions()` appends every `MultiplyPatternAsset`. Picking an asset assigns `ToPattern()`, not the SO. `ClonePattern` copies grid fields.
-- Yard preset **Multiply on hit (Grid)** and `Samples~/Yard/Recipes/GridFan` (center 1, right 2, above 3, Spacing 2, Spread 20). `SampleLab.multiplyPatterns` feeds the sheet picker. Do **not** run **Projectile Lab > Rebuild** to refresh that preset: Rebuild writes `Assets/Samples/<version>/` and copies the scene back over `Samples~/Yard/Scenes/Yard.unity`, which swaps recipe guids. Copy changed sample scripts into the gitignored import (or reimport) before expecting Play Mode to match.
+- Package version is **0.1.12** (the `v0.1.11` tag already exists, `package.json` was still 0.1.10). No git tag in the phase session. Phase 34 is the Play Mode debug overlay. Do not add gizmos.
+- `Spawned` is raised in `SpawnCore` before `RunSpawnStages`, so `Direction` is the Arc-solved, pre-OnSpawn direction. Assigned `HomingLocked` follows it there. Acquired locks queue on `ModifierContext.AcquiredHomingLocks` and flush in `RunStage`, `RunIntervals`, and `KinkHitscan`.
+- `ExpireReason` is threaded through `Despawn(..., reason)`. A Hitscan ray that ends on a hit is `Hit`. `HitOutcome` compares Pierce / Bounce charges before and after the OnHit stage.
+- A Beam re-lock after a silent `AimBeam` redraw can raise `HomingLocked` again (Beam is outside the card's compositions). Ground field and area-effect events are a separate card.
+- Authored Multiply grid (phase 33): `Patterns()` stays the procedural types; `PatternOptions()` appends every `MultiplyPatternAsset`. Do **not** run **Projectile Lab > Rebuild** to refresh the grid preset: Rebuild writes `Assets/Samples/<version>/` and copies the scene back over `Samples~/Yard/Scenes/Yard.unity`, which swaps recipe guids. Copy changed sample scripts into the gitignored import (or reimport) before expecting Play Mode to match.
 - `HomingAcquirePoint` is still the only aim point. Do not add `AimPoint`.
 - OnHit Multiply keeps the hit normal unless Pierce still has charges on that Target or Basic hit. Then children spawn past the body along the travel direction from the start of the hit (list order does not matter). Spent charges, a World hit Pierce does not absorb, and no Pierce modifier keep the normal.
 - Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until a later phase touches those files.
