@@ -166,6 +166,10 @@ interface IProjectileWorld
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
     event Action<StatusInfo> StatusApplied; // after OnHit / area / ground-field flush (ADR-011, ADR-016, ADR-022)
+    event Action<GroundFieldInfo> GroundFieldPlanted;      // before the immediate pulse (ADR-039)
+    event Action<GroundFieldPulseInfo> GroundFieldPulsed;  // every pulse, empty or not, after that pulse's Area Hits
+    event Action<GroundFieldInfo> GroundFieldEnded;        // lifetime out (Expired) or world Dispose (Disposed)
+    event Action<AreaBurstInfo> AreaBurst;                 // every AreaEffect overlap, before its Area Hits; occupancy once
 }
 
 struct StatusInfo

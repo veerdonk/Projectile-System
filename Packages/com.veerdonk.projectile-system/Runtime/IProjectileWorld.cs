@@ -65,6 +65,31 @@ namespace Veerdonk.ProjectileSystem
         /// The package does not apply the effect.
         /// </summary>
         event Action<StatusInfo> StatusApplied;
+
+        /// <summary>
+        /// Raised when a ground field is planted, before its immediate pulse. Carries the id that
+        /// <see cref="GroundFieldPulsed"/> and <see cref="GroundFieldEnded"/> repeat.
+        /// </summary>
+        event Action<GroundFieldInfo> GroundFieldPlanted;
+
+        /// <summary>
+        /// Raised for every pulse, including one over an empty disk and the immediate pulse inside the plant.
+        /// Raised after that pulse's Area <see cref="Hit"/> and <see cref="StatusApplied"/> events, so
+        /// <see cref="GroundFieldPulseInfo.TargetsHit"/> is final. Occupancy fields never pulse.
+        /// </summary>
+        event Action<GroundFieldPulseInfo> GroundFieldPulsed;
+
+        /// <summary>
+        /// Raised when a field's lifetime runs out (after any occupancy exit hits) and for each live field
+        /// when the world is disposed. <see cref="GroundFieldInfo.Reason"/> says which.
+        /// </summary>
+        event Action<GroundFieldInfo> GroundFieldEnded;
+
+        /// <summary>
+        /// Raised for every <c>AreaEffect</c> overlap that runs, empty or not, before that overlap's Area
+        /// <see cref="Hit"/> events. An occupancy overlap raises it only when it is first made, not each tick.
+        /// </summary>
+        event Action<AreaBurstInfo> AreaBurst;
     }
 
     /// <summary>Payload for <see cref="IProjectileWorld.StatusApplied"/>.</summary>

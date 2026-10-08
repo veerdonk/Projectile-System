@@ -126,11 +126,15 @@ namespace Veerdonk.ProjectileSystem
         readonly IGroundFieldViewFactory viewFactory;
         readonly Action<HitInfo> hit;
         readonly Action<StatusInfo> statusApplied;
+        readonly Action<GroundFieldInfo> planted;
+        readonly Action<GroundFieldPulseInfo> pulsed;
+        readonly Action<GroundFieldInfo> ended;
         readonly List<LiveField> fields = new List<LiveField>();
         readonly Dictionary<string, Stack<ProjectileView>> viewPools = new Dictionary<string, Stack<ProjectileView>>();
         readonly List<ProjectileView> allViews = new List<ProjectileView>();
         readonly List<HitInfo> overlapResults = new List<HitInfo>();
         readonly List<TargetId> seenTargets = new List<TargetId>();
+        int nextFieldId = 1;
         bool disposed;
 
         public GroundFieldSet(
@@ -139,8 +143,14 @@ namespace Veerdonk.ProjectileSystem
             Transform poolParent,
             Action<HitInfo> hit,
             Action<StatusInfo> statusApplied,
-            IGroundFieldViewFactory viewFactory = null)
+            IGroundFieldViewFactory viewFactory = null,
+            Action<GroundFieldInfo> planted = null,
+            Action<GroundFieldPulseInfo> pulsed = null,
+            Action<GroundFieldInfo> ended = null)
         {
+            this.planted = planted;
+            this.pulsed = pulsed;
+            this.ended = ended;
             this.hitQuery = hitQuery ?? throw new ArgumentNullException(nameof(hitQuery));
             this.createViews = createViews;
             this.poolParent = poolParent;
@@ -157,9 +167,11 @@ namespace Veerdonk.ProjectileSystem
             Vector3 center = ToGround(request.Center);
             var field = new LiveField
             {
+                FieldId = new GroundFieldId(nextFieldId++),
                 SourceId = sourceId,
                 Center = center,
                 Radius = request.Radius,
+                LifetimeSeconds = request.LifetimeSeconds,
                 RemainingLifetime = request.LifetimeSeconds,
                 IntervalSeconds = request.IntervalSeconds,
                 Damage = request.Damage,
@@ -173,6 +185,7 @@ namespace Veerdonk.ProjectileSystem
                 field.View = RentView(center, request.Radius, request.PresentationId);
 
             fields.Add(field);
+            planted?.Invoke(ToInfo(field, GroundFieldEndReason.Expired));
             if (request.Occupancy)
                 UpdateOccupancy(fields[fields.Count - 1]);
             else if (request.IntervalSeconds > 0f)
@@ -219,6 +232,7 @@ namespace Veerdonk.ProjectileSystem
                             statusApplied);
                     }
 
+                    ended?.Invoke(ToInfo(field, GroundFieldEndReason.Expired));
                     ReturnView(field);
                     fields.RemoveAt(i);
                     continue;
@@ -251,6 +265,9 @@ namespace Veerdonk.ProjectileSystem
             if (disposed)
                 return;
             disposed = true;
+
+            for (int i = 0; i < fields.Count; i++)
+                ended?.Invoke(ToInfo(fields[i], GroundFieldEndReason.Disposed));
 
             for (int i = 0; i < allViews.Count; i++)
             {
@@ -320,6 +337,31 @@ namespace Veerdonk.ProjectileSystem
                     Effect = field.Status
                 });
             }
+
+            pulsed?.Invoke(new GroundFieldPulseInfo
+            {
+                FieldId = field.FieldId,
+                SourceId = field.SourceId,
+                Center = field.Center,
+                Radius = field.Radius,
+                TargetsHit = seenTargets.Count
+            });
+        }
+
+        static GroundFieldInfo ToInfo(in LiveField field, GroundFieldEndReason reason)
+        {
+            return new GroundFieldInfo
+            {
+                FieldId = field.FieldId,
+                SourceId = field.SourceId,
+                Center = field.Center,
+                Radius = field.Radius,
+                LifetimeSeconds = field.LifetimeSeconds,
+                IntervalSeconds = field.IntervalSeconds,
+                Occupancy = field.Occupancy,
+                PresentationId = field.PresentationId,
+                Reason = reason
+            };
         }
 
         ProjectileView RentView(Vector3 center, float radius, string presentationId)
@@ -417,9 +459,11 @@ namespace Veerdonk.ProjectileSystem
 
         struct LiveField
         {
+            public GroundFieldId FieldId;
             public ProjectileId SourceId;
             public Vector3 Center;
             public float Radius;
+            public float LifetimeSeconds;
             public float RemainingLifetime;
             public float ElapsedSeconds;
             public float IntervalSeconds;

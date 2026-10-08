@@ -33,14 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 33 — authored Multiply grid (implemented; do not start phase 34)**
+**Phase 35 — ground field and area burst events (implemented; do not start phase 34)**
 
-- Package version is **0.1.10**. No git tag in the phase session. Phase 34 is the Play Mode debug overlay. Do not add gizmos.
-- `Patterns()` stays the procedural types (GridMultiplyPattern excluded). `PatternOptions()` appends every `MultiplyPatternAsset`. Picking an asset assigns `ToPattern()`, not the SO. `ClonePattern` copies grid fields.
-- Yard preset **Multiply on hit (Grid)** and `Samples~/Yard/Recipes/GridFan` (center 1, right 2, above 3, Spacing 2, Spread 20). `SampleLab.multiplyPatterns` feeds the sheet picker. Do **not** run **Projectile Lab > Rebuild** to refresh that preset: Rebuild writes `Assets/Samples/<version>/` and copies the scene back over `Samples~/Yard/Scenes/Yard.unity`, which swaps recipe guids. Copy changed sample scripts into the gitignored import (or reimport) before expecting Play Mode to match.
-- `HomingAcquirePoint` is still the only aim point. Do not add `AimPoint`.
-- OnHit Multiply keeps the hit normal unless Pierce still has charges on that Target or Basic hit. Then children spawn past the body along the travel direction from the start of the hit (list order does not matter). Spent charges, a World hit Pierce does not absorb, and no Pierce modifier keep the normal.
-- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until a later phase touches those files.
+- Package version is **0.2.0**. No git tag in the phase session. Phase 34 (Play Mode debug overlay) is still next; phase 35 was inserted for Trello card i9g6LSBf. Move the card list only when the human says so.
+- New files: `Runtime/GroundFieldEvents.cs`, `Tests/Editor/FieldAreaEventTests.cs`. New `.meta` files are made by Unity on import; check they are committed.
+- Events live on `IProjectileWorld` (ADR-039). `GroundFieldSet` takes optional planted/pulsed/ended callbacks; `SimulationBridge.AreaBurst` carries bursts. Pulsed comes after that pulse's Area Hits; AreaBurst comes before its Area Hits; occupancy burst only on first overlap.
+- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Do **not** run **Projectile Lab > Rebuild** to refresh presets (it overwrites `Samples~/Yard/Scenes/Yard.unity`). Catalog `Compact()` leftover from phase 29 still applies.
 
 ## Do not
 

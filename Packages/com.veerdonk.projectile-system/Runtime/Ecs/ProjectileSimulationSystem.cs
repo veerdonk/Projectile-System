@@ -17,6 +17,7 @@ namespace Veerdonk.ProjectileSystem
         public System.Action<HitInfo> Hit;
         public System.Action<ExpireInfo> Expired;
         public System.Action<StatusInfo> StatusApplied;
+        public System.Action<AreaBurstInfo> AreaBurst;
         public GroundFieldSet GroundFields;
     }
 
@@ -784,7 +785,7 @@ namespace Veerdonk.ProjectileSystem
                 AreaOverlapRequest request = requests[r];
                 if (!request.Occupancy)
                 {
-                    FlushAreaRequest(request, instanceId, projectile);
+                    FlushAreaRequest(request, instanceId, projectile, occupancyChannel);
                     continue;
                 }
 
@@ -793,11 +794,12 @@ namespace Veerdonk.ProjectileSystem
             }
         }
 
-        void FlushAreaRequest(in AreaOverlapRequest request, ProjectileId instanceId, in Projectile projectile)
+        void FlushAreaRequest(in AreaOverlapRequest request, ProjectileId instanceId, in Projectile projectile, int channel)
         {
             if (request.Radius <= 0f)
                 return;
 
+            RaiseAreaBurst(request, instanceId, channel);
             overlapResults.Clear();
             seenAreaTargets.Clear();
             Bridge.HitQuery.Overlap(instanceId, request.Center, request.Radius, overlapResults);
@@ -820,6 +822,7 @@ namespace Veerdonk.ProjectileSystem
             {
                 previous = new List<TargetId>();
                 occupancyInside[key] = previous;
+                RaiseAreaBurst(request, instanceId, channel);
             }
 
             overlapResults.Clear();
@@ -835,6 +838,29 @@ namespace Veerdonk.ProjectileSystem
                 request.Status,
                 Bridge.Hit,
                 Bridge.StatusApplied);
+        }
+
+        void RaiseAreaBurst(in AreaOverlapRequest request, ProjectileId instanceId, int channel)
+        {
+            Bridge.AreaBurst?.Invoke(new AreaBurstInfo
+            {
+                InstanceId = instanceId,
+                Center = request.Center,
+                Radius = request.Radius,
+                Stage = StageForChannel(channel),
+                Occupancy = request.Occupancy
+            });
+        }
+
+        static RecipeStage StageForChannel(int channel)
+        {
+            switch (channel)
+            {
+                case OccupancyOnTravel: return RecipeStage.OnTravel;
+                case OccupancyOnTick: return RecipeStage.OnTick;
+                case OccupancyOnInterval: return RecipeStage.OnInterval;
+                default: return RecipeStage.OnHit;
+            }
         }
 
         void ClearOccupancy(ProjectileId instanceId)

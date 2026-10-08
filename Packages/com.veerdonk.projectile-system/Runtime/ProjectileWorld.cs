@@ -73,7 +73,10 @@ namespace Veerdonk.ProjectileSystem
                 poolParent,
                 info => Hit?.Invoke(info),
                 info => StatusApplied?.Invoke(info),
-                groundFieldViewFactory);
+                groundFieldViewFactory,
+                info => GroundFieldPlanted?.Invoke(info),
+                info => GroundFieldPulsed?.Invoke(info),
+                info => GroundFieldEnded?.Invoke(info));
             ecsWorld = new World("ProjectileSimulation");
             pool = new ProjectilePool(ecsWorld, poolParent, createViews, viewFactory);
 
@@ -98,6 +101,7 @@ namespace Veerdonk.ProjectileSystem
                 Hit = info => Hit?.Invoke(info),
                 Expired = info => Expired?.Invoke(info),
                 StatusApplied = info => StatusApplied?.Invoke(info),
+                AreaBurst = info => AreaBurst?.Invoke(info),
                 GroundFields = groundFields
             };
             simulation.Bridge = bridge;
@@ -111,6 +115,18 @@ namespace Veerdonk.ProjectileSystem
 
         /// <inheritdoc />
         public event Action<StatusInfo> StatusApplied;
+
+        /// <inheritdoc />
+        public event Action<GroundFieldInfo> GroundFieldPlanted;
+
+        /// <inheritdoc />
+        public event Action<GroundFieldPulseInfo> GroundFieldPulsed;
+
+        /// <inheritdoc />
+        public event Action<GroundFieldInfo> GroundFieldEnded;
+
+        /// <inheritdoc />
+        public event Action<AreaBurstInfo> AreaBurst;
 
         /// <summary>Live instances (not Disabled pool entities).</summary>
         public int ActiveCount

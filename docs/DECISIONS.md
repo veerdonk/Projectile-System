@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-039 — Ground field and area burst events on IProjectileWorld
+
+- **Date:** 2026-10-08
+- **Decision:** `IProjectileWorld` / `ProjectileWorld` gain four events: `GroundFieldPlanted` and `GroundFieldEnded` (`GroundFieldInfo`), `GroundFieldPulsed` (`GroundFieldPulseInfo`), `AreaBurst` (`AreaBurstInfo`). `GroundFieldId` is an opaque world-assigned handle (same shape as `ProjectileId`) given at plant. **Order:** Planted, then the immediate pulse inside `Plant` (its Area `Hit`s, then `GroundFieldPulsed`). Every pulse raises `GroundFieldPulsed` **after** that pulse's Area `Hit`/`StatusApplied`, even over an empty disk, so `TargetsHit` (distinct Targets that raised an Area Hit) is final. Occupancy fields raise Planted and Ended only. Ended is raised after the occupancy exit hits when the lifetime runs out (`GroundFieldEndReason.Expired`) and for each live field on world `Dispose` (`Disposed`). `AreaBurst` is raised for every `AreaEffect` overlap request that runs (radius > 0), empty or not, **before** its Area hits, with the stage that requested it. An occupancy request raises `AreaBurst` only when its overlap is first made, not on later ticks. Events are `Action<struct>`; no per-event allocation.
+- **Why:** The game plays effects on plant, each pulse, end, and burst. Empty pulses and bursts raised nothing, and fields had no id to match an end to a plant. Events stay on the one façade (no second world).
+- **Consequences:** Additive only; existing events, fields, and behavior unchanged. `IProjectileWorld` grows members (`ProjectileWorld` is the only implementer). Bump `package.json` to **0.2.0**. The field view is still released when the field ends; fading is the game's job using the Ended pose. Phase 35.
+
 ## ADR-038 — Authored Multiply grid: Spacing places, Spread aims a cone
 
 - **Date:** 2026-09-28
