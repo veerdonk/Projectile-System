@@ -803,7 +803,7 @@ Bare phase. Hitscan has no mesh; Beam segments are easy to miss. Add Play Mode d
 
 ## Phase 35 — Ground field and area burst events
 
-Fields and `AreaEffect` bursts report to the game so it can play effects. ADR-039.
+Fields and `AreaEffect` bursts report to the game so it can play effects. ADR-040.
 
 **In scope**
 
