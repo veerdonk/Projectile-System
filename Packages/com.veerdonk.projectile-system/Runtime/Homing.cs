@@ -92,6 +92,7 @@ namespace Veerdonk.ProjectileSystem
                 if (!TryAcquireLock(context, out target))
                     return;
                 context.HomingTarget = target;
+                context.NoteHomingAcquired(target);
             }
             else if (context.HomingAcquirePointSet)
                 context.HomingAimPointUsed = true;

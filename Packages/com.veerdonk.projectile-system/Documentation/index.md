@@ -2,7 +2,7 @@
 
 Use this package to spawn, simulate, and pool kinematic projectiles. Games own HP, camera, input, and the player. The runtime owns movement, hits, pooling, and Recipe composition.
 
-Call `IProjectileWorld.Spawn` with a `SpawnRequest` (Recipe, position, direction). Call `Tick` once per frame. Listen to `Hit`, `Expired`, and `StatusApplied`. For effects, listen to `GroundFieldPlanted`, `GroundFieldPulsed` (raised after that pulse's Area hits, even over an empty disk), `GroundFieldEnded`, and `AreaBurst` (before its Area hits; occupancy only when first made). Do not tick instances yourself.
+Call `IProjectileWorld.Spawn` with a `SpawnRequest` (Recipe, position, direction). Call `Tick` once per frame. Listen to `Hit`, `Expired`, and `StatusApplied`. For presentation, `Spawned` reports every live instance (game or package-made, with `ParentId` and `SpawnCause`), `HomingLocked` reports each new lock, `ExpireInfo` carries the last pose and an `ExpireReason`, and `HitInfo.Outcome` says whether a Direct hit ended, pierced, bounced, or continued. For effects, listen to `GroundFieldPlanted`, `GroundFieldPulsed` (raised after that pulse's Area hits, even over an empty disk), `GroundFieldEnded`, and `AreaBurst` (before its Area hits; occupancy only when first made). Do not tick instances yourself.
 
 ## Recipe stage lists
 
@@ -21,7 +21,7 @@ Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectil
 
 ## Public types
 
-**Façade:** `IProjectileWorld` (`Spawn`, `Tick`, `Despawn`, `SetHitTarget`, `RemoveHitTarget`, `SetHomingCandidate`, `RemoveHomingCandidate`), `ProjectileWorld`, `Recipe`, `Delivery`, `SpawnRequest`, `HitInfo`, `HitKind`, `HitSource`, `ProtectionLevel`, `StatusInfo`, `ExpireInfo`, `ProjectileId`, `TargetId`, `HomingTarget`
+**Façade:** `IProjectileWorld` (`Spawn`, `Tick`, `Despawn`, `SetHitTarget`, `RemoveHitTarget`, `SetHomingCandidate`, `RemoveHomingCandidate`), `ProjectileWorld`, `Recipe`, `Delivery`, `SpawnRequest`, `HitInfo`, `HitKind`, `HitSource`, `ProtectionLevel`, `StatusInfo`, `ExpireInfo`, `ExpireReason`, `HitOutcome`, `SpawnInfo`, `SpawnCause`, `HomingLockInfo`, `HomingLockKind`, `ProjectileId`, `TargetId`, `HomingTarget`
 
 **Hits and protection:** `SpawnRequest.IgnoreCollider` skips that collider on Direct overlap and sweep until the shot body no longer overlaps it (not a hit; a later contact is normal). `IDamageable` on colliders. `SetHitTarget(id, position, radius, protection)` publishes a sphere with no collider (`HitKind.Target`). `protection` defaults to `None`; `Basic` and `Strong` match `IProjectileProtection`. `radius <= 0` or `RemoveHitTarget` drops it. Direct casts, `AreaEffect` (including `OnTick`), `GroundField`, and Homing all read that catalog. `occupancy` on `AreaEffect` / `GroundField` raises `HitSource.OccupancyEnter` and `OccupancyExit` instead of pulses. `IProjectileProtection`. Hit queries stay inside the package.
 
@@ -42,6 +42,84 @@ Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectil
 **Authoring:** `RecipeAsset`, `ModifierKit`, `ModifierKitLayer`, `MultiplyPatternAsset`, `GridMultiplyPattern`, `Recipe.Clone`, `Recipe.Append`, `Recipe.Compose`, `RecipeStage`, `ModifierStageAttribute`
 
 Internal ECS types under `Runtime/Ecs/` are not a consumer API.
+
+## Shot lifecycle events (presentation)
+
+Since 0.1.12 the world reports each moment of a shot's life, so a game can play a visual effect or sound at each one. Everything is additive: `Hit`, `Expired`, and `StatusApplied` behave as before, and the new fields default to zero.
+
+| Moment | Where to listen | What you get |
+| --- | --- | --- |
+| Fired or split | `Spawned` | `SpawnInfo`: `InstanceId`, `ParentId`, `Cause`, `Position`, `Direction`, `Recipe` |
+| Homing locks on | `HomingLocked` | `HomingLockInfo`: `InstanceId`, `TargetId`, `Position`, `Kind` |
+| Hits | `Hit` | `HitInfo.Outcome`: what happened to the shot |
+| Ends | `Expired` | `ExpireInfo`: `Position`, `Direction`, `Reason` |
+| Flies | your own `ProjectileView` | Start it on `Spawned`, stop it on `Expired` |
+
+**`Spawned`** is raised once for every instance that becomes live: your own `Spawn` calls and every spawn the package makes (Multicast extras, Multiply children including those past a pierced target, other queued spawns). `Cause` is `Game`, `Multicast`, `Multiply`, or `Other`. `ParentId` is the instance that produced it, or `default` for a game spawn. Use it to start flight effects on a child, play a split effect at the parent, or link a child to its parent. `Direction` is the normalized launch direction after the Arc solve and before OnSpawn modifiers run. `Recipe.Id` and `Recipe.PresentationId` pick the effect. A Hitscan raises it before its `Hit` and `Expired`. An unreachable Arc returns `default` and raises nothing.
+
+**`Expired`** now says why and where. `Reason`:
+
+| `ExpireReason` | Meaning |
+| --- | --- |
+| `Lifetime` | `LifetimeSeconds` ran out |
+| `Hit` | a Direct hit ended it (including a Hitscan ray that ended on a hit) |
+| `Absorbed` | `ProtectionLevel.Strong` ate it. No `Hit` is raised |
+| `Despawned` | the game called `Despawn(id)` |
+| `HitscanEnd` | a Hitscan ray finished without a killing hit |
+| `Other` | reserved |
+
+`Position` and `Direction` are the last simulated pose, read before the view is released.
+
+**`HitInfo.Outcome`** is set on Direct hits before `Hit` is raised:
+
+| `HitOutcome` | Meaning |
+| --- | --- |
+| `Ended` | the shot ends (for a Beam pulse, the pulse ends and the Beam lives) |
+| `Pierced` | Pierce spent a charge and the shot flies on |
+| `Bounced` | Bounce spent a charge and reflected the shot |
+| `Continued` | another modifier cancelled the despawn and the shot continues |
+| `None` | not a Direct hit (Area, occupancy, ground field) |
+
+**`HomingLocked`** is raised when a shot gets a new lock: assigned at spawn through `SpawnRequest.HomingTarget` (`Kind = Assigned`, right after that instance's `Spawned`), and on every acquire or re-acquire (`Kind = Acquired`). It is not raised on ticks where the shot keeps the same lock. A shot that is assigned a lock at fire time never acquires, so it raises exactly one `Assigned` event.
+
+**Ordering you can rely on**
+
+- `Spawned` comes before that instance's first `HomingLocked`, `Hit`, or `Expired`.
+- A child's `Spawned` comes after the parent's `Hit` that made it.
+- `Hit` comes before the same instance's `Expired`.
+
+**Example**
+
+```csharp
+world.Spawned += s =>
+{
+    Vfx.PlayFlight(s.InstanceId, s.Recipe.PresentationId, s.Position, s.Direction);
+    if (s.Cause == SpawnCause.Multiply)
+        Vfx.PlaySplit(s.Position, s.Direction);
+};
+
+world.HomingLocked += l => Vfx.PlayLockOn(l.InstanceId, l.TargetId, l.Position);
+
+world.Hit += h =>
+{
+    if (h.Source != HitSource.Direct) return;
+    switch (h.Outcome)
+    {
+        case HitOutcome.Pierced: Vfx.PlayPassThrough(h.Point, h.Normal); break;
+        case HitOutcome.Bounced: Vfx.PlayRicochet(h.Point, h.Normal); break;
+        default: Vfx.PlayImpact(h.Point, h.Normal); break;
+    }
+};
+
+world.Expired += e =>
+{
+    Vfx.StopFlight(e.InstanceId);
+    if (e.Reason == ExpireReason.Lifetime)
+        Vfx.PlayFizzle(e.Position, e.Direction);
+};
+```
+
+Notes: the events are structs, so there is no per-event allocation. `Absorbed` expires have no `Hit`, so play the absorb effect from `Expired`. A Beam that is re-aimed with `AimBeam` can raise `HomingLocked` again. Ground-field and area-effect events are not part of this set.
 
 ## Installing
 

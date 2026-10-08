@@ -67,6 +67,20 @@ namespace Veerdonk.ProjectileSystem
         event Action<StatusInfo> StatusApplied;
 
         /// <summary>
+        /// Raised once for every instance that becomes live: from <see cref="Spawn"/> and from every
+        /// package-made spawn (Multicast extras, Multiply children, other queued spawns). An unreachable
+        /// Arc raises nothing. Hitscan raises it before its <see cref="Hit"/> and <see cref="Expired"/>.
+        /// Comes before that instance's first <see cref="HomingLocked"/>, <see cref="Hit"/>, or <see cref="Expired"/>.
+        /// </summary>
+        event Action<SpawnInfo> Spawned;
+
+        /// <summary>
+        /// Raised when an instance gets a new Homing lock: assigned at spawn (right after its
+        /// <see cref="Spawned"/>), or acquired or re-acquired. Not raised while the same lock is kept.
+        /// </summary>
+        event Action<HomingLockInfo> HomingLocked;
+
+        /// <summary>
         /// Raised when a ground field is planted, before its immediate pulse. Carries the id that
         /// <see cref="GroundFieldPulsed"/> and <see cref="GroundFieldEnded"/> repeat.
         /// </summary>
@@ -128,6 +142,8 @@ namespace Veerdonk.ProjectileSystem
         /// </summary>
         public Collider IgnoreCollider;
         internal ProjectileId InheritIgnoreFrom;
+        internal ProjectileId ParentId;
+        internal SpawnCause Cause;
         internal ChainBudget MulticastChain;
         internal ChainBudget MultiplyChain;
     }
@@ -179,5 +195,11 @@ namespace Veerdonk.ProjectileSystem
     {
         /// <summary>Instance that returned to the pool.</summary>
         public ProjectileId InstanceId;
+        /// <summary>Last simulated position, read before the view was released.</summary>
+        public Vector3 Position;
+        /// <summary>Last simulated travel direction (normalized).</summary>
+        public Vector3 Direction;
+        /// <summary>Why the instance ended.</summary>
+        public ExpireReason Reason;
     }
 }

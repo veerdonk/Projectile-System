@@ -100,6 +100,7 @@ namespace Veerdonk.ProjectileSystem
                 ModifierContext = modifierContext,
                 Hit = info => Hit?.Invoke(info),
                 Expired = info => Expired?.Invoke(info),
+                HomingLocked = info => HomingLocked?.Invoke(info),
                 StatusApplied = info => StatusApplied?.Invoke(info),
                 AreaBurst = info => AreaBurst?.Invoke(info),
                 GroundFields = groundFields
@@ -115,6 +116,12 @@ namespace Veerdonk.ProjectileSystem
 
         /// <inheritdoc />
         public event Action<StatusInfo> StatusApplied;
+
+        /// <inheritdoc />
+        public event Action<SpawnInfo> Spawned;
+
+        /// <inheritdoc />
+        public event Action<HomingLockInfo> HomingLocked;
 
         /// <inheritdoc />
         public event Action<GroundFieldInfo> GroundFieldPlanted;
@@ -624,6 +631,26 @@ namespace Veerdonk.ProjectileSystem
             hitQuery.CopyIgnore(request.InheritIgnoreFrom, id);
             if (request.IgnoreCollider != null)
                 hitQuery.SetIgnore(id, request.IgnoreCollider);
+            Spawned?.Invoke(new SpawnInfo
+            {
+                InstanceId = id,
+                ParentId = request.ParentId,
+                Cause = request.Cause,
+                Position = request.Position,
+                Direction = direction,
+                Recipe = recipe
+            });
+            if (request.HomingTarget.IsAssigned)
+            {
+                HomingLocked?.Invoke(new HomingLockInfo
+                {
+                    InstanceId = id,
+                    TargetId = request.HomingTarget.Id,
+                    Position = request.Position,
+                    Kind = HomingLockKind.Assigned
+                });
+            }
+
             simulation.RunSpawnStages(entity, multicastLeft);
             if (recipe.Delivery == Delivery.Hitscan)
             {

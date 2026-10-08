@@ -768,6 +768,23 @@ A ScriptableObject grid authors Multiply pip order. `Spacing` is how far apart c
 
 **Stop.** Play Mode debug tooling is **phase 34**. Do not start it in the same session.
 
+## Phase 33b — Shot lifecycle events
+
+Presentation hooks for a shot's life (Trello "Shot lifecycle events for presentation"). ADR-039.
+
+**In scope**
+
+- `Spawned` (`SpawnInfo`) on `IProjectileWorld` for every live instance, game or package-made; internal `SpawnRequest.ParentId` / `Cause` set in `ModifierContext.Enqueue`
+- `ExpireInfo.Position` / `Direction` / `Reason` (`ExpireReason`); `HitInfo.Outcome` (`HitOutcome`)
+- `HomingLocked` (`HomingLockInfo`): assigned at spawn, acquired, re-acquired; not while kept
+- Edit Mode `LifecycleEventTests`; docs; `CHANGELOG` and `package.json` **0.1.12**. No git tag in the phase session
+
+**Out of scope:** ground field and area-effect events (separate card); changing any existing event or behavior; a second façade; the debug overlay (phase 34)
+
+**Proof:** Edit Mode tests: Spawned (game, Multiply child, Multicast extra, Hitscan order, unreachable Arc), every `ExpireReason`, Pierced / Bounced / Ended / Continued, HomingLocked assigned / acquired / re-acquire / not repeated.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Phase 34 — Play Mode debug tooling
 
 Bare phase. Hitscan has no mesh; Beam segments are easy to miss. Add Play Mode debug drawing and refine it after the human sees it. Do not invent a second façade. Depends on phase 32.

@@ -37,8 +37,19 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 
 - Package version is **0.2.0**. No git tag in the phase session. Phase 34 (Play Mode debug overlay) is still next; phase 35 was inserted for Trello card i9g6LSBf. Move the card list only when the human says so.
 - New files: `Runtime/GroundFieldEvents.cs`, `Tests/Editor/FieldAreaEventTests.cs`. New `.meta` files are made by Unity on import; check they are committed.
-- Events live on `IProjectileWorld` (ADR-039). `GroundFieldSet` takes optional planted/pulsed/ended callbacks; `SimulationBridge.AreaBurst` carries bursts. Pulsed comes after that pulse's Area Hits; AreaBurst comes before its Area Hits; occupancy burst only on first overlap.
+- Events live on `IProjectileWorld` (ADR-040). `GroundFieldSet` takes optional planted/pulsed/ended callbacks; `SimulationBridge.AreaBurst` carries bursts. Pulsed comes after that pulse's Area Hits; AreaBurst comes before its Area Hits; occupancy burst only on first overlap.
 - Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Do **not** run **Projectile Lab > Rebuild** to refresh presets (it overwrites `Samples~/Yard/Scenes/Yard.unity`). Catalog `Compact()` leftover from phase 29 still applies.
+
+**Also from phase 33b (shot lifecycle events, merged from main):**
+
+- That phase shipped as 0.1.12. No git tag in the phase session. Phase 34 is the Play Mode debug overlay. Do not add gizmos.
+- `Spawned` is raised in `SpawnCore` before `RunSpawnStages`, so `Direction` is the Arc-solved, pre-OnSpawn direction. Assigned `HomingLocked` follows it there. Acquired locks queue on `ModifierContext.AcquiredHomingLocks` and flush in `RunStage`, `RunIntervals`, and `KinkHitscan`.
+- `ExpireReason` is threaded through `Despawn(..., reason)`. A Hitscan ray that ends on a hit is `Hit`. `HitOutcome` compares Pierce / Bounce charges before and after the OnHit stage.
+- A Beam re-lock after a silent `AimBeam` redraw can raise `HomingLocked` again (Beam is outside the card's compositions). Ground field and area-effect events are a separate card.
+- Authored Multiply grid (phase 33): `Patterns()` stays the procedural types; `PatternOptions()` appends every `MultiplyPatternAsset`. Do **not** run **Projectile Lab > Rebuild** to refresh the grid preset: Rebuild writes `Assets/Samples/<version>/` and copies the scene back over `Samples~/Yard/Scenes/Yard.unity`, which swaps recipe guids. Copy changed sample scripts into the gitignored import (or reimport) before expecting Play Mode to match.
+- `HomingAcquirePoint` is still the only aim point. Do not add `AimPoint`.
+- OnHit Multiply keeps the hit normal unless Pierce still has charges on that Target or Basic hit. Then children spawn past the body along the travel direction from the start of the hit (list order does not matter). Spent charges, a World hit Pierce does not absorb, and no Pierce modifier keep the normal.
+- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until a later phase touches those files.
 
 ## Do not
 
