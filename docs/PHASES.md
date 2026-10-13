@@ -814,6 +814,28 @@ Fields and `AreaEffect` bursts report to the game so it can play effects. ADR-04
 
 **Stop.**
 
+## Phase 36 — Hit query on concave mesh and terrain colliders
+
+`Collider.ClosestPoint` does not support a non-convex `MeshCollider` or a `TerrainCollider`: it logs a warning and returns the input point. `PhysicsHitQuery` calls it on every Direct hit, so a shot that lands on concave ground warns twice per hit and builds wrong values. Game CR (Trello card #42). Runs before phase 34. No ADR; `CHANGELOG` only.
+
+**In scope**
+
+- Unsupported = `MeshCollider` with `convex == false`, or `TerrainCollider`, checked by type. `PhysicsHitQuery` never calls `ClosestPoint` on one. Box / Sphere / Capsule / convex Mesh keep today's code unchanged
+- One fallback helper used at all six call sites: `ExitSurface`, `TryPickOverlap`, `Overlaps`, `SurfaceNormal`, `Overlap`, `OverlapDisk`
+- Pierce exit is computed only when it is read (`TryPierceExit` from `RecordPierceExit`: Pierce charges left, Target or Basic hit), not eagerly on every hit in `TryCast`. `IHitQuery` stays internal; update `ScriptedHitQuery` to match
+- Concave mesh pierce exit is the **last** exit: `Collider.Raycast` from beyond the bounds back along `-travel`, on the travel line through the hit point (the far side of the whole body, as convex today). Ray misses → no exit, Multiply falls back to the hit point. `TerrainCollider` has no pierce exit
+- `Overlaps` (does the ignore skip still hold?) on an unsupported collider: the collider is in an overlap-sphere query at `radius + 0.01` skin. After a Bounce off concave ground, a Pierce through a concave Target, or a concave `IgnoreCollider`, the skip clears once the shot is clear, as for a box
+- `TryPickOverlap` / `SurfaceNormal` on an unsupported collider: `Collider.Raycast` along travel from the origin backed up by `radius + 0.01`. Point and normal from that ray; the closest-pick uses that point's distance (a concave collider no longer wins at 0). Ray misses → point = origin, normal = `-travel` (today's last fallback)
+- `Overlap` / `OverlapDisk` on an unsupported `IDamageable` collider: point = `collider.bounds.ClosestPoint(center)`; normal as today (center inside → `Vector3.up`)
+- Play Mode tests (PhysX), with `LogAssert.NoUnexpectedReceived`. Positive: a Straight shot onto a concave plane `MeshCollider` raises one World `Hit`, no warning, point within `radius + 0.01` of the plane. Negative: a BoxCollider Pierce exit is unchanged. Also: Arc onto a concave plane and onto a `TerrainCollider` hits with no warning; Pierce(1) + Multiply through a concave Target spawns children past the far side; Bounce(2) off concave ground can hit that ground again; a concave `IgnoreCollider` clears after the shot is clear; an Area overlap on a concave `IDamageable` mesh raises no warning. Existing collider tests stay green
+- Docs: [REQUIREMENTS.md](REQUIREMENTS.md) scenario, [ECS.md](ECS.md) query row if it names `ClosestPoint`, `CHANGELOG` **0.2.1**. Bump `package.json` to **0.2.1**. Do not create a git tag in the phase session (merge to `main` tags and releases)
+
+**Out of scope:** first-exit (inside a U or courtyard) pierce; pierce exit on terrain; `Physics.ComputePenetration` or a package-owned probe collider; GroundField plant on terrain (Later); changing hits on supported colliders; the game repo's Greybox workaround; Unity Physics; Entities Graphics
+
+**Proof:** Play Mode tests above. Greybox (game repo, before card #41): firing at a concave `Ground` logs nothing.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
