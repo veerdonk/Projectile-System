@@ -856,6 +856,23 @@ A shot can skip a small set of colliders (the wizard and the pet) for its whole 
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 38 — Hit query buffers grow when full
+
+`PhysicsHitQuery` NonAlloc buffers (16 colliders; 64 for the skin check) can fill in clutter. Unity then returns an unsorted subset, so the real target can drop out and the shot misses. Ignored colliders still take slots. Found in the phase 37 review; the bug is older. Runs before phase 34. No ADR: internal behaviour, no API change.
+
+**In scope**
+
+- When a query returns a count equal to its buffer length, double that buffer (cap 1024) and run the query again. Applies to the `TryCast` overlap and SphereCast, `Overlap`, `OverlapDisk`, and the skin check. At the cap the full buffer is used as is
+- No allocation once a buffer has grown to what the scene needs
+- Play Mode tests (PhysX): 40 ignored colliders along the path, and 40 ignored colliders at the origin, with a dummy still hit; an `AreaEffect` with 40 ignored damageables still hits 20 other targets. The area test fails on 0.2.3
+- `CHANGELOG` **0.2.4**. Bump `package.json` to **0.2.4**. No git tag in the phase session
+
+**Out of scope:** filtering ignored colliders inside the query (layer masks); a configurable buffer size; changing hit selection
+
+**Proof:** Play Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

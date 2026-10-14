@@ -7,11 +7,12 @@ namespace Veerdonk.ProjectileSystem
     sealed class PhysicsHitQuery : IHitQuery
     {
         const int BufferSize = 16;
+        const int MaxBufferSize = 1024;
         const float Skin = 0.01f;
 
-        readonly Collider[] overlapBuffer = new Collider[BufferSize];
-        readonly Collider[] skinBuffer = new Collider[BufferSize * 4];
-        readonly RaycastHit[] castBuffer = new RaycastHit[BufferSize];
+        Collider[] overlapBuffer = new Collider[BufferSize];
+        Collider[] skinBuffer = new Collider[BufferSize * 4];
+        RaycastHit[] castBuffer = new RaycastHit[BufferSize];
         readonly Dictionary<ProjectileId, Collider> ignoreColliderByInstance = new Dictionary<ProjectileId, Collider>();
         readonly Dictionary<ProjectileId, PierceContact> pierceContactByInstance = new Dictionary<ProjectileId, PierceContact>();
         readonly Dictionary<ProjectileId, PierceContact> concaveExitByInstance = new Dictionary<ProjectileId, PierceContact>();
@@ -33,12 +34,7 @@ namespace Veerdonk.ProjectileSystem
             ignoreColliderByInstance.TryGetValue(instanceId, out Collider ignore);
             ignoreSetByInstance.TryGetValue(instanceId, out List<Collider> ignoreSet);
 
-            int overlapCount = Physics.OverlapSphereNonAlloc(
-                origin,
-                radius,
-                overlapBuffer,
-                ~0,
-                QueryTriggerInteraction.Ignore);
+            int overlapCount = OverlapSphere(origin, radius, ~0, ref overlapBuffer);
 
             Vector3 incoming = direction.sqrMagnitude > 1e-12f ? direction.normalized : Vector3.forward;
             HitInfo publishedHit = default;
@@ -65,14 +61,7 @@ namespace Veerdonk.ProjectileSystem
             if (distance <= 1e-8f || direction.sqrMagnitude <= 1e-12f)
                 return TakePublishedOrMiss(instanceId, origin, direction, radius, ignore, castCount: 0, published, publishedHit, ref hit);
 
-            int castCount = Physics.SphereCastNonAlloc(
-                origin,
-                radius,
-                incoming,
-                castBuffer,
-                distance,
-                ~0,
-                QueryTriggerInteraction.Ignore);
+            int castCount = SphereCast(origin, radius, incoming, distance);
 
             if (TryPickCast(instanceId, origin, incoming, radius, castCount, ignore, ignoreSet, out hit, out hitCollider, out float castTravel)
                 && (!published || castTravel <= publishedTravel))
@@ -180,12 +169,7 @@ namespace Veerdonk.ProjectileSystem
             if (radius <= 0f)
                 return;
 
-            int count = Physics.OverlapSphereNonAlloc(
-                center,
-                radius,
-                overlapBuffer,
-                ~0,
-                QueryTriggerInteraction.Ignore);
+            int count = OverlapSphere(center, radius, ~0, ref overlapBuffer);
 
             ignoreSetByInstance.TryGetValue(instanceId, out List<Collider> ignoreSet);
             for (int i = 0; i < count; i++)
@@ -231,13 +215,12 @@ namespace Veerdonk.ProjectileSystem
             const float halfHeight = 1f;
             Vector3 point0 = center + Vector3.up * halfHeight;
             Vector3 point1 = center - Vector3.up * halfHeight;
-            int count = Physics.OverlapCapsuleNonAlloc(
-                point0,
-                point1,
-                radius,
-                overlapBuffer,
-                ~0,
-                QueryTriggerInteraction.Ignore);
+            int count;
+            while ((count = Physics.OverlapCapsuleNonAlloc(point0, point1, radius, overlapBuffer, ~0, QueryTriggerInteraction.Ignore)) == overlapBuffer.Length
+                   && Grow(ref overlapBuffer))
+            {
+            }
+
 
             ignoreSetByInstance.TryGetValue(ignoreSetOwner, out List<Collider> ignoreSet);
             float radiusSq = radius * radius;
@@ -537,12 +520,7 @@ namespace Veerdonk.ProjectileSystem
                 return (closest - origin).sqrMagnitude <= skin * skin;
             }
 
-            int count = Physics.OverlapSphereNonAlloc(
-                origin,
-                skin,
-                skinBuffer,
-                1 << collider.gameObject.layer,
-                QueryTriggerInteraction.Ignore);
+            int count = OverlapSphere(origin, skin, 1 << collider.gameObject.layer, ref skinBuffer);
             for (int i = 0; i < count; i++)
             {
                 if (skinBuffer[i] == collider)
@@ -550,6 +528,36 @@ namespace Veerdonk.ProjectileSystem
             }
 
             return false;
+        }
+
+        static int OverlapSphere(Vector3 center, float radius, int mask, ref Collider[] buffer)
+        {
+            int count;
+            while ((count = Physics.OverlapSphereNonAlloc(center, radius, buffer, mask, QueryTriggerInteraction.Ignore)) == buffer.Length
+                   && Grow(ref buffer))
+            {
+            }
+
+            return count;
+        }
+
+        int SphereCast(Vector3 origin, float radius, Vector3 direction, float distance)
+        {
+            int count;
+            while ((count = Physics.SphereCastNonAlloc(origin, radius, direction, castBuffer, distance, ~0, QueryTriggerInteraction.Ignore)) == castBuffer.Length
+                   && Grow(ref castBuffer))
+            {
+            }
+
+            return count;
+        }
+
+        static bool Grow<T>(ref T[] buffer)
+        {
+            if (buffer.Length >= MaxBufferSize)
+                return false;
+            Array.Resize(ref buffer, Math.Min(buffer.Length * 2, MaxBufferSize));
+            return true;
         }
 
         static bool SupportsClosestPoint(Collider collider)

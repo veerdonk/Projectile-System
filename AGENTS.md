@@ -33,7 +33,13 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 37 — spawn ignores a set of colliders (implemented; do not start phase 34)**
+**Phase 38 — hit query buffers grow when full (implemented; do not start phase 34)**
+
+- Package version is **0.2.4**. No git tag in the phase session. `PhysicsHitQuery` doubles `overlapBuffer`, `castBuffer`, or `skinBuffer` (cap 1024) and re-queries when a NonAlloc count equals the buffer length (`OverlapSphere`, `SphereCast`, `Grow`).
+- New tests: `Tests/Runtime/QueryBufferGrowthPlayModeTests.cs`. Only the `AreaEffect` one fails on 0.2.3. PhysX happened to return the target in the two ignored-clutter cases, so those two are regression guards.
+- The open Unity Editor points at the main checkout and may be behind `main`. To test worktree code, copy the whole package folder over, run the tests, then `git checkout -- Packages` and delete the untracked files there.
+
+**Also from phase 37 (spawn ignores a set of colliders):**
 
 - Package version is **0.2.3** (ADR-041, Trello card #66 R492B0HI). No git tag in the phase session. The human moves the card.
 - The set lives in `PhysicsHitQuery.ignoreSetByInstance` (pooled `List<Collider>`), separate from the one-slot skip. `ClearIgnore` does **not** release it: Beam calls `ClearIgnore` every pulse, and children are spawned from `pendingSpawns` after the parent is pooled. Instead, `ReturnToPool` adds the id to `SimulationBridge.RetiredIds`, and `FlushPendingSpawns` releases those sets after the spawn loop drains. Ids only count up, so a released id is never live again.
