@@ -837,6 +837,25 @@ Fields and `AreaEffect` bursts report to the game so it can play effects. ADR-04
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 37 — Spawn ignores a set of colliders
+
+A shot can skip a small set of colliders (the wizard and the pet) for its whole life. Game CR (Trello card #66). Runs before phase 34. ADR-041.
+
+**In scope**
+
+- `SpawnRequest.IgnoreColliders` (`IReadOnlyList<Collider>`), with XmlDoc. Copied at spawn into a pooled `List<Collider>` in `PhysicsHitQuery`. Never cleared while the shot lives
+- `TryCast` overlap and sweep, `Overlap`, and `OverlapDisk` skip colliders in the set. No LINQ; a short loop
+- `CopyIgnore` copies the set to children (own pooled list). The set returns to the pool once the instance is pooled and its pending children have spawned (not in `ClearIgnore`). `GroundField` takes its own copy at plant and returns it when the field ends
+- `IHitQuery` additions are internal; update `ScriptedHitQuery` to match (no-op)
+- Play Mode tests (PhysX): a "pet" collider between the shooter and a dummy, with `IgnoreColliders` = [shooter, pet]. Straight, Arc, and Hitscan hit the dummy. Pierce(1) through a first dummy, then the pet behind it is still skipped. Bounce off a wall back through the pet. Multicast extras and Multiply children skip the pet. `AreaEffect` and `GroundField` on an `IDamageable` pet raise no Area `Hit` for it, but do for another Target. Caller clears its list after `Spawn`: the live shot still skips. Null or empty list: today's behaviour. `IgnoreCollider` and `IgnoreColliders` together. A destroyed collider in the set does not throw. Existing tests stay green
+- Docs: README, package AGENTS.md, `Documentation/index.md`, `CHANGELOG` **0.2.3**. Bump `package.json` to **0.2.3**. No git tag in the phase session
+
+**Out of scope:** skipping published hit targets by `TargetId`; a live (non-copied) list; changing `IgnoreCollider`; the game repo's integration
+
+**Proof:** Play Mode tests above. Greybox (game repo): the wizard's shot passes the fox and hits the enemy behind it.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

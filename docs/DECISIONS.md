@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-041 — Spawn can ignore a set of colliders for the whole life of the shot
+
+- **Date:** 2026-10-14
+- **Decision:** `SpawnRequest.IgnoreColliders` is a public `IReadOnlyList<Collider>` (null or empty = no set). Unlike `IgnoreCollider` it never clears: Direct overlap and SphereCast (`TryCast`, so Straight, Arc, Hitscan, and Beam) skip every collider in the set for the whole life of the instance, and so do `Overlap` (`AreaEffect`, including occupancy) and `OverlapDisk` (`GroundField`). A skip is not a hit: no `Hit`, despawn, Pierce/Bounce spend, or status. The set lives in `PhysicsHitQuery` next to, not inside, the one-slot skip of ADR-037, so a Pierce or Bounce hit no longer drops the shooter skip. At spawn the world copies the caller's list into a `List<Collider>` rented from a pool in `PhysicsHitQuery` (the caller may reuse or change its list afterwards; live shots do not see that). `CopyIgnore` copies the set into the child's own rented list (Multicast extras, Multiply children, Bounce/Pierce clones). The list returns to the pool after the instance is pooled and its pending children have spawned (end of `FlushPendingSpawns`), not in `ClearIgnore`, which Beam calls every pulse. A `GroundField` outlives its source shot, so it takes its own pooled copy at plant and returns it when the field ends. Null and destroyed colliders in the set are skipped. `IgnoreCollider` keeps its clear-on-exit behaviour. Published hit targets (`SetHitTarget`) are not in the set: it holds colliders, not `TargetId`s. The set is façade input, not an ECS field (ADR-005). `IHitQuery` stays internal.
+- **Why:** The game's pet has a non-trigger collider next to the wizard, so the wizard's shots hit the pet as World. One slot cannot hold two colliders, and the shooter skip is lost after the first Pierce or Bounce hit. Copying protects live shots from a list the game reuses between spawns; pooling keeps spawn allocation-free after warm-up.
+- **Consequences:** Partly supersedes ADR-037's "do not add a second ignore slot": the one slot stays for the post-hit skip and `IgnoreCollider`; the set is a separate, permanent skip. Area and ground queries now honor the set (they still ignore `IgnoreCollider`). Additive public field; bump `package.json` to **0.2.3** (a fix for game CR card #66). Phase 37.
+
 ## ADR-040 — Ground field and area burst events on IProjectileWorld
 
 - **Date:** 2026-10-08

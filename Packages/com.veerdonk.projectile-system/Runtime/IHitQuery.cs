@@ -23,11 +23,14 @@ namespace Veerdonk.ProjectileSystem
         void Overlap(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results);
 
         /// <summary>
-        /// Flat XZ disk of Targets for GroundField. Y does not count. Ignores World and other projectiles. Skips Strong.
+        /// Flat XZ disk of Targets for GroundField. Y does not count. Skips the set owned by <paramref name="ignoreSetOwner"/>. Ignores World and other projectiles. Skips Strong.
         /// </summary>
-        void OverlapDisk(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results);
+        void OverlapDisk(ProjectileId instanceId, ProjectileId ignoreSetOwner, Vector3 center, float radius, List<HitInfo> results);
 
-        /// <summary>Child instances ignore the same collider the parent already overlapped.</summary>
+        /// <summary>
+        /// Child instances ignore the same collider the parent already overlapped, and copy its ignore set
+        /// (<see cref="CopyIgnoreSet"/>).
+        /// </summary>
         void CopyIgnore(ProjectileId from, ProjectileId to);
 
         /// <summary>
@@ -35,6 +38,18 @@ namespace Veerdonk.ProjectileSystem
         /// Same one slot as <see cref="CopyIgnore"/>. Null does nothing.
         /// </summary>
         void SetIgnore(ProjectileId instanceId, Collider collider);
+
+        /// <summary>
+        /// Copies <paramref name="colliders"/> into a pooled set the instance skips for its whole life
+        /// (Direct, area, and ground queries). Null or empty does nothing.
+        /// </summary>
+        void SetIgnoreSet(ProjectileId instanceId, IReadOnlyList<Collider> colliders);
+
+        /// <summary>Copies only the ignore set of <paramref name="from"/> into its own pooled list for <paramref name="to"/>.</summary>
+        void CopyIgnoreSet(ProjectileId from, ProjectileId to);
+
+        /// <summary>Returns the instance's ignore set to the pool. Not part of <see cref="ClearIgnore"/>.</summary>
+        void ReleaseIgnoreSet(ProjectileId instanceId);
 
         /// <summary>Drops the one-slot collider skip and the published-target skip for this instance.</summary>
         void ClearIgnore(ProjectileId instanceId);

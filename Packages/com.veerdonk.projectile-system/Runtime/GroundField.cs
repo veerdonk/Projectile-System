@@ -165,9 +165,13 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             Vector3 center = ToGround(request.Center);
+            int fieldNumber = nextFieldId++;
+            var skipKey = new ProjectileId(-fieldNumber);
+            hitQuery.CopyIgnoreSet(sourceId, skipKey);
             var field = new LiveField
             {
-                FieldId = new GroundFieldId(nextFieldId++),
+                FieldId = new GroundFieldId(fieldNumber),
+                SkipKey = skipKey,
                 SourceId = sourceId,
                 Center = center,
                 Radius = request.Radius,
@@ -233,6 +237,7 @@ namespace Veerdonk.ProjectileSystem
                     }
 
                     ended?.Invoke(ToInfo(field, GroundFieldEndReason.Expired));
+                    hitQuery.ReleaseIgnoreSet(field.SkipKey);
                     ReturnView(field);
                     fields.RemoveAt(i);
                     continue;
@@ -267,7 +272,10 @@ namespace Veerdonk.ProjectileSystem
             disposed = true;
 
             for (int i = 0; i < fields.Count; i++)
+            {
                 ended?.Invoke(ToInfo(fields[i], GroundFieldEndReason.Disposed));
+                hitQuery.ReleaseIgnoreSet(fields[i].SkipKey);
+            }
 
             for (int i = 0; i < allViews.Count; i++)
             {
@@ -291,7 +299,7 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             overlapResults.Clear();
-            hitQuery.OverlapDisk(field.SourceId, field.Center, field.Radius, overlapResults);
+            hitQuery.OverlapDisk(field.SourceId, field.SkipKey, field.Center, field.Radius, overlapResults);
             OccupancyExchange.Exchange(
                 field.Occupants,
                 overlapResults,
@@ -309,7 +317,7 @@ namespace Veerdonk.ProjectileSystem
         {
             overlapResults.Clear();
             seenTargets.Clear();
-            hitQuery.OverlapDisk(field.SourceId, field.Center, field.Radius, overlapResults);
+            hitQuery.OverlapDisk(field.SourceId, field.SkipKey, field.Center, field.Radius, overlapResults);
 
             for (int i = 0; i < overlapResults.Count; i++)
             {
@@ -461,6 +469,7 @@ namespace Veerdonk.ProjectileSystem
         {
             public GroundFieldId FieldId;
             public ProjectileId SourceId;
+            public ProjectileId SkipKey;
             public Vector3 Center;
             public float Radius;
             public float LifetimeSeconds;

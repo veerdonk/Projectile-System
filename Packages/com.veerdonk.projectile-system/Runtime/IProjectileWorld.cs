@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Veerdonk.ProjectileSystem
@@ -141,6 +142,12 @@ namespace Veerdonk.ProjectileSystem
         /// Multicast extras and multiply children copy the skip. Area and ground queries are unchanged.
         /// </summary>
         public Collider IgnoreCollider;
+        /// <summary>
+        /// Colliders that Direct, area, and ground queries skip for the instance's whole life. A skip is not a hit.
+        /// Copied at <see cref="IProjectileWorld.Spawn"/>, so later changes to the caller's list do not affect live shots.
+        /// Children (Multicast, Multiply) copy it. Null or empty means no set. Does not change <see cref="IgnoreCollider"/>.
+        /// </summary>
+        public IReadOnlyList<Collider> IgnoreColliders;
         internal ProjectileId InheritIgnoreFrom;
         internal ProjectileId ParentId;
         internal SpawnCause Cause;

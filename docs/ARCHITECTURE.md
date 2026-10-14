@@ -57,7 +57,7 @@ Recipe
 
 **Modifier kits:** a game may treat one Recipe as a **base** and append extras at fire time ([DECISIONS.md](DECISIONS.md) ADR-032). `ModifierKit` is a ScriptableObject of layers (`RecipeStage` + modifiers), not a second Recipe and not stats. `Recipe.Clone()`, `Append`, `ModifierKit.ApplyTo`, and `Recipe.Compose(basis, id, kits)` clone then append. Each composition needs its own `Recipe.Id` (`RecipeStore` replaces the slot when the same id is spawned again). Kits do not insert `Interval(n)` for you.
 
-**Delivery:** `Recipe.Delivery` is how the shot is delivered ([DECISIONS.md](DECISIONS.md) ADR-035, ADR-036). **Straight** is today’s kinematic SphereCast (no gravity). **Arc** is kinematic with gravity; `Spawn` calls `BallisticAim.TrySolve` when `HomingAcquirePointSet` (unreachable → no spawn). **Hitscan** is one `Radius` polyline query inside `Spawn`, then expire — no view, World ends the ray unless Bounce, Pierce n+1, Homing `n` is max degrees of kink. **Beam** (phase 32) is a live instance that pulses a polyline until lifetime or `Despawn`. `AimBeam` moves the origin and direction and redraws without raising `Hit`. Homing on a Beam curves at degrees per second along the pulse (`distance / speed`), after a first step along the muzzle, and keeps that lock across redraws while the target stays in front of the muzzle. Segment cylinders are not colliders. Without Pierce a pulse stops on the first Target. Pierce n+1 is per pulse. World clips a pulse. Direct queries honor `SpawnRequest.IgnoreCollider` (ADR-037).
+**Delivery:** `Recipe.Delivery` is how the shot is delivered ([DECISIONS.md](DECISIONS.md) ADR-035, ADR-036). **Straight** is today’s kinematic SphereCast (no gravity). **Arc** is kinematic with gravity; `Spawn` calls `BallisticAim.TrySolve` when `HomingAcquirePointSet` (unreachable → no spawn). **Hitscan** is one `Radius` polyline query inside `Spawn`, then expire — no view, World ends the ray unless Bounce, Pierce n+1, Homing `n` is max degrees of kink. **Beam** (phase 32) is a live instance that pulses a polyline until lifetime or `Despawn`. `AimBeam` moves the origin and direction and redraws without raising `Hit`. Homing on a Beam curves at degrees per second along the pulse (`distance / speed`), after a first step along the muzzle, and keeps that lock across redraws while the target stays in front of the muzzle. Segment cylinders are not colliders. Without Pierce a pulse stops on the first Target. Pierce n+1 is per pulse. World clips a pulse. Direct queries honor `SpawnRequest.IgnoreCollider` (ADR-037) and the `IgnoreColliders` set (ADR-041).
 
 **Gravity:** `Recipe.Gravity` is downward acceleration in m/s², default 0 ([DECISIONS.md](DECISIONS.md) ADR-017). Burst integrates it each tick **only when Delivery is Arc** (ADR-035); `Gravity(n)` scales the instance value (ADR-018). Aim-to-point is `BallisticAim.TrySolve` (ADR-019, ADR-028): Arc `Spawn` calls it; games may still call it for barrel preview. Fast → nearly straight, barely enough on the level → ~45°. Not a baked curve and not an authored Range.
 
@@ -129,6 +129,7 @@ struct HitInfo
 - `Protection = Strong` — despawn with no Direct `Hit`, no `OnHit`, no `OnExpire`. `Expired` still fires. No field is planted
 - Projectile-vs-projectile: ignore until an ADR.
 - `IgnoreCollider` (ADR-037): Direct overlap and sweep skip that collider until the instance body no longer overlaps it. Not a hit. After clear, a later contact is a normal hit.
+- `IgnoreColliders` (ADR-041): a copied set of colliders skipped for the whole shot life by Direct, `Overlap`, and `OverlapDisk`. Not a hit. Multicast and Multiply children copy the set; a ground field keeps its own copy.
 
 The package does **not** apply HP, roll crits, spend mana, or tick DoT. Direct contact `HitInfo` is sampled before `OnHit` and raised after that list (ADR-016) so `AreaEffect` can suppress it; sampled damage still ignores OnHit `Damage(n)` on this contact. Sandbox listens to `Hit` for dummy health (`Hit.Damage`) when `Protection == None`, and to `StatusApplied` to call `IStatusReceiver.Apply`. Size is `Radius`. `Recipe.ManaCost` is the authored fire-time cost; `Mana(n)` scales the instance copy. `EffectRadius` is the `AreaEffect` overlap radius. A `GroundField` disk uses the modifier’s own radius and lifetime.
 
@@ -146,6 +147,7 @@ struct SpawnRequest
     bool HomingAcquirePointSet; // ADR-033 / ADR-035; game copies a world aim point (not mouse).
     Vector3 HomingAcquirePoint; // Homing first lock; Arc Spawn loft target; Hitscan / Beam aim. No second AimPoint field.
     Collider IgnoreCollider; // ADR-037. Direct skip until the shot body no longer overlaps it. Null = today.
+    IReadOnlyList<Collider> IgnoreColliders; // ADR-041. Copied at Spawn; skipped for the whole shot life. Null/empty = none.
 }
 
 struct ProjectileId { /* opaque handle */ }
@@ -312,7 +314,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038).
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `SpawnRequest.IgnoreColliders` (ADR-041), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 

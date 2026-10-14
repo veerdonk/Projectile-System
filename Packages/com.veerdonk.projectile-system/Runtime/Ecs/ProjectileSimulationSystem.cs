@@ -20,6 +20,7 @@ namespace Veerdonk.ProjectileSystem
         public System.Action<StatusInfo> StatusApplied;
         public System.Action<AreaBurstInfo> AreaBurst;
         public GroundFieldSet GroundFields;
+        public readonly List<ProjectileId> RetiredIds = new List<ProjectileId>();
     }
 
     [DisableAutoCreation]
@@ -701,6 +702,7 @@ namespace Veerdonk.ProjectileSystem
                 ? velocity.normalized
                 : ToVector3(projectile.BeamDirection);
             ClearOccupancy(instanceId);
+            Bridge.RetiredIds.Add(instanceId);
             Bridge.Pool.Return(projectile.RecipeIndex, entity);
             Bridge.Expired?.Invoke(new ExpireInfo
             {

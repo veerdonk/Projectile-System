@@ -33,12 +33,13 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 36 — hit query on concave mesh and terrain colliders (implemented; do not start phase 34)**
+**Phase 37 — spawn ignores a set of colliders (implemented; do not start phase 34)**
 
-- Package version is **0.2.1** (phase 36). **0.2.2** fixes the review follow-ups: a shorter overlap-pick ray, a trigger- and layer-filtered skin check, and a hold on the ignore after a concave pierce (`concaveExitByInstance`) until the shot passes the exit. No git tag in the phase session. Trello card #42 (jN71GH1X) is Done.
-- All changes are in `Runtime/PhysicsHitQuery.cs`. `SupportsClosestPoint` gates every `ClosestPoint` call. Hits now store a `PierceContact` (collider, point, incoming), and the exit is computed in `TryPierceExit`. `IHitQuery` and `ScriptedHitQuery` did not change, because the exit was already read only through `TryPierceExit`.
-- New tests are in `Tests/Runtime/ConcaveColliderPlayModeTests.cs` (7 for 0.2.1. For 0.2.2, 3 more: a thick-target pierce, a Pierce + Bounce re-hit, and a concave ray-miss ranking test). They fail on 0.2.0 and pass on 0.2.1. The BoxCollider pierce-exit negative case is the existing `PhysicsHitPlayModeTests.Pierce1_Multiply_SpawnsChildPastDummyAlongTravel`.
-- The open Unity Editor points at the main checkout, not at Claude worktrees. To test worktree code, copy the files over, run the tests, and restore them.
+- Package version is **0.2.3** (ADR-041, Trello card #66 R492B0HI). No git tag in the phase session. The human moves the card.
+- The set lives in `PhysicsHitQuery.ignoreSetByInstance` (pooled `List<Collider>`), separate from the one-slot skip. `ClearIgnore` does **not** release it: Beam calls `ClearIgnore` every pulse, and children are spawned from `pendingSpawns` after the parent is pooled. Instead, `ReturnToPool` adds the id to `SimulationBridge.RetiredIds`, and `FlushPendingSpawns` releases those sets after the spawn loop drains. Ids only count up, so a released id is never live again.
+- A ground field copies its source's set at `Plant` under a negative key `ProjectileId(-fieldNumber)` and passes it to `OverlapDisk(instanceId, ignoreSetOwner, ...)`. It releases that key when the field expires or on `Dispose`. Live instances' sets are not released on world `Dispose`; the query dies with the world.
+- Tests: `Tests/Runtime/IgnoreCollidersPlayModeTests.cs` (14). All 45 Play Mode and 286 Edit Mode tests pass. With `SetIgnoreSet` disabled in `SpawnCore`, 12 of the 14 fail (the null/empty cases pass either way).
+- The open Unity Editor points at the main checkout (now on `phase-35-field-area-events`, older than `main`), not at Claude worktrees. To test worktree code, copy the **whole** package folder over, run the tests, then `git checkout -- Packages/com.veerdonk.projectile-system` and delete the untracked files the copy added.
 
 **Also from phase 35 (ground field and area burst events):**
 

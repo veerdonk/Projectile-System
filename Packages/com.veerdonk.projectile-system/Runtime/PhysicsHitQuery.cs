@@ -16,6 +16,8 @@ namespace Veerdonk.ProjectileSystem
         readonly Dictionary<ProjectileId, PierceContact> pierceContactByInstance = new Dictionary<ProjectileId, PierceContact>();
         readonly Dictionary<ProjectileId, PierceContact> concaveExitByInstance = new Dictionary<ProjectileId, PierceContact>();
         readonly HashSet<ProjectileId> holdIgnore = new HashSet<ProjectileId>();
+        readonly Dictionary<ProjectileId, List<Collider>> ignoreSetByInstance = new Dictionary<ProjectileId, List<Collider>>();
+        readonly Stack<List<Collider>> ignoreSetPool = new Stack<List<Collider>>();
 
         public HitTargetCatalog HitTargets { get; set; }
 
@@ -29,6 +31,7 @@ namespace Veerdonk.ProjectileSystem
                 ignoreColliderByInstance.Remove(instanceId);
 
             ignoreColliderByInstance.TryGetValue(instanceId, out Collider ignore);
+            ignoreSetByInstance.TryGetValue(instanceId, out List<Collider> ignoreSet);
 
             int overlapCount = Physics.OverlapSphereNonAlloc(
                 origin,
@@ -51,7 +54,7 @@ namespace Veerdonk.ProjectileSystem
                 out publishedTravel,
                 out publishedClose);
 
-            if (TryPickOverlap(instanceId, origin, incoming, radius, overlapCount, ignore, out hit, out Collider hitCollider, out float overlapClose)
+            if (TryPickOverlap(instanceId, origin, incoming, radius, overlapCount, ignore, ignoreSet, out hit, out Collider hitCollider, out float overlapClose)
                 && (!published || publishedTravel > 1e-4f || overlapClose <= publishedClose))
             {
                 ignoreColliderByInstance[instanceId] = hitCollider;
@@ -71,7 +74,7 @@ namespace Veerdonk.ProjectileSystem
                 ~0,
                 QueryTriggerInteraction.Ignore);
 
-            if (TryPickCast(instanceId, origin, incoming, radius, castCount, ignore, out hit, out hitCollider, out float castTravel)
+            if (TryPickCast(instanceId, origin, incoming, radius, castCount, ignore, ignoreSet, out hit, out hitCollider, out float castTravel)
                 && (!published || castTravel <= publishedTravel))
             {
                 ignoreColliderByInstance[instanceId] = hitCollider;
@@ -104,11 +107,46 @@ namespace Veerdonk.ProjectileSystem
         public void CopyIgnore(ProjectileId from, ProjectileId to)
         {
             HitTargets?.CopyIgnore(from, to);
+            CopyIgnoreSet(from, to);
             if (from == to)
                 return;
             if (!ignoreColliderByInstance.TryGetValue(from, out Collider collider) || collider == null)
                 return;
             ignoreColliderByInstance[to] = collider;
+        }
+
+        public void SetIgnoreSet(ProjectileId instanceId, IReadOnlyList<Collider> colliders)
+        {
+            if (colliders == null || colliders.Count == 0)
+                return;
+
+            List<Collider> set = RentSet(instanceId);
+            for (int i = 0; i < colliders.Count; i++)
+            {
+                Collider collider = colliders[i];
+                if (collider != null)
+                    set.Add(collider);
+            }
+        }
+
+        public void CopyIgnoreSet(ProjectileId from, ProjectileId to)
+        {
+            if (from == to || !ignoreSetByInstance.TryGetValue(from, out List<Collider> source) || source.Count == 0)
+                return;
+
+            List<Collider> set = RentSet(to);
+            for (int i = 0; i < source.Count; i++)
+                set.Add(source[i]);
+        }
+
+        public void ReleaseIgnoreSet(ProjectileId instanceId)
+        {
+            if (!ignoreSetByInstance.TryGetValue(instanceId, out List<Collider> set))
+                return;
+
+            ignoreSetByInstance.Remove(instanceId);
+            set.Clear();
+            ignoreSetPool.Push(set);
         }
 
         public void SetIgnore(ProjectileId instanceId, Collider collider)
@@ -149,10 +187,11 @@ namespace Veerdonk.ProjectileSystem
                 ~0,
                 QueryTriggerInteraction.Ignore);
 
+            ignoreSetByInstance.TryGetValue(instanceId, out List<Collider> ignoreSet);
             for (int i = 0; i < count; i++)
             {
                 Collider collider = overlapBuffer[i];
-                if (collider == null || !collider.enabled)
+                if (collider == null || !collider.enabled || InSet(ignoreSet, collider))
                     continue;
 
                 var damageable = collider.GetComponentInParent<IDamageable>();
@@ -180,7 +219,7 @@ namespace Veerdonk.ProjectileSystem
             HitTargets?.AppendSphere(instanceId, center, radius, results);
         }
 
-        public void OverlapDisk(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
+        public void OverlapDisk(ProjectileId instanceId, ProjectileId ignoreSetOwner, Vector3 center, float radius, List<HitInfo> results)
         {
             if (results == null)
                 throw new ArgumentNullException(nameof(results));
@@ -200,11 +239,12 @@ namespace Veerdonk.ProjectileSystem
                 ~0,
                 QueryTriggerInteraction.Ignore);
 
+            ignoreSetByInstance.TryGetValue(ignoreSetOwner, out List<Collider> ignoreSet);
             float radiusSq = radius * radius;
             for (int i = 0; i < count; i++)
             {
                 Collider collider = overlapBuffer[i];
-                if (collider == null || !collider.enabled)
+                if (collider == null || !collider.enabled || InSet(ignoreSet, collider))
                     continue;
 
                 var damageable = collider.GetComponentInParent<IDamageable>();
@@ -271,6 +311,7 @@ namespace Veerdonk.ProjectileSystem
             float radius,
             int count,
             Collider ignore,
+            List<Collider> ignoreSet,
             out HitInfo hit,
             out Collider hitCollider,
             out float closeness)
@@ -283,7 +324,7 @@ namespace Veerdonk.ProjectileSystem
             for (int i = 0; i < count; i++)
             {
                 Collider collider = overlapBuffer[i];
-                if (collider == null || !collider.enabled || collider == ignore || IsPresentation(collider))
+                if (collider == null || !collider.enabled || collider == ignore || InSet(ignoreSet, collider) || IsPresentation(collider))
                     continue;
 
                 Vector3 point;
@@ -327,6 +368,7 @@ namespace Veerdonk.ProjectileSystem
             float radius,
             int count,
             Collider ignore,
+            List<Collider> ignoreSet,
             out HitInfo hit,
             out Collider hitCollider,
             out float travel)
@@ -340,7 +382,7 @@ namespace Veerdonk.ProjectileSystem
             {
                 RaycastHit rayHit = castBuffer[i];
                 Collider collider = rayHit.collider;
-                if (collider == null || !collider.enabled || collider == ignore || IsPresentation(collider))
+                if (collider == null || !collider.enabled || collider == ignore || InSet(ignoreSet, collider) || IsPresentation(collider))
                     continue;
 
                 if (rayHit.distance >= travel)
@@ -420,6 +462,33 @@ namespace Veerdonk.ProjectileSystem
             for (int i = 0; i < count; i++)
             {
                 if (castBuffer[i].collider == ignore)
+                    return true;
+            }
+
+            return false;
+        }
+
+        List<Collider> RentSet(ProjectileId instanceId)
+        {
+            if (ignoreSetByInstance.TryGetValue(instanceId, out List<Collider> existing))
+            {
+                existing.Clear();
+                return existing;
+            }
+
+            List<Collider> set = ignoreSetPool.Count > 0 ? ignoreSetPool.Pop() : new List<Collider>();
+            ignoreSetByInstance[instanceId] = set;
+            return set;
+        }
+
+        static bool InSet(List<Collider> set, Collider collider)
+        {
+            if (set == null)
+                return false;
+
+            for (int i = 0; i < set.Count; i++)
+            {
+                if (set[i] == collider)
                     return true;
             }
 
