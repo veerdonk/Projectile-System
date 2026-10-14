@@ -120,6 +120,125 @@ namespace Veerdonk.ProjectileSystem.Tests
         }
 
         [UnityTest]
+        public IEnumerator Pierce1_ThroughThickConcaveTarget_SmallSteps_HitsOnce()
+        {
+            CreateConcaveCube(new Vector3(0f, 0f, 4f), 3f, new TargetId(1));
+            GameObject poolRoot = Track(new GameObject("TestPool"));
+            var world = new ProjectileWorld(poolRoot.transform);
+            try
+            {
+                Recipe recipe = CreateRecipe("concave-thick-pierce", speed: 20f, lifetime: 5f);
+                recipe.OnHit = new IModifier[] { new Pierce(1) };
+                world.Prewarm(recipe, 2);
+                int hitCount = 0;
+                world.Hit += _ => hitCount++;
+
+                Physics.SyncTransforms();
+                yield return null;
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                TickUntil(
+                    world,
+                    1f,
+                    w => w.ActiveCount == 0 || (w.TryGetActiveAt(0, out _, out Vector3 at, out _, out _) && at.z > 7f),
+                    dt: 0.01f);
+
+                Assert.AreEqual(1, hitCount);
+                Assert.AreEqual(1, world.ActiveCount);
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator PierceAndBounce_OffConcaveTargetGround_HitsItAgain()
+        {
+            CreateSlabWithSpire(new TargetId(3));
+            GameObject poolRoot = Track(new GameObject("TestPool"));
+            var world = new ProjectileWorld(poolRoot.transform);
+            try
+            {
+                Recipe recipe = CreateRecipe("concave-pierce-bounce", speed: 3f, lifetime: 5f);
+                recipe.Delivery = Delivery.Arc;
+                recipe.Gravity = 20f;
+                recipe.OnHit = new IModifier[] { new Pierce(1), new Bounce(2) };
+                world.Prewarm(recipe, 2);
+                var hits = new List<HitInfo>();
+                world.Hit += info =>
+                {
+                    if (info.TargetId == new TargetId(3))
+                        hits.Add(info);
+                };
+
+                Physics.SyncTransforms();
+                yield return null;
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = new Vector3(0f, 1f, 0f),
+                    Direction = Vector3.down
+                });
+                TickUntil(world, 2f, _ => hits.Count >= 2, dt: 0.005f);
+
+                Assert.GreaterOrEqual(hits.Count, 2);
+                Assert.Greater(hits[1].Normal.y, 0.5f);
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator OverlapPick_ConcaveFloorRayMiss_LosesToCloserBoxTarget()
+        {
+            CreateConcavePlane();
+            GameObject dummy = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            dummy.transform.position = new Vector3(0f, 0.2f, 0.3f);
+            dummy.transform.localScale = Vector3.one * 0.5f;
+            dummy.AddComponent<TestDamageable>().TargetId = new TargetId(5);
+            GameObject poolRoot = Track(new GameObject("TestPool"));
+            var world = new ProjectileWorld(poolRoot.transform);
+            try
+            {
+                Recipe recipe = CreateRecipe("concave-floor-pick", speed: 5f, lifetime: 5f);
+                world.Prewarm(recipe, 2);
+                HitInfo? seen = null;
+                world.Hit += info => seen ??= info;
+
+                Physics.SyncTransforms();
+                yield return null;
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = new Vector3(0f, 0.2f, 0f),
+                    Direction = Vector3.forward
+                });
+                world.Tick(0.01f);
+
+                Assert.IsTrue(seen.HasValue);
+                Assert.AreEqual(HitKind.Target, seen.Value.Kind);
+                Assert.AreEqual(new TargetId(5), seen.Value.TargetId);
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Bounce2_OffConcaveGround_HitsThatGroundAgain()
         {
             CreateConcavePlane();
@@ -299,6 +418,32 @@ namespace Veerdonk.ProjectileSystem.Tests
             GameObject plane = Track(GameObject.CreatePrimitive(PrimitiveType.Plane));
             plane.name = "TestConcavePlane";
             Assert.IsFalse(plane.GetComponent<MeshCollider>().convex);
+        }
+
+        void CreateSlabWithSpire(TargetId target)
+        {
+            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Mesh cubeMesh = cube.GetComponent<MeshFilter>().sharedMesh;
+            var vertices = new List<Vector3>();
+            foreach (Vector3 v in cubeMesh.vertices)
+                vertices.Add(new Vector3(v.x * 10f, v.y - 0.5f, v.z * 10f));
+            var triangles = new List<int>(cubeMesh.triangles);
+            Object.DestroyImmediate(cube);
+
+            int spire = vertices.Count;
+            vertices.Add(new Vector3(4f, 3f, 4f));
+            vertices.Add(new Vector3(4.5f, 3f, 4f));
+            vertices.Add(new Vector3(4f, 3f, 4.5f));
+            triangles.AddRange(new[] { spire, spire + 1, spire + 2, spire, spire + 2, spire + 1 });
+
+            var mesh = Track(new Mesh());
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            GameObject slab = Track(new GameObject("TestSlabWithSpire"));
+            var collider = slab.AddComponent<MeshCollider>();
+            collider.sharedMesh = mesh;
+            collider.convex = false;
+            slab.AddComponent<TestDamageable>().TargetId = target;
         }
 
         GameObject CreateConcaveCube(Vector3 position, float scale, TargetId? target)
