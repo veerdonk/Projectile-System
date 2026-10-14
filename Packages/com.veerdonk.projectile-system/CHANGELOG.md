@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- A Pierce shot no longer hits a concave `MeshCollider` Target a second time on its far side when the body is thicker than one tick step. The skip on that collider now holds until the shot has passed the pierce exit.
-- On a concave collider, the overlap-pick raycast no longer reports a surface beyond the front of the shot's sphere.
+- A Pierce shot no longer hits a concave `MeshCollider` Target a second time on its far side when the body is thicker than one tick step. The skip on that collider now holds until the shot has passed the pierce exit. It releases at once if the shot turns away from the exit, for example after a Bounce, so the shot can hit that collider again.
+- On a concave collider, the overlap-pick raycast no longer reports a surface beyond the front of the shot's sphere. When that ray misses, the collider is ranked at the shot's radius, not at distance 0, so a closer Box Target overlapped in the same tick still wins.
+- The pierce-exit raycast on a concave mesh reaches a skin past the hit point, so a thin double-sided body still finds its exit.
 - The concave "still touching" check ignores triggers and other layers, so a crowded overlap cannot drop the skipped collider.
 
 ## [0.2.1] - 2026-10-14
