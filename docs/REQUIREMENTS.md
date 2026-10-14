@@ -802,6 +802,12 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** fire at the dummy line
 - **Then:** a debug polyline shows the query (Hitscan has no mesh)
 
+### Phase 36 — Concave ground and terrain hit without a warning
+
+- **Given:** ground with a concave `MeshCollider` (or a `TerrainCollider`), and a concave mesh Target
+- **When:** a Straight or Arc shot lands on the ground, and a `Pierce(1)` + `Multiply` shot goes through the Target
+- **Then:** one World `Hit` at the surface with no `ClosestPoint` warning; the Multiply child spawns past the Target's far side
+
 ## Product constraints
 
 - Sandbox uses URP

@@ -5,6 +5,14 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-10-14
+
+### Fixed
+
+- A shot that hits a concave `MeshCollider` or a `TerrainCollider` no longer logs the `Physics.ClosestPoint` warning, and its hit point and normal come from a raycast instead of the unchanged input point. The hit query never calls `ClosestPoint` on those colliders; Box, Sphere, Capsule, and convex Mesh colliders are unchanged.
+- The pierce exit is computed only when Pierce reads it. On a concave mesh it is the far side of the whole body along the travel line; a `TerrainCollider` has no pierce exit, so Multiply falls back to the hit point.
+- The `IgnoreCollider` / post-hit skip clears on a concave collider once the shot is clear, as for a box. Area and ground-field overlaps on a concave `IDamageable` use its bounds for the hit point.
+
 ## [0.2.0] - 2026-10-08
 
 ### Added

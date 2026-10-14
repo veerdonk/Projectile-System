@@ -7,11 +7,13 @@ namespace Veerdonk.ProjectileSystem
     sealed class PhysicsHitQuery : IHitQuery
     {
         const int BufferSize = 16;
+        const float Skin = 0.01f;
 
         readonly Collider[] overlapBuffer = new Collider[BufferSize];
+        readonly Collider[] skinBuffer = new Collider[BufferSize * 4];
         readonly RaycastHit[] castBuffer = new RaycastHit[BufferSize];
         readonly Dictionary<ProjectileId, Collider> ignoreColliderByInstance = new Dictionary<ProjectileId, Collider>();
-        readonly Dictionary<ProjectileId, Vector3> pierceExitByInstance = new Dictionary<ProjectileId, Vector3>();
+        readonly Dictionary<ProjectileId, PierceContact> pierceContactByInstance = new Dictionary<ProjectileId, PierceContact>();
         readonly HashSet<ProjectileId> holdIgnore = new HashSet<ProjectileId>();
 
         public HitTargetCatalog HitTargets { get; set; }
@@ -48,11 +50,11 @@ namespace Veerdonk.ProjectileSystem
                 out publishedTravel,
                 out publishedClose);
 
-            if (TryPickOverlap(instanceId, origin, incoming, overlapCount, ignore, out hit, out Collider hitCollider, out float overlapClose)
+            if (TryPickOverlap(instanceId, origin, incoming, radius, overlapCount, ignore, out hit, out Collider hitCollider, out float overlapClose)
                 && (!published || publishedTravel > 1e-4f || overlapClose <= publishedClose))
             {
                 ignoreColliderByInstance[instanceId] = hitCollider;
-                RememberPierceExit(instanceId, hitCollider, incoming);
+                RememberPierceContact(instanceId, hitCollider, hit.Point, incoming);
                 return true;
             }
 
@@ -68,11 +70,11 @@ namespace Veerdonk.ProjectileSystem
                 ~0,
                 QueryTriggerInteraction.Ignore);
 
-            if (TryPickCast(instanceId, origin, incoming, castCount, ignore, out hit, out hitCollider, out float castTravel)
+            if (TryPickCast(instanceId, origin, incoming, radius, castCount, ignore, out hit, out hitCollider, out float castTravel)
                 && (!published || castTravel <= publishedTravel))
             {
                 ignoreColliderByInstance[instanceId] = hitCollider;
-                RememberPierceExit(instanceId, hitCollider, incoming);
+                RememberPierceContact(instanceId, hitCollider, hit.Point, incoming);
                 return true;
             }
 
@@ -81,8 +83,8 @@ namespace Veerdonk.ProjectileSystem
 
         public bool TryPierceExit(ProjectileId instanceId, Vector3 travel, out Vector3 surface)
         {
-            if (pierceExitByInstance.TryGetValue(instanceId, out surface))
-                return true;
+            if (pierceContactByInstance.TryGetValue(instanceId, out PierceContact contact))
+                return TryExitSurface(contact, out surface);
 
             if (HitTargets != null && HitTargets.TryPierceExit(instanceId, travel, out surface))
                 return true;
@@ -111,7 +113,7 @@ namespace Veerdonk.ProjectileSystem
         public void ClearIgnore(ProjectileId instanceId)
         {
             ignoreColliderByInstance.Remove(instanceId);
-            pierceExitByInstance.Remove(instanceId);
+            pierceContactByInstance.Remove(instanceId);
             holdIgnore.Remove(instanceId);
             HitTargets?.ClearIgnore(instanceId);
         }
@@ -152,7 +154,7 @@ namespace Veerdonk.ProjectileSystem
                 if (protection == ProtectionLevel.Strong)
                     continue;
 
-                Vector3 point = collider.ClosestPoint(center);
+                Vector3 point = AreaPoint(collider, center);
                 Vector3 delta = point - center;
                 Vector3 normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up;
                 results.Add(new HitInfo
@@ -210,7 +212,7 @@ namespace Veerdonk.ProjectileSystem
                 if (dx * dx + dz * dz > radiusSq)
                     continue;
 
-                Vector3 point = collider.ClosestPoint(center);
+                Vector3 point = AreaPoint(collider, center);
                 Vector3 delta = point - center;
                 Vector3 normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up;
                 results.Add(new HitInfo
@@ -239,14 +241,14 @@ namespace Veerdonk.ProjectileSystem
         {
             if (!published)
             {
-                pierceExitByInstance.Remove(instanceId);
+                pierceContactByInstance.Remove(instanceId);
                 RememberOrClearIgnore(instanceId, ignore, origin, radius, castCount);
                 hit = default;
                 return false;
             }
 
             HitTargets.NoteHit(instanceId, publishedHit.TargetId);
-            pierceExitByInstance.Remove(instanceId);
+            pierceContactByInstance.Remove(instanceId);
             RememberOrClearIgnore(instanceId, ignore, origin, radius, castCount);
             hit = publishedHit;
             return true;
@@ -256,6 +258,7 @@ namespace Veerdonk.ProjectileSystem
             ProjectileId instanceId,
             Vector3 origin,
             Vector3 incoming,
+            float radius,
             int count,
             Collider ignore,
             out HitInfo hit,
@@ -273,13 +276,30 @@ namespace Veerdonk.ProjectileSystem
                 if (collider == null || !collider.enabled || collider == ignore || IsPresentation(collider))
                     continue;
 
-                Vector3 point = collider.ClosestPoint(origin);
+                Vector3 point;
+                Vector3 reported;
+                if (SupportsClosestPoint(collider))
+                {
+                    point = collider.ClosestPoint(origin);
+                    reported = origin - point;
+                }
+                else if (TryBackedUpRay(collider, origin, incoming, radius, out RaycastHit surface))
+                {
+                    point = surface.point;
+                    reported = surface.normal;
+                }
+                else
+                {
+                    point = origin;
+                    reported = Vector3.zero;
+                }
+
                 float distSq = (point - origin).sqrMagnitude;
                 if (distSq >= closeness)
                     continue;
 
                 closeness = distSq;
-                hit = BuildHit(instanceId, collider, origin, incoming, point, origin - point);
+                hit = BuildHit(instanceId, collider, origin, incoming, radius, point, reported);
                 hitCollider = collider;
                 found = true;
             }
@@ -291,6 +311,7 @@ namespace Veerdonk.ProjectileSystem
             ProjectileId instanceId,
             Vector3 origin,
             Vector3 incoming,
+            float radius,
             int count,
             Collider ignore,
             out HitInfo hit,
@@ -313,7 +334,7 @@ namespace Veerdonk.ProjectileSystem
                     continue;
 
                 travel = rayHit.distance;
-                hit = BuildHit(instanceId, collider, origin, incoming, rayHit.point, rayHit.normal);
+                hit = BuildHit(instanceId, collider, origin, incoming, radius, rayHit.point, rayHit.normal);
                 hitCollider = collider;
                 found = true;
             }
@@ -321,31 +342,47 @@ namespace Veerdonk.ProjectileSystem
             return found;
         }
 
-        void RememberPierceExit(ProjectileId instanceId, Collider collider, Vector3 incoming)
+        void RememberPierceContact(ProjectileId instanceId, Collider collider, Vector3 point, Vector3 incoming)
         {
             if (collider == null)
             {
-                pierceExitByInstance.Remove(instanceId);
+                pierceContactByInstance.Remove(instanceId);
                 return;
             }
 
-            pierceExitByInstance[instanceId] = ExitSurface(collider, incoming);
+            pierceContactByInstance[instanceId] = new PierceContact(collider, point, incoming);
         }
 
-        static Vector3 ExitSurface(Collider collider, Vector3 incoming)
+        static bool TryExitSurface(PierceContact contact, out Vector3 surface)
         {
-            Vector3 dir = incoming.sqrMagnitude > 1e-12f ? incoming.normalized : Vector3.forward;
+            Collider collider = contact.Collider;
+            surface = default;
+            if (collider == null || collider is TerrainCollider)
+                return false;
+
+            Vector3 dir = contact.Incoming.sqrMagnitude > 1e-12f ? contact.Incoming.normalized : Vector3.forward;
             Bounds bounds = collider.bounds;
+            if (!SupportsClosestPoint(collider))
+            {
+                float far = Vector3.Distance(contact.Point, bounds.center) + bounds.extents.magnitude + 1f;
+                var back = new Ray(contact.Point + dir * far, -dir);
+                if (!collider.Raycast(back, out RaycastHit exit, far))
+                    return false;
+
+                surface = exit.point;
+                return true;
+            }
+
             float reach = bounds.extents.magnitude + 1f;
             Vector3 probe = bounds.center + dir * reach;
-            Vector3 surface = collider.ClosestPoint(probe);
+            surface = collider.ClosestPoint(probe);
             if ((surface - probe).sqrMagnitude < 1e-8f)
             {
                 probe = bounds.center + dir * (reach + bounds.size.magnitude + 1f);
                 surface = collider.ClosestPoint(probe);
             }
 
-            return surface;
+            return true;
         }
 
         void RememberOrClearIgnore(ProjectileId instanceId, Collider ignore, Vector3 origin, float radius, int castCount)
@@ -381,14 +418,45 @@ namespace Veerdonk.ProjectileSystem
             return collider.GetComponentInParent<ProjectileView>() != null;
         }
 
-        static bool Overlaps(Collider collider, Vector3 origin, float radius)
+        bool Overlaps(Collider collider, Vector3 origin, float radius)
         {
             if (collider == null || !collider.enabled)
                 return false;
 
-            Vector3 closest = collider.ClosestPoint(origin);
-            float skin = radius + 0.01f;
-            return (closest - origin).sqrMagnitude <= skin * skin;
+            float skin = radius + Skin;
+            if (SupportsClosestPoint(collider))
+            {
+                Vector3 closest = collider.ClosestPoint(origin);
+                return (closest - origin).sqrMagnitude <= skin * skin;
+            }
+
+            int count = Physics.OverlapSphereNonAlloc(origin, skin, skinBuffer, ~0, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < count; i++)
+            {
+                if (skinBuffer[i] == collider)
+                    return true;
+            }
+
+            return false;
+        }
+
+        static bool SupportsClosestPoint(Collider collider)
+        {
+            if (collider is TerrainCollider)
+                return false;
+            return !(collider is MeshCollider mesh) || mesh.convex;
+        }
+
+        static bool TryBackedUpRay(Collider collider, Vector3 origin, Vector3 incoming, float radius, out RaycastHit surface)
+        {
+            Vector3 dir = incoming.sqrMagnitude > 1e-12f ? incoming.normalized : Vector3.forward;
+            float backup = radius + Skin;
+            return collider.Raycast(new Ray(origin - dir * backup, dir), out surface, backup * 2f + 1f);
+        }
+
+        static Vector3 AreaPoint(Collider collider, Vector3 center)
+        {
+            return SupportsClosestPoint(collider) ? collider.ClosestPoint(center) : collider.bounds.ClosestPoint(center);
         }
 
         static HitInfo BuildHit(
@@ -396,6 +464,7 @@ namespace Veerdonk.ProjectileSystem
             Collider collider,
             Vector3 origin,
             Vector3 incoming,
+            float radius,
             Vector3 point,
             Vector3 reportedNormal)
         {
@@ -403,7 +472,7 @@ namespace Veerdonk.ProjectileSystem
             {
                 InstanceId = instanceId,
                 Point = point,
-                Normal = SurfaceNormal(collider, origin, incoming, point, reportedNormal)
+                Normal = SurfaceNormal(collider, origin, incoming, radius, point, reportedNormal)
             };
 
             var damageable = collider.GetComponentInParent<IDamageable>();
@@ -431,6 +500,7 @@ namespace Veerdonk.ProjectileSystem
             Collider collider,
             Vector3 origin,
             Vector3 incoming,
+            float radius,
             Vector3 point,
             Vector3 reported)
         {
@@ -442,9 +512,16 @@ namespace Veerdonk.ProjectileSystem
             Vector3 normal = reported;
             if (normal.sqrMagnitude < 1e-10f && collider != null)
             {
-                Vector3 fromSurface = origin - collider.ClosestPoint(origin);
-                if (fromSurface.sqrMagnitude > 1e-10f)
-                    normal = fromSurface;
+                if (SupportsClosestPoint(collider))
+                {
+                    Vector3 fromSurface = origin - collider.ClosestPoint(origin);
+                    if (fromSurface.sqrMagnitude > 1e-10f)
+                        normal = fromSurface;
+                }
+                else if (TryBackedUpRay(collider, origin, incomingDir, radius, out RaycastHit backed))
+                {
+                    normal = backed.normal;
+                }
             }
 
             if (normal.sqrMagnitude < 1e-10f)
@@ -454,6 +531,20 @@ namespace Veerdonk.ProjectileSystem
             if (Vector3.Dot(normal, incomingDir) > 0f)
                 normal = -normal;
             return normal;
+        }
+
+        readonly struct PierceContact
+        {
+            public PierceContact(Collider collider, Vector3 point, Vector3 incoming)
+            {
+                Collider = collider;
+                Point = point;
+                Incoming = incoming;
+            }
+
+            public Collider Collider { get; }
+            public Vector3 Point { get; }
+            public Vector3 Incoming { get; }
         }
     }
 }

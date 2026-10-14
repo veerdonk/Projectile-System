@@ -33,9 +33,16 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 35 — ground field and area burst events (implemented; do not start phase 34)**
+**Phase 36 — hit query on concave mesh and terrain colliders (implemented; do not start phase 34)**
 
-- Package version is **0.2.0**. No git tag in the phase session. Phase 34 (Play Mode debug overlay) is still next; phase 35 was inserted for Trello card i9g6LSBf. Move the card list only when the human says so.
+- Package version is **0.2.1**. No git tag in the phase session. Trello card #42 (jN71GH1X) is in review.
+- All changes are in `Runtime/PhysicsHitQuery.cs`. `SupportsClosestPoint` gates every `ClosestPoint` call. Hits now store a `PierceContact` (collider, point, incoming), and the exit is computed in `TryPierceExit`. `IHitQuery` and `ScriptedHitQuery` did not change, because the exit was already read only through `TryPierceExit`.
+- New tests are in `Tests/Runtime/ConcaveColliderPlayModeTests.cs` (7). They fail on 0.2.0 and pass on 0.2.1. The BoxCollider pierce-exit negative case is the existing `PhysicsHitPlayModeTests.Pierce1_Multiply_SpawnsChildPastDummyAlongTravel`.
+- The open Unity Editor points at the main checkout, not at Claude worktrees. To test worktree code, copy the files over, run the tests, and restore them.
+
+**Also from phase 35 (ground field and area burst events):**
+
+- That phase shipped as **0.2.0**. No git tag in the phase session. Phase 34 (Play Mode debug overlay) is still next; phase 35 was inserted for Trello card i9g6LSBf. Move the card list only when the human says so.
 - New files: `Runtime/GroundFieldEvents.cs`, `Tests/Editor/FieldAreaEventTests.cs`. New `.meta` files are made by Unity on import; check they are committed.
 - Events live on `IProjectileWorld` (ADR-040). `GroundFieldSet` takes optional planted/pulsed/ended callbacks; `SimulationBridge.AreaBurst` carries bursts. Pulsed comes after that pulse's Area Hits; AreaBurst comes before its Area Hits; occupancy burst only on first overlap.
 - Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Do **not** run **Projectile Lab > Rebuild** to refresh presets (it overwrites `Samples~/Yard/Scenes/Yard.unity`). Catalog `Compact()` leftover from phase 29 still applies.
