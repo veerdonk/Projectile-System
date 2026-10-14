@@ -168,7 +168,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             hitTargets?.AppendSphere(instanceId, center, radius, results);
         }
 
-        public void OverlapDisk(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
+        public void OverlapDisk(ProjectileId instanceId, ProjectileId ignoreSetOwner, Vector3 center, float radius, List<HitInfo> results)
         {
             results.Clear();
             if (radius <= 0f)
@@ -207,6 +207,18 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         public void SetIgnore(ProjectileId instanceId, Collider collider)
+        {
+        }
+
+        public void SetIgnoreSet(ProjectileId instanceId, IReadOnlyList<Collider> colliders)
+        {
+        }
+
+        public void CopyIgnoreSet(ProjectileId from, ProjectileId to)
+        {
+        }
+
+        public void ReleaseIgnoreSet(ProjectileId instanceId)
         {
         }
 

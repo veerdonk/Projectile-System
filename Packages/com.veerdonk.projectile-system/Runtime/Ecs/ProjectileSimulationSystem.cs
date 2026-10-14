@@ -20,6 +20,7 @@ namespace Veerdonk.ProjectileSystem
         public System.Action<StatusInfo> StatusApplied;
         public System.Action<AreaBurstInfo> AreaBurst;
         public GroundFieldSet GroundFields;
+        public readonly List<ProjectileId> RetiredIds = new List<ProjectileId>();
     }
 
     [DisableAutoCreation]
@@ -658,6 +659,9 @@ namespace Veerdonk.ProjectileSystem
                     Bridge.Hit?.Invoke(raised);
                 if (!Bridge.ModifierContext.DirectStatusSuppressed)
                     FlushStatusApplied(hit);
+                if (!em.Exists(entity) || !em.IsEnabled(entity)
+                    || em.GetComponentData<Projectile>(entity).Id != projectile.Id)
+                    return false;
                 FlushAreaOverlaps(entity, OccupancyOnHit);
                 FlushGroundFields(entity);
                 if (Bridge.ModifierContext.CancelDespawn)
@@ -701,6 +705,7 @@ namespace Veerdonk.ProjectileSystem
                 ? velocity.normalized
                 : ToVector3(projectile.BeamDirection);
             ClearOccupancy(instanceId);
+            Bridge.RetiredIds.Add(instanceId);
             Bridge.Pool.Return(projectile.RecipeIndex, entity);
             Bridge.Expired?.Invoke(new ExpireInfo
             {

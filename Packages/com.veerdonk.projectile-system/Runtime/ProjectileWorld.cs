@@ -631,6 +631,7 @@ namespace Veerdonk.ProjectileSystem
             hitQuery.CopyIgnore(request.InheritIgnoreFrom, id);
             if (request.IgnoreCollider != null)
                 hitQuery.SetIgnore(id, request.IgnoreCollider);
+            hitQuery.SetIgnoreSet(id, request.IgnoreColliders);
             Spawned?.Invoke(new SpawnInfo
             {
                 InstanceId = id,
@@ -681,6 +682,10 @@ namespace Veerdonk.ProjectileSystem
                 pendingSpawns.RemoveAt(0);
                 SpawnCore(request);
             }
+
+            for (int i = 0; i < bridge.RetiredIds.Count; i++)
+                hitQuery.ReleaseIgnoreSet(bridge.RetiredIds[i]);
+            bridge.RetiredIds.Clear();
         }
 
         void ThrowIfDisposed()

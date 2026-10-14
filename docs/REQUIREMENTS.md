@@ -38,6 +38,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Gravity** — downward acceleration in m/s² on the Recipe (default 0) and the instance. Burst adds it to velocity each tick **only when `Delivery` is Arc** (ADR-035). Straight / Hitscan / Beam ignore it for motion. Arc with gravity 0 stays level. Ballistic reach is derived from Speed + Gravity (ADR-028); there is no Range stat
 - **Delivery** — how the shot is delivered (`Straight`, `Arc`, `Hitscan`, `Beam`). Not a modifier and not a seventh stage. Arc: `Spawn` solves loft from `HomingAcquirePoint`. Hitscan: one polyline query then expire. Beam: live instance, pulse polyline until lifetime or `Despawn`
 - **Ignore collider** — `SpawnRequest.IgnoreCollider`. Direct overlap and sweep skip that collider until the shot body no longer overlaps it. Not a hit. After clear, a later contact is a normal hit. Same one-slot skip pierce/bounce already use after a hit ([DECISIONS.md](DECISIONS.md) ADR-037). Not `IProjectileProtection`
+- **Ignore colliders** — `SpawnRequest.IgnoreColliders` (ADR-041). A copied list of colliders skipped for the whole life of the shot by Direct, area, and ground queries. Not a hit. Null or empty is today’s behaviour.
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
 - **Strength** for homing: degrees per second on Straight / Arc and along a Beam pulse (`distance / speed`); **degrees of kink** per segment on Hitscan (ADR-035, ADR-036)
@@ -807,6 +808,18 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** ground with a concave `MeshCollider` (or a `TerrainCollider`), and a concave mesh Target
 - **When:** a Straight or Arc shot lands on the ground, and a `Pierce(1)` + `Multiply` shot goes through the Target
 - **Then:** one World `Hit` at the surface with no `ClosestPoint` warning; the Multiply child spawns past the Target's far side
+
+### Phase 37 — Ignored pet is not a hit
+
+- **Given:** a Straight Recipe spawned between the shooter and a pet collider, with `IgnoreColliders` = [shooter, pet]
+- **When:** the shot passes the pet
+- **Then:** no `Hit` for the pet, the instance stays live, Pierce/Bounce remaining are unchanged
+
+### Phase 37 — Caller clearing the list does not end the skip
+
+- **Given:** the same spawn, and the caller clears its list right after `Spawn`
+- **When:** the shot passes the pet
+- **Then:** still skipped
 
 ## Product constraints
 
