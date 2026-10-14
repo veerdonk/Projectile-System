@@ -33,7 +33,14 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 38 — hit query buffers grow when full (implemented; do not start phase 34)**
+**Phase 39 — OpenUPM distribution (docs and metadata done; do not start phase 34)**
+
+- Package version is **0.2.5**. No runtime code changed. No git tag in the phase session; CI tags `v0.2.5` on merge and OpenUPM builds it.
+- The repo is public now. The OpenUPM submission (openupm.com/packages/add, folder `Packages/com.veerdonk.projectile-system`) is a manual step by the human. Until the listing is live, the README's OpenUPM route does not resolve.
+- OpenUPM criteria checked (2026-10-14): three-segment name matches `package.json`, MIT on public GitHub, tags match `version`, package ~1.8 MB (limit 512 MB). A release is needed within 3 months of submission or the listing is removed. Choose only topics that fit in the submission form.
+- Never move or delete a released `v*` tag; OpenUPM keeps the version it built.
+
+**Also from phase 38 — hit query buffers grow when full:**
 
 - Package version is **0.2.4**. No git tag in the phase session. `PhysicsHitQuery` doubles `overlapBuffer`, `castBuffer`, or `skinBuffer` (cap 1024) and re-queries when a NonAlloc count equals the buffer length (`OverlapSphere`, `SphereCast`, `Grow`).
 - New tests: `Tests/Runtime/QueryBufferGrowthPlayModeTests.cs`. All three fail on 0.2.3 (checked by swapping in the old `PhysicsHitQuery`).

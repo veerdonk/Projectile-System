@@ -125,7 +125,9 @@ Notes: the events are structs, so there is no per-event allocation. `Absorbed` e
 
 Requires Unity 6 LTS (`6000.6`) and `com.unity.entities`. MIT license.
 
-**Add package from git URL** (Package Manager → +):
+**From OpenUPM** (recommended; Package Manager shows updates): add a scoped registry in **Project Settings → Package Manager** with URL `https://package.openupm.com` and scope `com.veerdonk`, then install **Projectile System** from **My Registries**. Or run `openupm add com.veerdonk.projectile-system`.
+
+**Add package from git URL** (Package Manager → +). Locked to one commit; no update checks:
 
 ```text
 https://github.com/veerdonk/Projectile-System.git?path=/Packages/com.veerdonk.projectile-system

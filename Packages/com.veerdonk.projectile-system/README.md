@@ -8,6 +8,40 @@ Kinematic projectile simulation for Unity 6 LTS. Games spawn through `IProjectil
 
 Requires **Unity 6 LTS `6000.6`** (this project is `6000.6.0f1`). Package Manager will pull **Entities 6.6**.
 
+### From OpenUPM (recommended)
+
+Package Manager checks registry packages for updates, so this is the only route with an **Update** button.
+
+1. Unity → **Edit → Project Settings → Package Manager**.
+2. Under **Scoped Registries**, add:
+   - **Name:** `OpenUPM`
+   - **URL:** `https://package.openupm.com`
+   - **Scope(s):** `com.veerdonk`
+3. **Window → Package Manager** → **My Registries** → **Projectile System** → **Install**.
+
+Or add the registry and dependency to `Packages/manifest.json` yourself:
+
+```json
+{
+  "scopedRegistries": [
+    {
+      "name": "OpenUPM",
+      "url": "https://package.openupm.com",
+      "scopes": ["com.veerdonk"]
+    }
+  ],
+  "dependencies": {
+    "com.veerdonk.projectile-system": "0.2.5"
+  }
+}
+```
+
+With the [openupm-cli](https://openupm.com/docs/getting-started-cli.html): `openupm add com.veerdonk.projectile-system`.
+
+Merges to `main` that introduce a new `package.json` version create tag `v{version}` and a GitHub Release (notes from `CHANGELOG.md` plus merged PRs). OpenUPM builds that tag into a registry version shortly after.
+
+**Moving from a Git URL install:** remove the package in Package Manager (or delete its line in `manifest.json`), add the scoped registry, then install from **My Registries**. A Git install does not see registry updates.
+
 ### From Git (another Unity project)
 
 1. Unity → **Window → Package Manager**.
@@ -18,9 +52,7 @@ Requires **Unity 6 LTS `6000.6`** (this project is `6000.6.0f1`). Package Manage
 https://github.com/veerdonk/Projectile-System.git?path=/Packages/com.veerdonk.projectile-system
 ```
 
-To pin a release, append `#` and the tag (for example `#v0.1.1`). Merges to `main` that introduce a new `package.json` version create tag `v{version}` and a GitHub Release (notes from `CHANGELOG.md` plus merged PRs).
-
-The GitHub repo must be public, or the other person needs access.
+To pin a release, append `#` and the tag (for example `#v0.2.5`). Package Manager locks a Git install to one commit and does not check for updates; add the package again to update.
 
 ### Copy the folder
 

@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-042 — Publish through OpenUPM; Git URL stays as a fallback
+
+- **Date:** 2026-10-14
+- **Decision:** The package is listed on OpenUPM (`https://package.openupm.com`, scope `com.veerdonk`). OpenUPM builds a registry version from each `v{version}` Git tag that `.github/workflows/release-package.yml` already creates on `main`; this repo publishes nothing itself. The docs show OpenUPM first, then the Git URL, then copying the folder. `package.json` gains a readable `displayName` plus `documentationUrl`, `changelogUrl`, `licensesUrl`, and `keywords`.
+- **Why:** Unity Package Manager only checks registry packages for updates. A Git URL install is locked to a commit in `packages-lock.json`, so users had to add the package again to update. With a scoped registry, Package Manager lists versions and shows an Update button. OpenUPM is free, builds from tags we already push, and needs no publish secrets. The repo is now public, which OpenUPM requires.
+- **Consequences:** Supersedes the "no OpenUPM / registry publish" lines in phases 22–25. Each tag must match `package.json` `version` at that commit (the release workflow already ensures this). Never move or delete a released tag: OpenUPM keeps the version it built. Users who installed by Git URL must remove and re-add the package from the registry to get updates. The OpenUPM submission is a manual step by the repo owner. Bump `package.json` to **0.2.5**. Phase 39.
+
 ## ADR-041 — Spawn can ignore a set of colliders for the whole life of the shot
 
 - **Date:** 2026-10-14
