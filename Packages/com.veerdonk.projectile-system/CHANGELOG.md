@@ -5,6 +5,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-10-14
+
+### Fixed
+
+- A crowded scene could make the physics hit query miss the real target. The overlap, sweep, `Overlap`, `OverlapDisk`, and skin-check buffers held 16 colliders (64 for the skin check), and when they filled, Unity returned an unsorted subset. Ignored colliders (the `IgnoreCollider` slot and the `IgnoreColliders` set) take slots too. A query that fills its buffer now doubles it (cap 1024) and runs again, so a buffer allocates only when a scene first needs it. Buffers never shrink.
+
 ## [0.2.3] - 2026-10-14
 
 ### Added
