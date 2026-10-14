@@ -37,7 +37,7 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 
 - Package version is **0.2.1** (phase 36). **0.2.2** fixes the review follow-ups: a shorter overlap-pick ray, a trigger- and layer-filtered skin check, and a hold on the ignore after a concave pierce (`concaveExitByInstance`) until the shot passes the exit. No git tag in the phase session. Trello card #42 (jN71GH1X) is Done.
 - All changes are in `Runtime/PhysicsHitQuery.cs`. `SupportsClosestPoint` gates every `ClosestPoint` call. Hits now store a `PierceContact` (collider, point, incoming), and the exit is computed in `TryPierceExit`. `IHitQuery` and `ScriptedHitQuery` did not change, because the exit was already read only through `TryPierceExit`.
-- New tests are in `Tests/Runtime/ConcaveColliderPlayModeTests.cs` (7 for 0.2.1, plus a thick-target pierce test for 0.2.2). They fail on 0.2.0 and pass on 0.2.1. The BoxCollider pierce-exit negative case is the existing `PhysicsHitPlayModeTests.Pierce1_Multiply_SpawnsChildPastDummyAlongTravel`.
+- New tests are in `Tests/Runtime/ConcaveColliderPlayModeTests.cs` (7 for 0.2.1. For 0.2.2, 3 more: a thick-target pierce, a Pierce + Bounce re-hit, and a concave ray-miss ranking test). They fail on 0.2.0 and pass on 0.2.1. The BoxCollider pierce-exit negative case is the existing `PhysicsHitPlayModeTests.Pierce1_Multiply_SpawnsChildPastDummyAlongTravel`.
 - The open Unity Editor points at the main checkout, not at Claude worktrees. To test worktree code, copy the files over, run the tests, and restore them.
 
 **Also from phase 35 (ground field and area burst events):**
