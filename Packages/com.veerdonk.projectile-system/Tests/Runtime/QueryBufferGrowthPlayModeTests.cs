@@ -8,7 +8,7 @@ namespace Veerdonk.ProjectileSystem.Tests
 {
     public sealed class QueryBufferGrowthPlayModeTests
     {
-        const int Clutter = 40;
+        const int Clutter = 100;
 
         readonly List<Object> spawned = new List<Object>();
         readonly List<HitInfo> hits = new List<HitInfo>();
@@ -40,15 +40,15 @@ namespace Veerdonk.ProjectileSystem.Tests
         [UnityTest]
         public IEnumerator Straight_IgnoredClutterAlongPath_StillHitsDummy()
         {
-            Small(new Vector3(0f, 0f, 6f), true, 7);
+            Small(new Vector3(0f, 0f, 3.2f), true, 7);
             var ignore = new List<Collider>();
-            for (int i = 0; i < Clutter; i++)
+            for (int i = 0; i < 40; i++)
                 ignore.Add(Small(new Vector3(0f, 0f, 1f + i * 0.05f), false, 0));
             Recipe recipe = Prewarmed("straight");
             yield return Settle();
 
             Spawn(recipe, ignore);
-            TickUntil(w => w.ActiveCount == 0);
+            world.Tick(0.2f);
 
             Assert.AreEqual(1, hits.Count);
             Assert.AreEqual(HitKind.Target, hits[0].Kind);
@@ -90,8 +90,11 @@ namespace Veerdonk.ProjectileSystem.Tests
             Spawn(recipe, ignore);
 
             Assert.AreEqual(20, hits.Count);
+            var seen = new HashSet<TargetId>();
             for (int i = 0; i < hits.Count; i++)
-                Assert.Less(int.Parse(hits[i].TargetId.ToString()), 100);
+                seen.Add(hits[i].TargetId);
+            for (int i = 1; i <= 20; i++)
+                Assert.IsTrue(seen.Contains(new TargetId(i)), "target " + i);
             LogAssert.NoUnexpectedReceived();
         }
 

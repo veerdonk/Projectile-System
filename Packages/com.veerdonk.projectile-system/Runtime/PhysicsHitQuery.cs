@@ -215,12 +215,7 @@ namespace Veerdonk.ProjectileSystem
             const float halfHeight = 1f;
             Vector3 point0 = center + Vector3.up * halfHeight;
             Vector3 point1 = center - Vector3.up * halfHeight;
-            int count;
-            while ((count = Physics.OverlapCapsuleNonAlloc(point0, point1, radius, overlapBuffer, ~0, QueryTriggerInteraction.Ignore)) == overlapBuffer.Length
-                   && Grow(ref overlapBuffer))
-            {
-            }
-
+            int count = OverlapCapsule(point0, point1, radius);
 
             ignoreSetByInstance.TryGetValue(ignoreSetOwner, out List<Collider> ignoreSet);
             float radiusSq = radius * radius;
@@ -535,6 +530,17 @@ namespace Veerdonk.ProjectileSystem
             int count;
             while ((count = Physics.OverlapSphereNonAlloc(center, radius, buffer, mask, QueryTriggerInteraction.Ignore)) == buffer.Length
                    && Grow(ref buffer))
+            {
+            }
+
+            return count;
+        }
+
+        int OverlapCapsule(Vector3 point0, Vector3 point1, float radius)
+        {
+            int count;
+            while ((count = Physics.OverlapCapsuleNonAlloc(point0, point1, radius, overlapBuffer, ~0, QueryTriggerInteraction.Ignore)) == overlapBuffer.Length
+                   && Grow(ref overlapBuffer))
             {
             }
 

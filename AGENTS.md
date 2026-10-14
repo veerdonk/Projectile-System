@@ -36,7 +36,7 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 **Phase 38 — hit query buffers grow when full (implemented; do not start phase 34)**
 
 - Package version is **0.2.4**. No git tag in the phase session. `PhysicsHitQuery` doubles `overlapBuffer`, `castBuffer`, or `skinBuffer` (cap 1024) and re-queries when a NonAlloc count equals the buffer length (`OverlapSphere`, `SphereCast`, `Grow`).
-- New tests: `Tests/Runtime/QueryBufferGrowthPlayModeTests.cs`. Only the `AreaEffect` one fails on 0.2.3. PhysX happened to return the target in the two ignored-clutter cases, so those two are regression guards.
+- New tests: `Tests/Runtime/QueryBufferGrowthPlayModeTests.cs`. All three fail on 0.2.3 (checked by swapping in the old `PhysicsHitQuery`).
 - The open Unity Editor points at the main checkout and may be behind `main`. To test worktree code, copy the whole package folder over, run the tests, then `git checkout -- Packages` and delete the untracked files there.
 
 **Also from phase 37 (spawn ignores a set of colliders):**
