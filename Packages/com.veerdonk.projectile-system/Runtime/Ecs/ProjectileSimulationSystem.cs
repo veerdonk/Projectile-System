@@ -659,6 +659,9 @@ namespace Veerdonk.ProjectileSystem
                     Bridge.Hit?.Invoke(raised);
                 if (!Bridge.ModifierContext.DirectStatusSuppressed)
                     FlushStatusApplied(hit);
+                if (!em.Exists(entity) || !em.IsEnabled(entity)
+                    || em.GetComponentData<Projectile>(entity).Id != projectile.Id)
+                    return false;
                 FlushAreaOverlaps(entity, OccupancyOnHit);
                 FlushGroundFields(entity);
                 if (Bridge.ModifierContext.CancelDespawn)

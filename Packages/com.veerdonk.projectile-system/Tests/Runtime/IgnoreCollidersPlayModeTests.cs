@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -330,6 +331,215 @@ namespace Veerdonk.ProjectileSystem.Tests
 
             AssertSingleTargetHit(7);
             LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator RetiredShot_ReleasesIgnoreSet()
+        {
+            Collider shooter = Cube(Vector3.zero);
+            Collider pet = Cube(new Vector3(0f, 0f, 3f));
+            Dummy(new Vector3(0f, 0f, 6f), 7);
+            Recipe recipe = Prewarmed("release");
+            yield return Settle();
+
+            ProjectileId id = Spawn(recipe, shooter, pet);
+            Dictionary<ProjectileId, List<Collider>> sets = IgnoreSets();
+            Assert.IsTrue(sets.ContainsKey(id));
+            Assert.AreEqual(2, sets[id].Count);
+
+            TickUntil(w => w.ActiveCount == 0);
+            world.Tick(0.05f);
+
+            AssertSingleTargetHit(7);
+            Assert.IsFalse(sets.ContainsKey(id));
+            Assert.AreEqual(0, sets.Count);
+            Stack<List<Collider>> pool = IgnoreSetPool();
+            Assert.GreaterOrEqual(pool.Count, 1);
+            Assert.AreEqual(0, pool.Peek().Count);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator RecycledSet_DoesNotLeakIntoNextShot()
+        {
+            Collider shooter = Cube(Vector3.zero);
+            Collider pet = Cube(new Vector3(0f, 0f, 3f));
+            Dummy(new Vector3(0f, 0f, 6f), 7);
+            Recipe recipe = Prewarmed("recycle");
+            yield return Settle();
+
+            Spawn(recipe, shooter, pet);
+            TickUntil(w => w.ActiveCount == 0);
+            world.Tick(0.05f);
+            AssertSingleTargetHit(7);
+            Assert.GreaterOrEqual(IgnoreSetPool().Count, 1);
+
+            hits.Clear();
+            Spawn(recipe, shooter);
+            TickUntil(w => w.ActiveCount == 0);
+
+            Assert.AreEqual(1, hits.Count);
+            Assert.AreEqual(HitKind.World, hits[0].Kind);
+            Assert.Less(hits[0].Point.z, 3f);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator Beam_PulsePassesPet_HitsDummy()
+        {
+            Collider shooter = Cube(Vector3.zero);
+            Collider pet = Cube(new Vector3(0f, 0f, 3f));
+            Dummy(new Vector3(0f, 0f, 6f), 7);
+            Recipe recipe = Prewarmed("beam");
+            recipe.Delivery = Delivery.Beam;
+            recipe.BeamPulseSeconds = 0.1f;
+            yield return Settle();
+
+            Spawn(recipe, shooter, pet);
+            for (int i = 0; i < 3; i++)
+                world.Tick(0.1f);
+
+            Assert.AreEqual(1, world.ActiveCount);
+            Assert.GreaterOrEqual(hits.Count, 3);
+            for (int i = 0; i < hits.Count; i++)
+            {
+                Assert.AreEqual(HitKind.Target, hits[i].Kind);
+                Assert.AreEqual(new TargetId(7), hits[i].TargetId);
+            }
+
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator GroundFieldOnHit_SkipsPet()
+        {
+            Collider shooter = Cube(Vector3.zero);
+            Collider pet = Dummy(new Vector3(1.5f, 0f, 5f), 50);
+            Dummy(new Vector3(-1.5f, 0f, 5f), 8);
+            Dummy(new Vector3(0f, 0f, 6f), 7);
+            Recipe recipe = Prewarmed("field-on-hit");
+            recipe.OnHit = new IModifier[] { new GroundField(3f, 3f, 3f, intervalSeconds: 0.5f) };
+            yield return Settle();
+
+            Spawn(recipe, shooter, pet);
+            TickUntil(w => w.ActiveCount == 0);
+            for (int i = 0; i < 20; i++)
+                world.Tick(0.05f);
+
+            int otherAreaHits = 0;
+            for (int i = 0; i < hits.Count; i++)
+            {
+                if (hits[i].Source != HitSource.Area)
+                    continue;
+
+                Assert.AreNotEqual(new TargetId(50), hits[i].TargetId);
+                if (hits[i].TargetId == new TargetId(8))
+                    otherAreaHits++;
+            }
+
+            Assert.GreaterOrEqual(otherAreaHits, 2);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator MultiplyGrandchildren_InheritSet()
+        {
+            Collider shooter = Cube(Vector3.zero);
+            Collider pet = Cube(new Vector3(0f, 0f, 3f));
+            Dummy(new Vector3(0f, 0f, 6f), 1);
+            Dummy(new Vector3(0f, 0f, -6f), 2);
+            Recipe grandchild = Prewarmed("grandchild");
+            Recipe child = Prewarmed("child-gen1");
+            child.OnHit = new IModifier[] { new Multiply(1, grandchild) };
+            Recipe recipe = Prewarmed("multiply-gen0");
+            recipe.MultiplyGenerations = 1;
+            recipe.OnHit = new IModifier[] { new Multiply(1, child) };
+            yield return Settle();
+
+            Spawn(recipe, shooter, pet);
+            TickUntil(w => w.ActiveCount == 0);
+
+            Assert.AreEqual(3, hits.Count);
+            Assert.AreEqual(HitKind.Target, hits[0].Kind);
+            Assert.AreEqual(new TargetId(1), hits[0].TargetId);
+            Assert.AreEqual(HitKind.Target, hits[1].Kind);
+            Assert.AreEqual(new TargetId(2), hits[1].TargetId);
+            Assert.AreEqual(HitKind.Target, hits[2].Kind);
+            Assert.AreEqual(new TargetId(1), hits[2].TargetId);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator HitHandlerDespawnsShot_OnExpireFieldStillSkipsPet()
+        {
+            Collider shooter = Cube(Vector3.zero);
+            Collider pet = Dummy(new Vector3(1.5f, 0f, 5f), 50);
+            Dummy(new Vector3(-1.5f, 0f, 5f), 8);
+            Dummy(new Vector3(0f, 0f, 6f), 7);
+            Recipe recipe = Prewarmed("despawn-in-handler");
+            recipe.OnExpire = new IModifier[] { new GroundField(3f, 3f, 3f, intervalSeconds: 0.5f) };
+            yield return Settle();
+
+            var expired = new List<ExpireInfo>();
+            bool despawned = false;
+            world.Expired += info => expired.Add(info);
+            world.Hit += info =>
+            {
+                if (despawned || info.Source != HitSource.Direct)
+                    return;
+
+                despawned = true;
+                world.Despawn(info.InstanceId);
+            };
+
+            ProjectileId id = Spawn(recipe, shooter, pet);
+            Assert.DoesNotThrow(() =>
+            {
+                TickUntil(w => w.ActiveCount == 0);
+                for (int i = 0; i < 20; i++)
+                    world.Tick(0.05f);
+            });
+
+            Assert.IsTrue(despawned);
+            Assert.AreEqual(1, expired.Count);
+            Assert.AreEqual(id, expired[0].InstanceId);
+            int otherAreaHits = 0;
+            for (int i = 0; i < hits.Count; i++)
+            {
+                if (hits[i].Source != HitSource.Area)
+                    continue;
+
+                Assert.AreNotEqual(new TargetId(50), hits[i].TargetId);
+                if (hits[i].TargetId == new TargetId(8))
+                    otherAreaHits++;
+            }
+
+            Assert.GreaterOrEqual(otherAreaHits, 2);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        PhysicsHitQuery Query()
+        {
+            FieldInfo field = typeof(ProjectileWorld).GetField("hitQuery", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(field);
+            return (PhysicsHitQuery)field.GetValue(world);
+        }
+
+        Dictionary<ProjectileId, List<Collider>> IgnoreSets()
+        {
+            return (Dictionary<ProjectileId, List<Collider>>)PrivateField("ignoreSetByInstance").GetValue(Query());
+        }
+
+        Stack<List<Collider>> IgnoreSetPool()
+        {
+            return (Stack<List<Collider>>)PrivateField("ignoreSetPool").GetValue(Query());
+        }
+
+        static FieldInfo PrivateField(string name)
+        {
+            FieldInfo field = typeof(PhysicsHitQuery).GetField(name, BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(field, name);
+            return field;
         }
 
         ProjectileId Spawn(Recipe recipe, params Collider[] ignore)

@@ -145,7 +145,7 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>
         /// Colliders that Direct, area, and ground queries skip for the instance's whole life. A skip is not a hit.
         /// Copied at <see cref="IProjectileWorld.Spawn"/>, so later changes to the caller's list do not affect live shots.
-        /// Children (Multicast, Multiply) copy it. Null or empty means no set. Does not change <see cref="IgnoreCollider"/>.
+        /// Children (Multicast, Multiply, `RequestSpawn`) copy it. Null or empty means no set. Does not change <see cref="IgnoreCollider"/>.
         /// </summary>
         public IReadOnlyList<Collider> IgnoreColliders;
         internal ProjectileId InheritIgnoreFrom;

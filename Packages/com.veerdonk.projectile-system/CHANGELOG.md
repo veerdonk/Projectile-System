@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `SpawnRequest.IgnoreColliders` (`IReadOnlyList<Collider>`). Direct overlap and sweep (Straight, Arc, Hitscan, and Beam), `AreaEffect` overlaps, and `GroundField` disk pulses skip every collider in the set for the whole life of the shot. A skip is not a hit: no `Hit`, despawn, Pierce or Bounce spend, or status. The list is copied at `Spawn`, so the caller can reuse or clear it. Multicast extras and Multiply children inherit the set; a ground field keeps its own copy after the shot is gone. Null or empty keeps today's behaviour. `IgnoreCollider` is unchanged.
+- `SpawnRequest.IgnoreColliders` (`IReadOnlyList<Collider>`). Direct overlap and sweep (Straight, Arc, Hitscan, and Beam), `AreaEffect` overlaps, and `GroundField` disk pulses skip every collider in the set for the whole life of the shot. A skip is not a hit: no `Hit`, despawn, Pierce or Bounce spend, or status. The list is copied at `Spawn`, so the caller can reuse or clear it. Multicast extras, Multiply children, and `RequestSpawn` children inherit the set; a ground field keeps its own copy after the shot is gone. Null or empty keeps today's behaviour. `IgnoreCollider` is unchanged.
+
+### Fixed
+
+- A `Hit` handler that calls `Despawn` on the shot it was told about no longer runs that shot's OnHit area and ground flushes, OnExpire, and pool return a second time.
 
 ## [0.2.2] - 2026-10-14
 
