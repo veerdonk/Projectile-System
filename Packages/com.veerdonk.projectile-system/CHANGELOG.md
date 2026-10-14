@@ -5,6 +5,16 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2026-10-14
+
+### Added
+
+- The package is listed on OpenUPM. Install it from the scoped registry `https://package.openupm.com` (scope `com.veerdonk`) so Package Manager shows new versions and an **Update** button. A Git URL install is locked to one commit and does not check for updates. The README explains how to move from a Git install to the registry.
+
+### Changed
+
+- `package.json`: `displayName` is now "Projectile System". Added `documentationUrl`, `changelogUrl`, `licensesUrl`, `repository`, and `keywords`. No runtime changes.
+
 ## [0.2.4] - 2026-10-14
 
 ### Fixed

@@ -1,7 +1,7 @@
 {
 	"name": "com.veerdonk.projectile-system",
-	"displayName": "com.veerdonk.projectile-system",
-	"version": "0.2.4",
+	"displayName": "Projectile System",
+	"version": "0.2.5",
 	"unity": "6000.6",
 	"unityRelease": "0f1",
 	"description": "Kinematic projectile simulation for Unity 6: spawn, tick, pool, hits, and six-stage Recipe modifiers (pierce, bounce, multiply, authored multiply grids, multicast, homing, combat scales, area, ground fields, ballistic aim, Delivery Straight / Arc / Hitscan / Beam).",
@@ -13,6 +13,21 @@
 		"name": "David Van de Veerdonk"
 	},
 	"license": "MIT",
+	"documentationUrl": "https://github.com/veerdonk/Projectile-System/blob/main/Packages/com.veerdonk.projectile-system/Documentation/index.md",
+	"changelogUrl": "https://github.com/veerdonk/Projectile-System/blob/main/Packages/com.veerdonk.projectile-system/CHANGELOG.md",
+	"licensesUrl": "https://github.com/veerdonk/Projectile-System/blob/main/Packages/com.veerdonk.projectile-system/LICENSE.md",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/veerdonk/Projectile-System.git"
+	},
+	"keywords": [
+		"projectile",
+		"bullet",
+		"spell",
+		"ecs",
+		"pooling",
+		"combat"
+	],
 	"samples": [
 		{
 			"displayName": "Projectile Yard",

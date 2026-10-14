@@ -8,13 +8,15 @@ Games spawn through `IProjectileWorld`, tick once per frame, and listen to `Hit`
 
 Requires **Unity 6 LTS `6000.6`**. Package Manager will pull **Entities 6.6**.
 
-**Window → Package Manager → + → Add package from git URL:**
+**From OpenUPM (recommended, gets Package Manager updates):** in **Edit → Project Settings → Package Manager**, add a scoped registry named `OpenUPM` with URL `https://package.openupm.com` and scope `com.veerdonk`. Then install **Projectile System** from **Window → Package Manager → My Registries**. Or run `openupm add com.veerdonk.projectile-system`.
+
+**From Git:** **Window → Package Manager → + → Add package from git URL:**
 
 ```text
 https://github.com/veerdonk/Projectile-System.git?path=/Packages/com.veerdonk.projectile-system
 ```
 
-To pin a release, append `#` and the tag (for example `#v0.1.1`). Merges to `main` that introduce a new `package.json` version create tag `v{version}` and a GitHub Release (notes from `CHANGELOG.md` plus merged PRs). The repo must be public, or the other person needs access.
+To pin a release, append `#` and the tag (for example `#v0.2.5`). A Git install is locked to one commit and gets no update checks. Merges to `main` that introduce a new `package.json` version create tag `v{version}` and a GitHub Release (notes from `CHANGELOG.md` plus merged PRs); OpenUPM builds each tag into a registry version.
 
 Alternatively, copy `Packages/com.veerdonk.projectile-system/` into the other project’s `Packages/` folder.
 

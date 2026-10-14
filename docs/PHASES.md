@@ -873,6 +873,23 @@ A shot can skip a small set of colliders (the wizard and the pet) for its whole 
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 39 — OpenUPM distribution
+
+Users get Package Manager update checks by installing from the OpenUPM scoped registry instead of a Git URL. Runs before phase 34. ADR-042.
+
+**In scope**
+
+- `package.json`: `displayName` "Projectile System", `documentationUrl`, `changelogUrl`, `licensesUrl`, `keywords`
+- Root README, package README, and `Documentation/index.md`: OpenUPM install first (scoped registry snippet and `openupm add`), then Git URL, then folder copy. Say how to move from a Git URL install to the registry
+- `CHANGELOG` **0.2.5**. Bump `package.json` to **0.2.5**. No git tag in the phase session
+- Manual, by the repo owner: submit the package at openupm.com, then check the OpenUPM build of `v0.2.5`
+
+**Out of scope:** publishing from CI (npm, GitHub Packages); an in-editor update checker; changing the release workflow; runtime code
+
+**Proof:** After the OpenUPM listing is live, a clean Unity 6 project with the scoped registry lists the package under **My Registries** and offers `0.2.5`.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
