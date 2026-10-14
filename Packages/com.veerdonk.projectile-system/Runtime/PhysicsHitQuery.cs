@@ -14,6 +14,7 @@ namespace Veerdonk.ProjectileSystem
         readonly RaycastHit[] castBuffer = new RaycastHit[BufferSize];
         readonly Dictionary<ProjectileId, Collider> ignoreColliderByInstance = new Dictionary<ProjectileId, Collider>();
         readonly Dictionary<ProjectileId, PierceContact> pierceContactByInstance = new Dictionary<ProjectileId, PierceContact>();
+        readonly Dictionary<ProjectileId, PierceContact> concaveExitByInstance = new Dictionary<ProjectileId, PierceContact>();
         readonly HashSet<ProjectileId> holdIgnore = new HashSet<ProjectileId>();
 
         public HitTargetCatalog HitTargets { get; set; }
@@ -24,7 +25,7 @@ namespace Veerdonk.ProjectileSystem
             HitTargets?.ReleaseIfSeparated(instanceId, origin, radius);
             if (!hold
                 && ignoreColliderByInstance.TryGetValue(instanceId, out Collider stored)
-                && (stored == null || !stored.enabled || !Overlaps(stored, origin, radius)))
+                && (stored == null || !stored.enabled || !StillTouching(instanceId, stored, origin, radius)))
                 ignoreColliderByInstance.Remove(instanceId);
 
             ignoreColliderByInstance.TryGetValue(instanceId, out Collider ignore);
@@ -84,7 +85,14 @@ namespace Veerdonk.ProjectileSystem
         public bool TryPierceExit(ProjectileId instanceId, Vector3 travel, out Vector3 surface)
         {
             if (pierceContactByInstance.TryGetValue(instanceId, out PierceContact contact))
-                return TryExitSurface(contact, out surface);
+            {
+                bool found = TryExitSurface(contact, out surface);
+                if (found && !SupportsClosestPoint(contact.Collider))
+                    concaveExitByInstance[instanceId] = new PierceContact(contact.Collider, surface, contact.Incoming);
+                else
+                    concaveExitByInstance.Remove(instanceId);
+                return found;
+            }
 
             if (HitTargets != null && HitTargets.TryPierceExit(instanceId, travel, out surface))
                 return true;
@@ -114,6 +122,7 @@ namespace Veerdonk.ProjectileSystem
         {
             ignoreColliderByInstance.Remove(instanceId);
             pierceContactByInstance.Remove(instanceId);
+            concaveExitByInstance.Remove(instanceId);
             holdIgnore.Remove(instanceId);
             HitTargets?.ClearIgnore(instanceId);
         }
@@ -393,7 +402,7 @@ namespace Veerdonk.ProjectileSystem
                 return;
             }
 
-            if (Overlaps(ignore, origin, radius) || CastIncludes(castCount, ignore))
+            if (StillTouching(instanceId, ignore, origin, radius) || CastIncludes(castCount, ignore))
             {
                 ignoreColliderByInstance[instanceId] = ignore;
                 return;
@@ -418,6 +427,29 @@ namespace Veerdonk.ProjectileSystem
             return collider.GetComponentInParent<ProjectileView>() != null;
         }
 
+        bool StillTouching(ProjectileId instanceId, Collider collider, Vector3 origin, float radius)
+        {
+            return Overlaps(collider, origin, radius) || InsideConcavePierce(instanceId, collider, origin, radius);
+        }
+
+        bool InsideConcavePierce(ProjectileId instanceId, Collider collider, Vector3 origin, float radius)
+        {
+            if (!concaveExitByInstance.TryGetValue(instanceId, out PierceContact exit))
+                return false;
+
+            float skin = radius + Skin;
+            Vector3 dir = exit.Incoming.sqrMagnitude > 1e-12f ? exit.Incoming.normalized : Vector3.forward;
+            Bounds bounds = collider.bounds;
+            bounds.Expand(skin * 2f);
+            if (exit.Collider == collider
+                && Vector3.Dot(origin - exit.Point, dir) < skin
+                && bounds.Contains(origin))
+                return true;
+
+            concaveExitByInstance.Remove(instanceId);
+            return false;
+        }
+
         bool Overlaps(Collider collider, Vector3 origin, float radius)
         {
             if (collider == null || !collider.enabled)
@@ -430,7 +462,12 @@ namespace Veerdonk.ProjectileSystem
                 return (closest - origin).sqrMagnitude <= skin * skin;
             }
 
-            int count = Physics.OverlapSphereNonAlloc(origin, skin, skinBuffer, ~0, QueryTriggerInteraction.Collide);
+            int count = Physics.OverlapSphereNonAlloc(
+                origin,
+                skin,
+                skinBuffer,
+                1 << collider.gameObject.layer,
+                QueryTriggerInteraction.Ignore);
             for (int i = 0; i < count; i++)
             {
                 if (skinBuffer[i] == collider)
@@ -451,7 +488,7 @@ namespace Veerdonk.ProjectileSystem
         {
             Vector3 dir = incoming.sqrMagnitude > 1e-12f ? incoming.normalized : Vector3.forward;
             float backup = radius + Skin;
-            return collider.Raycast(new Ray(origin - dir * backup, dir), out surface, backup * 2f + 1f);
+            return collider.Raycast(new Ray(origin - dir * backup, dir), out surface, backup * 2f);
         }
 
         static Vector3 AreaPoint(Collider collider, Vector3 center)

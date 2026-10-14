@@ -120,6 +120,45 @@ namespace Veerdonk.ProjectileSystem.Tests
         }
 
         [UnityTest]
+        public IEnumerator Pierce1_ThroughThickConcaveTarget_SmallSteps_HitsOnce()
+        {
+            CreateConcaveCube(new Vector3(0f, 0f, 4f), 3f, new TargetId(1));
+            GameObject poolRoot = Track(new GameObject("TestPool"));
+            var world = new ProjectileWorld(poolRoot.transform);
+            try
+            {
+                Recipe recipe = CreateRecipe("concave-thick-pierce", speed: 20f, lifetime: 5f);
+                recipe.OnHit = new IModifier[] { new Pierce(1) };
+                world.Prewarm(recipe, 2);
+                int hitCount = 0;
+                world.Hit += _ => hitCount++;
+
+                Physics.SyncTransforms();
+                yield return null;
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                TickUntil(
+                    world,
+                    1f,
+                    w => w.ActiveCount == 0 || (w.TryGetActiveAt(0, out _, out Vector3 at, out _, out _) && at.z > 7f),
+                    dt: 0.01f);
+
+                Assert.AreEqual(1, hitCount);
+                Assert.AreEqual(1, world.ActiveCount);
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Bounce2_OffConcaveGround_HitsThatGroundAgain()
         {
             CreateConcavePlane();

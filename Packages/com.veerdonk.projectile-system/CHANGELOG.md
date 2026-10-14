@@ -5,6 +5,14 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-10-14
+
+### Fixed
+
+- A Pierce shot no longer hits a concave `MeshCollider` Target a second time on its far side when the body is thicker than one tick step. The skip on that collider now holds until the shot has passed the pierce exit.
+- On a concave collider, the overlap-pick raycast no longer reports a surface beyond the front of the shot's sphere.
+- The concave "still touching" check ignores triggers and other layers, so a crowded overlap cannot drop the skipped collider.
+
 ## [0.2.1] - 2026-10-14
 
 ### Fixed
