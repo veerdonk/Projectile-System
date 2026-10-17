@@ -35,8 +35,9 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Ground field** — flat lingering disk planted by `GroundField`. Has its own size, lifetime, damage, optional status, and pulse period. Stays after the projectile despawns. Not a Recipe and not an `AreaEffect` aura
 - **Presentation** — GameObject view for an instance. Selected by `Recipe.PresentationId` through `IProjectileViewFactory`. Not the hit shape
 - **Size** — projectile collision size. This **is** `Recipe.Radius`; there is no second size field
-- **Gravity** — downward acceleration in m/s² on the Recipe (default 0) and the instance. Burst adds it to velocity each tick **only when `Delivery` is Arc** (ADR-035). Straight / Hitscan / Beam ignore it for motion. Arc with gravity 0 stays level. Ballistic reach is derived from Speed + Gravity (ADR-028); there is no Range stat
+- **Gravity** — downward acceleration in m/s² on the Recipe (default 0) and the instance. Burst adds it to velocity each tick **only when `Delivery` is Arc** (ADR-035). Straight / Hitscan / Beam ignore it for motion. Arc with gravity 0 stays level. Ballistic reach is derived from Speed + Gravity (ADR-028); there is no ballistic Range stat and no `Range(n)`
 - **Delivery** — how the shot is delivered (`Straight`, `Arc`, `Hitscan`, `Beam`). Not a modifier and not a seventh stage. Arc: `Spawn` solves loft from `HomingAcquirePoint`. Hitscan: one polyline query then expire. Beam: live instance, pulse polyline until lifetime or `Despawn`
+- **MaxRange** — `Recipe.MaxRange`, meters, default 0. Caps the total polyline length of a Beam pulse or a Hitscan query; `<= 0` is 10 km. Pierce, Bounce, and homing curves share the one length. Hits reach `MaxRange` + `Radius`. Straight / Arc ignore it. No modifier scales it (ADR-043, phase 40)
 - **Ignore collider** — `SpawnRequest.IgnoreCollider`. Direct overlap and sweep skip that collider until the shot body no longer overlaps it. Not a hit. After clear, a later contact is a normal hit. Same one-slot skip pierce/bounce already use after a hit ([DECISIONS.md](DECISIONS.md) ADR-037). Not `IProjectileProtection`
 - **Ignore colliders** — `SpawnRequest.IgnoreColliders` (ADR-041). A copied list of colliders skipped for the whole life of the shot by Direct, area, and ground queries. Not a hit. Null or empty is today’s behaviour.
 - **Magnitude** — the number in `ModifierName(n)`:
@@ -51,7 +52,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 
 - **Pierce(n)** — `OnHit` + `Target`: pass through `n` targets; despawn on hit `n+1`
 - **Bounce(n)** — `OnHit`: reflect off `n` `World` or `Target` hits; despawn on hit `n+1`. `Hit` still fires on `Target`, so dummy HP still drops
-- **Homing(n)** — Straight / Arc `OnTick`: steer toward a homing target; higher `n` turns faster (°/s). Hitscan: max degrees each polyline segment may kink toward a lock (ADR-035). Beam: the same °/s, stepped along the pulse by distance / speed, so the beam curves (ADR-036). A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel. Published hit volumes count as candidates (ADR-031); the same id in `SetHomingCandidate` is one candidate and the hit-target position wins. `SetHomingCandidate` remains for a pose that is not hittable. If `SpawnRequest.HomingAcquirePointSet`, the **first** lock is the candidate closest to that world point (ADR-033); retarget after a Target hit still uses travel direction. That same point is the Arc loft target and the Hitscan / Beam aim point (no second field)
+- **Homing(n)** — Straight / Arc `OnTick`: steer toward a homing target; higher `n` turns faster (°/s). Hitscan: max degrees each polyline segment may kink toward a lock (ADR-035). Beam: the same °/s, stepped along the pulse by distance / speed, so the beam curves (ADR-036). A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel. Published hit volumes count as candidates (ADR-031); the same id in `SetHomingCandidate` is one candidate and the hit-target position wins. `SetHomingCandidate` remains for a pose that is not hittable. If `SpawnRequest.HomingAcquirePointSet`, the **first** lock is the candidate closest to that world point (ADR-033); retarget after a Target hit still uses travel direction. That same point is the Arc loft target and the Hitscan / Beam aim point (no second field). A live Beam's lock can be replaced through `AimBeam(id, position, direction, target)`: the set lock is kept across redraws and pulses even when it is not in front of the muzzle, a Target hit drops it for the rest of that pulse only, and `default` returns the Beam to self-acquire (ADR-044, phase 40)
 - **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
 - **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`). Layout comes from an `IMultiplyPattern` (default `SquarePattern`). Optional `Spread` is meters between adjacent pips on Square / Circle / RandomCircle, or cone half-angle in degrees on an authored grid. Grid placement uses **Spacing**, not Spread. On a hit, children leave along the hit normal. When `Pierce` still has charges on that Target (or Basic) hit, they spawn past the body along the shot's travel direction instead. A later hit with no charges left uses the normal again
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
@@ -820,6 +821,30 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** the same spawn, and the caller clears its list right after `Spawn`
 - **When:** the shot passes the pet
 - **Then:** still skipped
+
+### Phase 40 — Beam MaxRange stops the pulse
+
+- **Given:** a Beam Recipe with `MaxRange = 30` and published volumes at 25 m and 40 m on the beam line, in two separate runs
+- **When:** a pulse runs
+- **Then:** the 25 m volume gets a Direct `Hit`; the 40 m volume gets none, and the beam view ends at 30 m
+
+### Phase 40 — MaxRange is one budget across Pierce
+
+- **Given:** a Beam with `MaxRange = 30` and `Pierce(1)`, volumes at 20 m and 35 m
+- **When:** a pulse runs
+- **Then:** only the 20 m volume is hit
+
+### Phase 40 — The game moves a live Beam's homing lock
+
+- **Given:** a Beam with Homing spawned with `HomingTarget = Assigned(A)`, and target B also published
+- **When:** the game calls `AimBeam(id, position, direction, Assigned(B))` and more pulses run
+- **Then:** those pulses hit B and never A. One `HomingLocked` for B, none for later pulses or for setting B again
+
+### Phase 40 — Clearing the set lock self-acquires
+
+- **Given:** a Beam whose lock was set to B
+- **When:** the game calls `AimBeam(id, position, direction, default)`
+- **Then:** the Beam acquires a lock again as a Beam with no assigned target does
 
 ## Product constraints
 
