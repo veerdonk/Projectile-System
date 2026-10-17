@@ -17,6 +17,7 @@ namespace Veerdonk.ProjectileSystem
         [SerializeField] float radius = 0.25f;
         [SerializeField] float lifetimeSeconds;
         [SerializeField] float beamPulseSeconds = 0.1f;
+        [SerializeField] float maxRange;
         [SerializeField] float gravity;
         [SerializeField] float damage = 1f;
         [SerializeField] float criticalChance;
@@ -73,6 +74,13 @@ namespace Veerdonk.ProjectileSystem
         {
             get => beamPulseSeconds;
             set => beamPulseSeconds = value;
+        }
+
+        /// <inheritdoc cref="Recipe.MaxRange"/>
+        public float MaxRange
+        {
+            get => maxRange;
+            set => maxRange = value;
         }
 
         /// <inheritdoc cref="Recipe.Gravity"/>
@@ -195,6 +203,7 @@ namespace Veerdonk.ProjectileSystem
                 Radius = radius,
                 LifetimeSeconds = lifetimeSeconds,
                 BeamPulseSeconds = beamPulseSeconds,
+                MaxRange = maxRange,
                 Gravity = gravity,
                 Damage = damage,
                 CriticalChance = criticalChance,

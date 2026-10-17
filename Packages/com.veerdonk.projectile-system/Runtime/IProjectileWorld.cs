@@ -33,9 +33,21 @@ namespace Veerdonk.ProjectileSystem
         /// Moves a live Beam's origin and direction and redraws the polyline. Does not raise
         /// <see cref="Hit"/>. Damage still follows <see cref="Recipe.BeamPulseSeconds"/>.
         /// Other deliveries and unknown ids do nothing. The package does not read the mouse;
-        /// the caller copies the current muzzle pose.
+        /// the caller copies the current muzzle pose. The homing lock is left as it is.
         /// </summary>
         void AimBeam(ProjectileId id, Vector3 position, Vector3 direction);
+
+        /// <summary>
+        /// Same redraw as <see cref="AimBeam(ProjectileId, Vector3, Vector3)"/>, and replaces the Beam's
+        /// homing lock with <paramref name="target"/> from that redraw on. A set lock is kept across redraws
+        /// and pulses whether or not it is in front of the muzzle; <c>Homing(n)</c> still caps the bend.
+        /// A Target hit drops it for the rest of that polyline only; the next pulse starts on it again.
+        /// <c>default</c> clears the set lock and any spawn-assigned lock, and the Beam self-acquires again.
+        /// <see cref="HomingLocked"/> is raised only when the target differs from the current lock.
+        /// Without a <c>Homing</c> modifier the target is stored but does not steer.
+        /// Other deliveries and unknown ids do nothing.
+        /// </summary>
+        void AimBeam(ProjectileId id, Vector3 position, Vector3 direction, HomingTarget target);
 
         /// <summary>Publishes a live pose Homing can lock onto and steer toward. Call again to move it.</summary>
         void SetHomingCandidate(TargetId id, Vector3 position);

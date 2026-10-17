@@ -50,7 +50,7 @@ namespace Veerdonk.ProjectileSystem
     /// <summary>How a Homing lock was obtained.</summary>
     public enum HomingLockKind
     {
-        /// <summary>Assigned at spawn through <see cref="SpawnRequest.HomingTarget"/>.</summary>
+        /// <summary>Assigned at spawn through <see cref="SpawnRequest.HomingTarget"/>, or set on a live Beam through the four-argument <c>AimBeam</c>.</summary>
         Assigned,
         /// <summary>Acquired or re-acquired by Homing.</summary>
         Acquired
@@ -82,7 +82,7 @@ namespace Veerdonk.ProjectileSystem
         public TargetId TargetId;
         /// <summary>The shot's position when the lock was obtained.</summary>
         public Vector3 Position;
-        /// <summary>Assigned at spawn, or acquired.</summary>
+        /// <summary>Assigned at spawn or by the four-argument <c>AimBeam</c>, or acquired.</summary>
         public HomingLockKind Kind;
     }
 }
