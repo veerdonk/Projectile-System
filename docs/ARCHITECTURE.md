@@ -46,6 +46,7 @@ Recipe
   Delivery                 // Straight (default), Arc, Hitscan; Beam in phase 32
   Speed, Radius, LifetimeSeconds, Gravity
   BeamPulseSeconds         // phase 32; Beam only
+  MaxRange                 // phase 40 (ADR-043); Beam / Hitscan polyline length, meters; <= 0 is 10 km
   Damage, CriticalChance, ManaCost, EffectRadius
   PresentationId
   OnSpawn[], OnTravel[], OnTick[], OnInterval[], OnHit[], OnExpire[]
@@ -57,7 +58,7 @@ Recipe
 
 **Modifier kits:** a game may treat one Recipe as a **base** and append extras at fire time ([DECISIONS.md](DECISIONS.md) ADR-032). `ModifierKit` is a ScriptableObject of layers (`RecipeStage` + modifiers), not a second Recipe and not stats. `Recipe.Clone()`, `Append`, `ModifierKit.ApplyTo`, and `Recipe.Compose(basis, id, kits)` clone then append. Each composition needs its own `Recipe.Id` (`RecipeStore` replaces the slot when the same id is spawned again). Kits do not insert `Interval(n)` for you.
 
-**Delivery:** `Recipe.Delivery` is how the shot is delivered ([DECISIONS.md](DECISIONS.md) ADR-035, ADR-036). **Straight** is today’s kinematic SphereCast (no gravity). **Arc** is kinematic with gravity; `Spawn` calls `BallisticAim.TrySolve` when `HomingAcquirePointSet` (unreachable → no spawn). **Hitscan** is one `Radius` polyline query inside `Spawn`, then expire — no view, World ends the ray unless Bounce, Pierce n+1, Homing `n` is max degrees of kink. **Beam** (phase 32) is a live instance that pulses a polyline until lifetime or `Despawn`. `AimBeam` moves the origin and direction and redraws without raising `Hit`. Homing on a Beam curves at degrees per second along the pulse (`distance / speed`), after a first step along the muzzle, and keeps that lock across redraws while the target stays in front of the muzzle. Segment cylinders are not colliders. Without Pierce a pulse stops on the first Target. Pierce n+1 is per pulse. World clips a pulse. Direct queries honor `SpawnRequest.IgnoreCollider` (ADR-037) and the `IgnoreColliders` set (ADR-041).
+**Delivery:** `Recipe.Delivery` is how the shot is delivered ([DECISIONS.md](DECISIONS.md) ADR-035, ADR-036). **Straight** is today’s kinematic SphereCast (no gravity). **Arc** is kinematic with gravity; `Spawn` calls `BallisticAim.TrySolve` when `HomingAcquirePointSet` (unreachable → no spawn). **Hitscan** is one `Radius` polyline query inside `Spawn`, then expire — no view, World ends the ray unless Bounce, Pierce n+1, Homing `n` is max degrees of kink. **Beam** (phase 32) is a live instance that pulses a polyline until lifetime or `Despawn`. `AimBeam` moves the origin and direction and redraws without raising `Hit`. Homing on a Beam curves at degrees per second along the pulse (`distance / speed`), after a first step along the muzzle, and keeps that lock across redraws while the target stays in front of the muzzle. The four-argument `AimBeam` sets the lock from the game: a set lock is kept across redraws and pulses whether or not it is in front, a Target hit drops it for the rest of that pulse only, and `default` returns to self-acquire (ADR-044). `Recipe.MaxRange` caps the total length of a Beam pulse or Hitscan query (`<= 0` is 10 km; reach is `MaxRange` + `Radius`; ADR-043). Segment cylinders are not colliders. Without Pierce a pulse stops on the first Target. Pierce n+1 is per pulse. World clips a pulse. Direct queries honor `SpawnRequest.IgnoreCollider` (ADR-037) and the `IgnoreColliders` set (ADR-041).
 
 **Gravity:** `Recipe.Gravity` is downward acceleration in m/s², default 0 ([DECISIONS.md](DECISIONS.md) ADR-017). Burst integrates it each tick **only when Delivery is Arc** (ADR-035); `Gravity(n)` scales the instance value (ADR-018). Aim-to-point is `BallisticAim.TrySolve` (ADR-019, ADR-028): Arc `Spawn` calls it; games may still call it for barrel preview. Fast → nearly straight, barely enough on the level → ~45°. Not a baked curve and not an authored Range.
 
@@ -161,6 +162,9 @@ interface IProjectileWorld
     // Hitscan: polyline query inside Spawn, then pool (Hit events already raised).
     void Tick(float dt);
     void Despawn(ProjectileId id); // phase 32. OnExpire + pool. Unknown / pooled = no-op.
+    void AimBeam(ProjectileId id, Vector3 position, Vector3 direction); // phase 32. Redraw, no Hit. Lock unchanged.
+    void AimBeam(ProjectileId id, Vector3 position, Vector3 direction, HomingTarget target);
+    // ADR-044, phase 40. Same redraw, and replaces the Beam's lock. default = self-acquire. Other deliveries no-op.
     void SetHomingCandidate(TargetId id, Vector3 position);
     void RemoveHomingCandidate(TargetId id);
     void SetHitTarget(TargetId id, Vector3 position, float radius, ProtectionLevel protection = None);

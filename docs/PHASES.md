@@ -890,6 +890,38 @@ Users get Package Manager update checks by installing from the OpenUPM scoped re
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 40 — Beam max range and live homing target
+
+Two change requests from the WizardGame board: a Beam / Hitscan length cap (card #208) and a game-set homing target on a live Beam (card #210). Runs before phase 34. ADR-043, ADR-044. One version.
+
+**In scope**
+
+- `Recipe.MaxRange` (meters, default 0; `<= 0` keeps 10 km). Caps the total polyline length of each Beam pulse and each Hitscan query; Pierce, Bounce, and homing curve segments share one budget. The last SphereCast stops at the cap (reach = `MaxRange` + `Radius`). No `Hit` past that sweep. Beam view ends at the cap. A Hitscan that reaches the cap without a killing hit expires as `HitscanEnd`. Straight and Arc ignore it. No modifier scales it
+- `RecipeAsset` / `ToRecipe` copy `MaxRange`; the Recipe inspector shows it
+- `IProjectileWorld.AimBeam(ProjectileId id, Vector3 position, Vector3 direction, HomingTarget target)`: same redraw as the three-argument `AimBeam`, plus it replaces the Beam's lock from that redraw on. The three-argument `AimBeam` leaves the lock as it is. Other deliveries and unknown ids do nothing
+- Set lock: kept across redraws and pulses whether or not the target is in front of the muzzle; `Homing(n)` still caps the bend. A Target hit drops it for the rest of that polyline only; the next pulse starts on it again. `default` clears the set lock and any spawn-assigned lock, and the Beam self-acquires as today. Without a `Homing` modifier the target is stored but does not steer
+- `HomingLocked` only when the set target differs from the current lock. Not on setting the same target again, not on the pulse-start restore, not on `default`
+- Edit Mode tests (published volumes):
+  - Beam `MaxRange = 30`: a volume at 25 m is hit; a volume at 40 m is not
+  - Hitscan `MaxRange = 30`: same pair
+  - `MaxRange = 0`: a volume at 40 m is hit (10 km default)
+  - Beam `MaxRange = 30` + `Pierce(1)`, volumes at 20 m and 35 m: only the first is hit (one budget, not reset per segment)
+  - Beam view's last point is at 30 m when nothing is hit
+  - Beam + Homing spawned with `HomingTarget = Assigned(A)`, then `AimBeam(..., Assigned(B))`: later pulses hit B and never A
+  - After the set to B, three-argument `AimBeam` with B off to the side of the muzzle: B is still the lock
+  - `AimBeam(..., default)` after a set: the Beam self-acquires the candidate ahead
+  - Set to B, then B again every frame: one `HomingLocked`; pulses raise none
+  - Set lock B + `Pierce(1)` and C behind B: a pulse hits B then C; the next pulse curves to B again
+  - Four-argument `AimBeam` on a Straight id does nothing
+  - Existing Beam / Hitscan / Homing tests stay green
+- Docs: the sketches, Delivery paragraph, glossary, and scenarios are already written; add phase 40 to the public API line at the end of [ARCHITECTURE.md](ARCHITECTURE.md); [ECS.md](ECS.md) Beam / Hitscan paragraph and the `Homing.cs` / `ProjectileWorld.cs` rows; package `AGENTS.md` / `README.md` / `Documentation/index.md`; XML on `Recipe.MaxRange`, `Delivery`, and both `AimBeam` overloads. `CHANGELOG` **0.2.6**. Bump `package.json` to **0.2.6**. No git tag in the phase session
+
+**Out of scope:** a `Range(n)` modifier or a distance fuse (ADR-028); a range on Straight / Arc; `SetHomingTarget` for other deliveries; a package "in front of the muzzle" check on a set lock; the game's lock circle; yard sample changes; Unity Physics; Entities Graphics
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
@@ -897,6 +929,6 @@ Users get Package Manager update checks by installing from the OpenUPM scoped re
 - GroundField plant pose: v1 snaps Y to the world ground plane (`0`). Revisit spawn process and positioning (terrain / ground raycast, sloped floors, a chosen ground height) without changing the disk overlap or pulse contract
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Save Play Mode tweaks to `RecipeAsset`
-- Authored `Range` / `Range(n)` / an OnExpire-at-distance fuse (ballistic reach stays Speed + Gravity, ADR-028)
+- `Range(n)` / an OnExpire-at-distance fuse (ballistic reach stays Speed + Gravity, ADR-028). Beam / Hitscan length is `Recipe.MaxRange` (phase 40, ADR-043)
 - Convert remaining sandbox C# Recipes
 - WASD turret move; orbit camera
