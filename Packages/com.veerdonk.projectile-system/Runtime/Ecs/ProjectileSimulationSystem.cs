@@ -177,11 +177,27 @@ namespace Veerdonk.ProjectileSystem
 
             projectile.BeamOrigin = origin;
             projectile.BeamDirection = dir;
-            if (setTarget)
-                SetBeamLock(ref projectile, target);
+            bool lockChanged = setTarget && SetBeamLock(ref projectile, target);
             em.SetComponentData(entity, projectile);
+            if (lockChanged)
+            {
+                Bridge.HomingLocked?.Invoke(new HomingLockInfo
+                {
+                    InstanceId = new ProjectileId(projectile.Id),
+                    TargetId = target.Id,
+                    Position = position,
+                    Kind = HomingLockKind.Assigned
+                });
+                if (!em.Exists(entity) || !em.IsEnabled(entity)
+                    || em.GetComponentData<Projectile>(entity).Id != projectile.Id)
+                    return;
+            }
+
             ResolvePolyline(entity, keepInstance: true, raiseContacts: false);
         }
+
+        const float uncappedDrawLength = 40f;
+        float beamDrawCap;
 
         void ResolvePolyline(Entity entity, bool keepInstance, bool raiseContacts = true)
         {
@@ -199,7 +215,9 @@ namespace Veerdonk.ProjectileSystem
 
             Projectile seeded = em.GetComponentData<Projectile>(entity);
             Recipe seededRecipe = Bridge.Recipes.Get(seeded.RecipeIndex);
-            float remaining = seededRecipe.MaxRange > 0f ? seededRecipe.MaxRange : defaultRange;
+            bool capped = seededRecipe.MaxRange > 0f;
+            float remaining = capped ? seededRecipe.MaxRange : defaultRange;
+            beamDrawCap = capped ? remaining : uncappedDrawLength;
             bool curve = keepInstance && HasHoming(seededRecipe);
 
             int limit = curve ? maxCurveSteps : maxSegments;
@@ -423,7 +441,8 @@ namespace Veerdonk.ProjectileSystem
             em.SetComponentData(entity, new ProjectileCandidate { Value = projectile.BeamOrigin });
         }
 
-        void SetBeamLock(ref Projectile projectile, HomingTarget target)
+        /// <summary>Writes the set lock onto the row. Returns true when the lock changed, so the caller raises HomingLocked.</summary>
+        static bool SetBeamLock(ref Projectile projectile, HomingTarget target)
         {
             if (!target.IsAssigned)
             {
@@ -436,7 +455,7 @@ namespace Veerdonk.ProjectileSystem
                 projectile.HomingTargetId = default;
                 projectile.HomingHasIgnoredTarget = false;
                 projectile.HomingIgnoredTargetId = default;
-                return;
+                return false;
             }
 
             bool changed = !CurrentBeamLock(projectile, out TargetId current) || !current.Equals(target.Id);
@@ -446,16 +465,7 @@ namespace Veerdonk.ProjectileSystem
             projectile.HomingTargetId = target.Id;
             projectile.HomingHasIgnoredTarget = false;
             projectile.HomingIgnoredTargetId = default;
-            if (!changed)
-                return;
-
-            Bridge.HomingLocked?.Invoke(new HomingLockInfo
-            {
-                InstanceId = new ProjectileId(projectile.Id),
-                TargetId = target.Id,
-                Position = ToVector3(projectile.BeamOrigin),
-                Kind = HomingLockKind.Assigned
-            });
+            return changed;
         }
 
         static bool CurrentBeamLock(in Projectile projectile, out TargetId id)
@@ -534,7 +544,7 @@ namespace Veerdonk.ProjectileSystem
         void AppendBeamSpan(Vector3 from, Vector3 to)
         {
             const float visualStep = 0.5f;
-            const float visualCap = 40f;
+            float visualCap = beamDrawCap > 0f ? beamDrawCap : uncappedDrawLength;
             Vector3 delta = to - from;
             float length = delta.magnitude;
             if (length < 1e-4f)

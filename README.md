@@ -16,7 +16,7 @@ Requires **Unity 6 LTS `6000.6`**. Package Manager will pull **Entities 6.6**.
 https://github.com/veerdonk/Projectile-System.git?path=/Packages/com.veerdonk.projectile-system
 ```
 
-To pin a release, append `#` and the tag (for example `#v0.2.5`). A Git install is locked to one commit and gets no update checks. Merges to `main` that introduce a new `package.json` version create tag `v{version}` and a GitHub Release (notes from `CHANGELOG.md` plus merged PRs); OpenUPM builds each tag into a registry version.
+To pin a release, append `#` and the tag (for example `#v0.2.6`). A Git install is locked to one commit and gets no update checks. Merges to `main` that introduce a new `package.json` version create tag `v{version}` and a GitHub Release (notes from `CHANGELOG.md` plus merged PRs); OpenUPM builds each tag into a registry version.
 
 Alternatively, copy `Packages/com.veerdonk.projectile-system/` into the other project’s `Packages/` folder.
 

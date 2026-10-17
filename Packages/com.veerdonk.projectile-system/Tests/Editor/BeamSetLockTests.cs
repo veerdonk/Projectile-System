@@ -93,6 +93,147 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
+        [Test]
+        public void SetToB_ThenBEveryFrame_OneHomingLocked_PulsesRaiseNone()
+        {
+            Recipe recipe = HomingBeam("beam-set-same");
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var locks = new List<HomingLockInfo>();
+                world.HomingLocked += info => locks.Add(info);
+                world.SetHitTarget(A, SideA, 0.75f);
+                world.SetHitTarget(B, SideB, 0.75f);
+                ProjectileId id = Fire(world, recipe, HomingTarget.Assigned(A));
+                locks.Clear();
+
+                for (int i = 0; i < 6; i++)
+                {
+                    world.AimBeam(id, Vector3.zero, Vector3.forward, HomingTarget.Assigned(B));
+                    world.Tick(0.05f);
+                }
+
+                Assert.AreEqual(1, locks.Count);
+                Assert.AreEqual(B, locks[0].TargetId);
+                Assert.AreEqual(HomingLockKind.Assigned, locks[0].Kind);
+                Assert.AreEqual(id, locks[0].InstanceId);
+            }
+        }
+
+        [Test]
+        public void SetLockB_Pierce1_CBehindB_PulseHitsBThenC_NextPulseCurvesToBAgain()
+        {
+            Recipe recipe = HomingBeam("beam-set-pierce", onHit: new IModifier[] { new Pierce(1) });
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var seen = new List<HitInfo>();
+                world.Hit += info => seen.Add(info);
+                world.SetHitTarget(B, new Vector3(3f, 0f, 6f), 0.6f);
+                world.SetHitTarget(C, new Vector3(4.5f, 0f, 9f), 0.6f);
+                ProjectileId id = Fire(world, recipe);
+                world.AimBeam(id, Vector3.zero, Vector3.forward, HomingTarget.Assigned(B));
+                seen.Clear();
+
+                world.Tick(0.1f);
+                Assert.AreEqual(2, seen.Count);
+                Assert.AreEqual(B, seen[0].TargetId);
+                Assert.AreEqual(C, seen[1].TargetId);
+
+                world.Tick(0.1f);
+                Assert.AreEqual(4, seen.Count);
+                Assert.AreEqual(B, seen[2].TargetId);
+                Assert.AreEqual(C, seen[3].TargetId);
+            }
+        }
+
+        [Test]
+        public void WithoutHoming_TargetIsStored_ButDoesNotSteer()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe("beam-set-nohoming", speed: 20f, lifetime: 5f, radius: 0.25f);
+            recipe.Delivery = Delivery.Beam;
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var seen = new List<HitInfo>();
+                var locks = new List<HomingLockInfo>();
+                world.Hit += info => seen.Add(info);
+                world.HomingLocked += info => locks.Add(info);
+                world.SetHitTarget(A, new Vector3(0f, 0f, 8f), 0.75f);
+                world.SetHitTarget(B, SideB, 0.75f);
+                ProjectileId id = Fire(world, recipe);
+                world.AimBeam(id, Vector3.zero, Vector3.forward, HomingTarget.Assigned(B));
+                Assert.AreEqual(1, locks.Count);
+                seen.Clear();
+                world.Tick(0.1f);
+
+                Assert.AreEqual(1, seen.Count);
+                Assert.AreEqual(A, seen[0].TargetId);
+            }
+        }
+
+        [Test]
+        public void HomingLocked_HandlerDespawnsTheBeam_NoRedrawOnThePooledRow()
+        {
+            Recipe recipe = HomingBeam("beam-set-despawn");
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var locks = new List<HomingLockInfo>();
+                var expires = new List<ExpireInfo>();
+                world.Expired += info => expires.Add(info);
+                world.HomingLocked += info =>
+                {
+                    locks.Add(info);
+                    world.Despawn(info.InstanceId);
+                };
+                world.SetHitTarget(B, SideB, 0.75f);
+                ProjectileId id = Fire(world, recipe);
+
+                Assert.DoesNotThrow(() => world.AimBeam(id, Vector3.zero, Vector3.forward, HomingTarget.Assigned(B)));
+                Assert.AreEqual(1, locks.Count);
+                Assert.AreEqual(1, expires.Count);
+                Assert.AreEqual(0, world.ActiveCount);
+            }
+        }
+
+        [Test]
+        public void FourArgumentAimBeam_OnStraight_DoesNothing()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "straight-set",
+                speed: 10f,
+                lifetime: 5f,
+                onTick: new IModifier[] { new Homing(300f) });
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var locks = new List<HomingLockInfo>();
+                world.HomingLocked += info => locks.Add(info);
+                world.SetHomingCandidate(B, SideB);
+                ProjectileId id = Fire(world, recipe);
+                world.AimBeam(id, new Vector3(5f, 5f, 5f), Vector3.back, HomingTarget.Assigned(B));
+
+                Assert.AreEqual(0, locks.Count);
+                var active = SimulationTestHelper.CollectActive(world);
+                Assert.AreEqual(1, active.Count);
+                Assert.AreEqual(Vector3.zero, active[0].position);
+                Assert.Greater(active[0].velocity.z, 0f);
+            }
+        }
+
+        [Test]
+        public void FourArgumentAimBeam_OnUnknownId_DoesNothing()
+        {
+            Recipe recipe = HomingBeam("beam-set-unknown");
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                Assert.DoesNotThrow(() =>
+                    world.AimBeam(new ProjectileId(999), Vector3.zero, Vector3.forward, HomingTarget.Assigned(B)));
+            }
+        }
+
         static ProjectileId Fire(ProjectileWorld world, Recipe recipe, HomingTarget homing = default)
         {
             return world.Spawn(new SpawnRequest

@@ -68,36 +68,62 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
-        [Test]
-        public void Beam_View_EndsAtTheCap_WhenNothingIsHit()
+        [TestCase(30f)]
+        [TestCase(60f)]
+        public void Beam_View_EndsAtTheCap_WhenNothingIsHit(float maxRange)
         {
             var parent = new GameObject("beam-range-view");
             try
             {
-                Recipe recipe = Recipe("beam-range-view", Delivery.Beam, maxRange: 30f);
+                Recipe recipe = Recipe("beam-range-view-" + maxRange, Delivery.Beam, maxRange: maxRange);
                 var world = new ProjectileWorld(parent.transform);
                 using (world)
                 {
                     Fire(world, recipe);
-                    float farthest = 0f;
-                    Transform[] transforms = parent.GetComponentsInChildren<Transform>(true);
-                    for (int i = 0; i < transforms.Length; i++)
-                    {
-                        Transform segment = transforms[i];
-                        if (segment.name != "BeamSegment" || !segment.gameObject.activeInHierarchy)
-                            continue;
-
-                        Vector3 half = segment.up * segment.lossyScale.y;
-                        farthest = Mathf.Max(farthest, (segment.position + half).z, (segment.position - half).z);
-                    }
-
-                    Assert.AreEqual(30f, farthest, 0.05f);
+                    Assert.AreEqual(maxRange, FarthestZ(parent.transform), 0.05f);
                 }
             }
             finally
             {
                 Object.DestroyImmediate(parent);
             }
+        }
+
+        [Test]
+        public void Beam_View_UncappedBeam_StillDraws40Metres()
+        {
+            var parent = new GameObject("beam-uncapped-view");
+            try
+            {
+                Recipe recipe = Recipe("beam-uncapped-view", Delivery.Beam);
+                var world = new ProjectileWorld(parent.transform);
+                using (world)
+                {
+                    Fire(world, recipe);
+                    Assert.AreEqual(40f, FarthestZ(parent.transform), 0.05f);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(parent);
+            }
+        }
+
+        static float FarthestZ(Transform root)
+        {
+            float farthest = 0f;
+            Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform segment = transforms[i];
+                if (segment.name != "BeamSegment" || !segment.gameObject.activeInHierarchy)
+                    continue;
+
+                Vector3 half = segment.up * segment.lossyScale.y;
+                farthest = Mathf.Max(farthest, (segment.position + half).z, (segment.position - half).z);
+            }
+
+            return farthest;
         }
 
         [Test]
