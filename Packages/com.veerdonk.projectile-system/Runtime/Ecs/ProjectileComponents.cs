@@ -35,6 +35,8 @@ namespace Veerdonk.ProjectileSystem
         public bool BeamHomingLockSet;
         public TargetId BeamHomingLockId;
         public bool HomingAssignedAtSpawn;
+        public bool BeamSetLockSet;
+        public TargetId BeamSetLockId;
     }
 
     struct ProjectilePosition : IComponentData

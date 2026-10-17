@@ -207,6 +207,16 @@ namespace Veerdonk.ProjectileSystem
         }
 
         /// <inheritdoc />
+        public void AimBeam(ProjectileId id, Vector3 position, Vector3 direction, HomingTarget target)
+        {
+            ThrowIfDisposed();
+            if (!TryGetLiveEntity(id, out Entity entity))
+                return;
+
+            simulation.AimBeam(entity, position, direction, target, setTarget: true);
+        }
+
+        /// <inheritdoc />
         public void Tick(float dt)
         {
             ThrowIfDisposed();

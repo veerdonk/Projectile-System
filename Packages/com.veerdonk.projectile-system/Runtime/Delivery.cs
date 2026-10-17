@@ -7,11 +7,11 @@ namespace Veerdonk.ProjectileSystem
     /// is true, <see cref="IProjectileWorld.Spawn"/> calls <see cref="BallisticAim.TrySolve"/> before OnSpawn.
     /// <see cref="Hitscan"/> is one polyline of <see cref="Recipe.Radius"/> SphereCasts inside
     /// <see cref="IProjectileWorld.Spawn"/>, then the instance returns to the pool. There is no view.
-    /// An unbounded Hitscan or Beam pulse is 10 km. Homing on Hitscan is the maximum kink
+    /// An unbounded Hitscan or Beam pulse is 10 km; <see cref="Recipe.MaxRange"/> caps it. Homing on Hitscan is the maximum kink
     /// in degrees per segment. Homing on Beam turns at degrees per second along the pulse
     /// (distance / speed). <see cref="SpawnRequest.IgnoreCollider"/> is the same Direct skip.
     /// <see cref="Beam"/> stays live and repeats that polyline until <see cref="Recipe.LifetimeSeconds"/> or
-    /// <see cref="IProjectileWorld.Despawn"/>.
+    /// <see cref="IProjectileWorld.Despawn"/>. The four-argument <c>AimBeam</c> sets a Beam's homing lock from the game.
     /// </summary>
     public enum Delivery
     {

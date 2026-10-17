@@ -30,6 +30,15 @@ namespace Veerdonk.ProjectileSystem
         /// </summary>
         public float BeamPulseSeconds { get; set; } = 0.1f;
 
+        /// <summary>
+        /// Caps the total polyline length in meters of each Beam pulse and each Hitscan query. Default 0;
+        /// values &lt;= 0 keep the 10 km default. Pierce, Bounce, and homing curve segments share the one
+        /// budget. The last SphereCast stops at the cap, so reach is <c>MaxRange + Radius</c>. The Beam view
+        /// ends at the cap; a Hitscan that reaches it expires as <see cref="ExpireReason.HitscanEnd"/>.
+        /// Straight and Arc ignore it. No modifier scales it.
+        /// </summary>
+        public float MaxRange { get; set; }
+
         /// <summary>Launch speed in meters per second. Copied onto the instance at spawn.</summary>
         public float Speed { get; set; }
 
@@ -111,6 +120,7 @@ namespace Veerdonk.ProjectileSystem
                 Id = Id,
                 Delivery = Delivery,
                 BeamPulseSeconds = BeamPulseSeconds,
+                MaxRange = MaxRange,
                 Speed = Speed,
                 Radius = Radius,
                 LifetimeSeconds = LifetimeSeconds,

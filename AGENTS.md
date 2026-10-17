@@ -33,45 +33,15 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 39 — OpenUPM distribution (docs and metadata done; do not start phase 34)**
+**Phase 40 — Beam MaxRange and live homing target (done; phase 34 is next)**
 
-- Package version is **0.2.5**. No runtime code changed. No git tag in the phase session; CI tags `v0.2.5` on merge and OpenUPM builds it.
-- The repo is public now. The OpenUPM submission (openupm.com/packages/add, folder `Packages/com.veerdonk.projectile-system`) is a manual step by the human. Until the listing is live, the README's OpenUPM route does not resolve.
-- OpenUPM criteria checked (2026-10-14): three-segment name matches `package.json`, MIT on public GitHub, tags match `version`, package ~1.8 MB (limit 512 MB). A release is needed within 3 months of submission or the listing is removed. Choose only topics that fit in the submission form.
-- Never move or delete a released `v*` tag; OpenUPM keeps the version it built.
-
-**Also from phase 38 — hit query buffers grow when full:**
-
-- Package version is **0.2.4**. No git tag in the phase session. `PhysicsHitQuery` doubles `overlapBuffer`, `castBuffer`, or `skinBuffer` (cap 1024) and re-queries when a NonAlloc count equals the buffer length (`OverlapSphere`, `SphereCast`, `Grow`).
-- New tests: `Tests/Runtime/QueryBufferGrowthPlayModeTests.cs`. All three fail on 0.2.3 (checked by swapping in the old `PhysicsHitQuery`).
-- The open Unity Editor points at the main checkout and may be behind `main`. To test worktree code, copy the whole package folder over, run the tests, then `git checkout -- Packages` and delete the untracked files there.
-
-**Also from phase 37 (spawn ignores a set of colliders):**
-
-- Package version is **0.2.3** (ADR-041, Trello card #66 R492B0HI). No git tag in the phase session. The human moves the card.
-- The set lives in `PhysicsHitQuery.ignoreSetByInstance` (pooled `List<Collider>`), separate from the one-slot skip. `ClearIgnore` does **not** release it: Beam calls `ClearIgnore` every pulse, and children are spawned from `pendingSpawns` after the parent is pooled. Instead, `ReturnToPool` adds the id to `SimulationBridge.RetiredIds`, and `FlushPendingSpawns` releases those sets after the spawn loop drains. Ids only count up, so a released id is never live again.
-- A ground field copies its source's set at `Plant` under a negative key `ProjectileId(-fieldNumber)` and passes it to `OverlapDisk(instanceId, ignoreSetOwner, ...)`. It releases that key when the field expires or on `Dispose`. Live instances' sets are not released on world `Dispose`; the query dies with the world.
-- Tests: `Tests/Runtime/IgnoreCollidersPlayModeTests.cs` (20; the last 6 came from the PR #69 review and read `PhysicsHitQuery` private fields by reflection). All 51 Play Mode and 286 Edit Mode tests pass. With `SetIgnoreSet` disabled, 12 of the first 14 fail; without the new `Despawn` re-check, `HitHandlerDespawnsShot_OnExpireFieldStillSkipsPet` fails.
-- Review follow-up not done: `PhysicsHitQuery` NonAlloc buffers are 16 slots, and ignored colliders still use slots. A multi-collider shooter plus pet in clutter could truncate the real target. Older than this PR.
-- The open Unity Editor points at the main checkout (now on `phase-35-field-area-events`, older than `main`), not at Claude worktrees. To test worktree code, copy the **whole** package folder over, run the tests, then `git checkout -- Packages/com.veerdonk.projectile-system` and delete the untracked files the copy added.
-
-**Also from phase 35 (ground field and area burst events):**
-
-- That phase shipped as **0.2.0**. No git tag in the phase session. Phase 34 (Play Mode debug overlay) is still next; phase 35 was inserted for Trello card i9g6LSBf. Move the card list only when the human says so.
-- New files: `Runtime/GroundFieldEvents.cs`, `Tests/Editor/FieldAreaEventTests.cs`. New `.meta` files are made by Unity on import; check they are committed.
-- Events live on `IProjectileWorld` (ADR-040). `GroundFieldSet` takes optional planted/pulsed/ended callbacks; `SimulationBridge.AreaBurst` carries bursts. Pulsed comes after that pulse's Area Hits; AreaBurst comes before its Area Hits; occupancy burst only on first overlap.
-- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Do **not** run **Projectile Lab > Rebuild** to refresh presets (it overwrites `Samples~/Yard/Scenes/Yard.unity`). Catalog `Compact()` leftover from phase 29 still applies.
-
-**Also from phase 33b (shot lifecycle events, merged from main):**
-
-- That phase shipped as 0.1.12. No git tag in the phase session. Phase 34 is the Play Mode debug overlay. Do not add gizmos.
-- `Spawned` is raised in `SpawnCore` before `RunSpawnStages`, so `Direction` is the Arc-solved, pre-OnSpawn direction. Assigned `HomingLocked` follows it there. Acquired locks queue on `ModifierContext.AcquiredHomingLocks` and flush in `RunStage`, `RunIntervals`, and `KinkHitscan`.
-- `ExpireReason` is threaded through `Despawn(..., reason)`. A Hitscan ray that ends on a hit is `Hit`. `HitOutcome` compares Pierce / Bounce charges before and after the OnHit stage.
-- A Beam re-lock after a silent `AimBeam` redraw can raise `HomingLocked` again (Beam is outside the card's compositions). Ground field and area-effect events are a separate card.
-- Authored Multiply grid (phase 33): `Patterns()` stays the procedural types; `PatternOptions()` appends every `MultiplyPatternAsset`. Do **not** run **Projectile Lab > Rebuild** to refresh the grid preset: Rebuild writes `Assets/Samples/<version>/` and copies the scene back over `Samples~/Yard/Scenes/Yard.unity`, which swaps recipe guids. Copy changed sample scripts into the gitignored import (or reimport) before expecting Play Mode to match.
-- `HomingAcquirePoint` is still the only aim point. Do not add `AimPoint`.
-- OnHit Multiply keeps the hit normal unless Pierce still has charges on that Target or Basic hit. Then children spawn past the body along the travel direction from the start of the hit (list order does not matter). Spent charges, a World hit Pierce does not absorb, and no Pierce modifier keep the normal.
-- Sample path / Rebuild / Input System / `AssemblyVersion` 0.0.0.0 / codecoverage / Sonar notes from phase 24 still apply. Catalog `Compact()` leftover from phase 29 still applies until a later phase touches those files.
+- Package version is **0.2.6** (ADR-043, ADR-044; Trello cards #208 and #210). No git tag in the phase session; CI tags `v0.2.6` on merge. The human moves the cards.
+- `Recipe.MaxRange` only replaces the 10 km constant in `ResolvePolyline`; the shared `remaining` budget, the view end, and `HitscanEnd` already followed it. Straight / Arc never reach that code.
+- The set lock is two new `Projectile` fields (`BeamSetLockSet` / `BeamSetLockId`), restored at the top of `PrepareBeamPulse` before the spawn-assigned and self-acquired branches. `SetBeamLock` raises `HomingLocked` (`Kind = Assigned`) itself, after the pose update, only when the target differs from `CurrentBeamLock` (set, then current, then remembered). `default` clears every lock flag, including `HomingAssignedAtSpawn`, so the next redraw self-acquires through `Homing.Apply` and raises `Acquired` under the old rule; that redraw-time event is expected (see `SetThenDefault_SelfAcquiresTheCandidateAhead`). `RememberBeamLock` skips a set lock.
+- Default self-acquire is `ClosestInTravelDirectionAcquisition`, which prefers the nearer volume over the more central one. Place test volumes accordingly.
+- New tests: `Tests/Editor/MaxRangeTests.cs` (8) and `Tests/Editor/BeamSetLockTests.cs` (8). All 297 Edit Mode tests pass. Play Mode was not run (no physics code changed).
+- The open Unity Editor points at the main checkout (branch `phase-35-field-area-events`), not at Claude worktrees. To test worktree code, copy the **whole** package folder over, `refresh_unity` with `scope: all` + `mode: force` (an unfocused Editor does not reimport on its own), run the tests, then `git checkout -- Packages/com.veerdonk.projectile-system` there and delete the untracked files the copy added. `get_test_job` does not return assertion messages; a failing `AreEqual` on `TargetId` prints the raw ints.
+- Older notes that still apply: never move or delete a released `v*` tag (OpenUPM keeps what it built); `PhysicsHitQuery` NonAlloc buffers grow when full (phase 38); the ignore-set lifetime rules of phase 37; do **not** run **Projectile Lab > Rebuild** (it overwrites `Samples~/Yard/Scenes/Yard.unity`); `HomingAcquirePoint` is still the only aim point; catalog `Compact()` leftover from phase 29.
 
 ## Do not
 

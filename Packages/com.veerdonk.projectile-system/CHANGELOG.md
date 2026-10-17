@@ -5,6 +5,17 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6] - 2026-10-16
+
+### Added
+
+- `Recipe.MaxRange` (meters, default 0). Caps the total polyline length of each Beam pulse and each Hitscan query; `<= 0` keeps the 10 km default. Pierce, Bounce, and homing curve segments share the one budget. The last SphereCast stops at the cap, so reach is `MaxRange + Radius`. The Beam view ends at the cap, and a Hitscan that reaches it without a killing hit expires as `HitscanEnd`. `RecipeAsset` copies it and the Recipe inspector shows it. Straight and Arc ignore it.
+- `IProjectileWorld.AimBeam(id, position, direction, HomingTarget target)`. Same redraw as the three-argument `AimBeam`, and it replaces the Beam's homing lock from that redraw on. A set lock is kept across redraws and pulses whether or not it is in front of the muzzle; `Homing(n)` still caps the bend. A Target hit drops it for the rest of that polyline only; the next pulse starts on it again. `default` clears the set lock and any spawn-assigned lock, and the Beam self-acquires as before. `HomingLocked` is raised only when the set target differs from the current lock. Other deliveries and unknown ids do nothing.
+
+### Changed
+
+- The three-argument `AimBeam` leaves the lock as it is (unchanged behaviour, now stated). `IProjectileWorld` gained a member; game-side fakes that implement it need the overload.
+
 ## [0.2.5] - 2026-10-14
 
 ### Added
