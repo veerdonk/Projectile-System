@@ -173,7 +173,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         [Test]
-        public void HomingLocked_HandlerDespawnsTheBeam_NoRedrawOnThePooledRow()
+        public void HomingLocked_HandlerDespawnsTheBeam_DoesNotThrow_AndTheBeamIsGone()
         {
             Recipe recipe = HomingBeam("beam-set-despawn");
             (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
