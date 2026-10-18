@@ -169,6 +169,8 @@ interface IProjectileWorld
     void RemoveHomingCandidate(TargetId id);
     void SetHitTarget(TargetId id, Vector3 position, float radius, ProtectionLevel protection = None);
     // ADR-030 / ADR-031. radius<=0 removes. Homing reads this pose. Same id as SetHomingCandidate is one candidate.
+    void SetHitTarget(TargetId id, Vector3 bottom, float radius, float height, float homingHeight, ProtectionLevel protection = None);
+    // ADR-045, phase 41. Upright capsule, height includes caps. Hits test the capsule; Homing reads bottom + homingHeight.
     void RemoveHitTarget(TargetId id);
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
@@ -318,7 +320,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038). Phase 37 (0.2.3) adds `SpawnRequest.IgnoreColliders` (ADR-041). Phase 40 (0.2.6) adds `Recipe.MaxRange` (ADR-043) and the four-argument `AimBeam` that sets a live Beam's homing lock (ADR-044).
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038). Phase 37 (0.2.3) adds `SpawnRequest.IgnoreColliders` (ADR-041). Phase 40 (0.2.6) adds `Recipe.MaxRange` (ADR-043) and the four-argument `AimBeam` that sets a live Beam's homing lock (ADR-044). Phase 41 (0.2.7) adds the upright capsule `SetHitTarget` overload with a homing point (ADR-045).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 

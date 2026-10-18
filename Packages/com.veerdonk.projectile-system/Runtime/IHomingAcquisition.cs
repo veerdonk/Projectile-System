@@ -208,7 +208,7 @@ namespace Veerdonk.ProjectileSystem
     /// Locks the catalog candidate closest to <see cref="ModifierContext.HomingAcquirePoint"/>.
     /// Distance is 3D squared magnitude. There is no travel-direction filter. Ties keep the first candidate
     /// considered (hit targets, then homing poses). The same id in both catalogs is one candidate, and the
-    /// hit-target position wins.
+    /// hit-target homing point wins.
     /// </summary>
     public sealed class ClosestToPointAcquisition : IHomingAcquisition
     {

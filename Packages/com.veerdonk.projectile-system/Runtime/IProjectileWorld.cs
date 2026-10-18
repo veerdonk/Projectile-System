@@ -64,7 +64,24 @@ namespace Veerdonk.ProjectileSystem
         /// </summary>
         void SetHitTarget(TargetId id, Vector3 position, float radius, ProtectionLevel protection = ProtectionLevel.None);
 
-        /// <summary>Drops a previously published hit volume.</summary>
+        /// <summary>
+        /// Publishes an upright capsule under the same rules as the sphere form of <c>SetHitTarget</c>.
+        /// <paramref name="bottom"/> is its lowest point and <paramref name="height"/> its total height including
+        /// both caps, as on a <c>CapsuleCollider</c>. A height below twice <paramref name="radius"/> is raised to
+        /// that, which is a sphere resting on <paramref name="bottom"/>. Direct casts (Straight, Arc, Hitscan, Beam),
+        /// <c>AreaEffect</c>, and <c>GroundField</c> test the capsule; <see cref="HitInfo.Point"/> is the contact on it.
+        /// Homing acquires and steers toward the point <paramref name="homingHeight"/> above <paramref name="bottom"/>,
+        /// clamped to the capsule. Call either form again to move, resize, or change shape.
+        /// </summary>
+        void SetHitTarget(
+            TargetId id,
+            Vector3 bottom,
+            float radius,
+            float height,
+            float homingHeight,
+            ProtectionLevel protection = ProtectionLevel.None);
+
+        /// <summary>Drops a previously published hit volume, sphere or capsule.</summary>
         void RemoveHitTarget(TargetId id);
 
         /// <summary>Raised for each hit produced by the query pipeline.</summary>

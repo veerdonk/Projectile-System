@@ -252,6 +252,19 @@ namespace Veerdonk.ProjectileSystem
         }
 
         /// <inheritdoc />
+        public void SetHitTarget(
+            TargetId id,
+            Vector3 bottom,
+            float radius,
+            float height,
+            float homingHeight,
+            ProtectionLevel protection = ProtectionLevel.None)
+        {
+            ThrowIfDisposed();
+            hitTargets.SetCapsule(id, bottom, radius, height, homingHeight, protection);
+        }
+
+        /// <inheritdoc />
         public void RemoveHitTarget(TargetId id)
         {
             ThrowIfDisposed();

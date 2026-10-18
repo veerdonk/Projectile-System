@@ -7,7 +7,7 @@ namespace Veerdonk.ProjectileSystem
     {
         readonly List<Volume> volumes = new List<Volume>();
         readonly Dictionary<TargetId, int> indexById = new Dictionary<TargetId, int>();
-        readonly Dictionary<ProjectileId, TargetId> ignored = new Dictionary<ProjectileId, TargetId>();
+        readonly Dictionary<ProjectileId, IgnoredContact> ignored = new Dictionary<ProjectileId, IgnoredContact>();
         readonly HashSet<ProjectileId> holdRelease = new HashSet<ProjectileId>();
         bool hasDeadSlots;
 
@@ -21,7 +21,33 @@ namespace Veerdonk.ProjectileSystem
                 return;
             }
 
-            var volume = new Volume(id, position, radius, protection);
+            Store(new Volume(id, position, position, radius, position, protection));
+        }
+
+        public void SetCapsule(
+            TargetId id,
+            Vector3 bottom,
+            float radius,
+            float height,
+            float homingHeight,
+            ProtectionLevel protection = ProtectionLevel.None)
+        {
+            if (radius <= 0f)
+            {
+                Remove(id);
+                return;
+            }
+
+            float total = Mathf.Max(height, 2f * radius);
+            Vector3 low = bottom + Vector3.up * radius;
+            Vector3 high = bottom + Vector3.up * (total - radius);
+            Vector3 aim = bottom + Vector3.up * Mathf.Clamp(homingHeight, 0f, total);
+            Store(new Volume(id, low, high, radius, aim, protection));
+        }
+
+        void Store(Volume volume)
+        {
+            TargetId id = volume.Id;
             if (indexById.TryGetValue(id, out int index))
             {
                 volumes[index] = volume;
@@ -44,7 +70,7 @@ namespace Veerdonk.ProjectileSystem
 
             Volume volume = volumes[index];
             id = volume.Id;
-            position = volume.Position;
+            position = volume.Aim;
             return true;
         }
 
@@ -56,7 +82,7 @@ namespace Veerdonk.ProjectileSystem
                 return false;
             }
 
-            position = volume.Position;
+            position = volume.Aim;
             return true;
         }
 
@@ -81,28 +107,28 @@ namespace Veerdonk.ProjectileSystem
             if (holdRelease.Remove(instanceId))
                 return;
 
-            if (!ignored.TryGetValue(instanceId, out TargetId id))
+            if (!ignored.TryGetValue(instanceId, out IgnoredContact contact))
                 return;
 
-            if (!TryFind(id, out Volume volume) || !Overlaps(origin, radius, volume, skin: 0.02f))
+            if (!TryFind(contact.Id, out Volume volume) || !Overlaps(origin, radius, volume, skin: 0.02f))
                 ignored.Remove(instanceId);
         }
 
-        public void NoteHit(ProjectileId instanceId, TargetId id)
+        public void NoteHit(ProjectileId instanceId, TargetId id, Vector3 point)
         {
-            ignored[instanceId] = id;
+            ignored[instanceId] = new IgnoredContact(id, point);
         }
 
         public bool TryPierceExit(ProjectileId instanceId, Vector3 travel, out Vector3 surface)
         {
             surface = default;
-            if (!ignored.TryGetValue(instanceId, out TargetId id))
+            if (!ignored.TryGetValue(instanceId, out IgnoredContact contact))
                 return false;
-            if (!TryFind(id, out Volume volume))
+            if (!TryFind(contact.Id, out Volume volume))
                 return false;
 
             Vector3 dir = travel.sqrMagnitude > 1e-12f ? travel.normalized : Vector3.forward;
-            surface = volume.Position + dir * volume.Radius;
+            surface = ClosestOnAxis(volume, contact.Point) + dir * volume.Radius;
             return true;
         }
 
@@ -116,10 +142,10 @@ namespace Veerdonk.ProjectileSystem
         {
             if (from == to)
                 return;
-            if (!ignored.TryGetValue(from, out TargetId id))
+            if (!ignored.TryGetValue(from, out IgnoredContact contact))
                 return;
 
-            ignored[to] = id;
+            ignored[to] = contact;
         }
 
         public bool TrySweep(
@@ -137,7 +163,8 @@ namespace Veerdonk.ProjectileSystem
             travel = 0f;
             closeness = 0f;
             bool found = false;
-            bool hasIgnore = ignored.TryGetValue(instanceId, out TargetId ignoredId);
+            bool hasIgnore = ignored.TryGetValue(instanceId, out IgnoredContact ignoredContact);
+            TargetId ignoredId = ignoredContact.Id;
 
             for (int i = 0; i < volumes.Count; i++)
             {
@@ -178,12 +205,13 @@ namespace Veerdonk.ProjectileSystem
                 if (volume.Protection == ProtectionLevel.Strong)
                     continue;
 
-                Vector3 delta = volume.Position - center;
+                Vector3 axis = ClosestOnAxis(volume, center);
+                Vector3 delta = axis - center;
                 float limit = radius + volume.Radius;
                 if (delta.sqrMagnitude > limit * limit)
                     continue;
 
-                results.Add(BuildOverlap(instanceId, center, volume, delta));
+                results.Add(BuildOverlap(instanceId, center, volume, axis, delta));
             }
         }
 
@@ -199,14 +227,15 @@ namespace Veerdonk.ProjectileSystem
                 if (volume.Protection == ProtectionLevel.Strong)
                     continue;
 
-                float dx = volume.Position.x - center.x;
-                float dz = volume.Position.z - center.z;
+                Vector3 axis = ClosestOnAxis(volume, center);
+                float dx = axis.x - center.x;
+                float dz = axis.z - center.z;
                 float limit = radius + volume.Radius;
                 if (dx * dx + dz * dz > limit * limit)
                     continue;
 
                 Vector3 delta = new Vector3(dx, 0f, dz);
-                results.Add(BuildOverlap(instanceId, center, volume, delta));
+                results.Add(BuildOverlap(instanceId, center, volume, axis, delta));
             }
         }
 
@@ -248,12 +277,12 @@ namespace Veerdonk.ProjectileSystem
             hasDeadSlots = false;
         }
 
-        static HitInfo BuildOverlap(ProjectileId instanceId, Vector3 center, Volume volume, Vector3 delta)
+        static HitInfo BuildOverlap(ProjectileId instanceId, Vector3 center, Volume volume, Vector3 axis, Vector3 delta)
         {
             Vector3 normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up;
-            Vector3 point = volume.Position - normal * volume.Radius;
-            if ((point - center).sqrMagnitude > (volume.Position - center).sqrMagnitude)
-                point = volume.Position;
+            Vector3 point = axis - normal * volume.Radius;
+            if ((point - center).sqrMagnitude > (axis - center).sqrMagnitude)
+                point = axis;
 
             return new HitInfo
             {
@@ -269,7 +298,7 @@ namespace Veerdonk.ProjectileSystem
         static bool Overlaps(Vector3 origin, float radius, Volume volume, float skin)
         {
             float limit = radius + volume.Radius + skin;
-            return (volume.Position - origin).sqrMagnitude <= limit * limit;
+            return (ClosestOnAxis(volume, origin) - origin).sqrMagnitude <= limit * limit;
         }
 
         static bool Sweep(
@@ -285,18 +314,18 @@ namespace Veerdonk.ProjectileSystem
         {
             travel = 0f;
             closeness = 0f;
-            point = volume.Position;
             normal = Vector3.up;
 
-            Vector3 offset = volume.Position - origin;
+            Vector3 axis = ClosestOnAxis(volume, origin);
+            point = axis;
+            Vector3 offset = axis - origin;
             float combined = projectileRadius + volume.Radius;
-            float distSq = offset.sqrMagnitude;
             float combinedSq = combined * combined;
-            if (distSq <= combinedSq)
+            if (offset.sqrMagnitude <= combinedSq)
             {
-                closeness = ContactDistanceSq(origin, volume.Position, volume.Radius, offset);
-                normal = RadialNormal(origin, volume.Position, direction);
-                point = volume.Position + normal * volume.Radius;
+                closeness = ContactDistanceSq(origin, axis, volume.Radius, offset);
+                normal = RadialNormal(origin, axis, direction);
+                point = axis + normal * volume.Radius;
                 return true;
             }
 
@@ -304,23 +333,73 @@ namespace Veerdonk.ProjectileSystem
                 return false;
 
             Vector3 dir = direction.normalized;
-            Vector3 fromCenter = origin - volume.Position;
-            float b = Vector3.Dot(fromCenter, dir);
-            float c = distSq - combinedSq;
-            float disc = b * b - c;
-            if (disc < 0f)
-                return false;
-
-            float t = -b - Mathf.Sqrt(disc);
-            if (t < 0f || t > maxDistance)
+            if (!TryEnterCapsule(origin, dir, volume.Low, volume.High, combined, out float t) || t > maxDistance)
                 return false;
 
             travel = t;
             closeness = t;
             Vector3 at = origin + dir * t;
-            normal = RadialNormal(at, volume.Position, dir);
-            point = volume.Position + normal * volume.Radius;
+            axis = ClosestOnAxis(volume, at);
+            normal = RadialNormal(at, axis, dir);
+            point = axis + normal * volume.Radius;
             return true;
+        }
+
+        // Origin is outside the capsule; the first entry is the earliest of the side wall and the two end spheres.
+        static bool TryEnterCapsule(Vector3 origin, Vector3 dir, Vector3 low, Vector3 high, float radius, out float travel)
+        {
+            travel = float.PositiveInfinity;
+            Vector3 axis = high - low;
+            float axisSq = axis.sqrMagnitude;
+            if (axisSq > 1e-12f)
+            {
+                Vector3 fromLow = origin - low;
+                float along = Vector3.Dot(axis, dir);
+                float a = axisSq - along * along;
+                if (a > 1e-10f)
+                {
+                    float axisOffset = Vector3.Dot(axis, fromLow);
+                    float b = axisSq * Vector3.Dot(dir, fromLow) - axisOffset * along;
+                    float c = axisSq * fromLow.sqrMagnitude - axisOffset * axisOffset - radius * radius * axisSq;
+                    float disc = b * b - a * c;
+                    if (disc >= 0f)
+                    {
+                        float t = (-b - Mathf.Sqrt(disc)) / a;
+                        float y = axisOffset + t * along;
+                        if (t >= 0f && y > 0f && y < axisSq)
+                            travel = t;
+                    }
+                }
+
+                if (TryEnterSphere(origin, dir, high, radius, out float top) && top < travel)
+                    travel = top;
+            }
+
+            if (TryEnterSphere(origin, dir, low, radius, out float bottom) && bottom < travel)
+                travel = bottom;
+
+            return !float.IsPositiveInfinity(travel);
+        }
+
+        static bool TryEnterSphere(Vector3 origin, Vector3 dir, Vector3 center, float radius, out float travel)
+        {
+            Vector3 fromCenter = origin - center;
+            float b = Vector3.Dot(fromCenter, dir);
+            float c = fromCenter.sqrMagnitude - radius * radius;
+            float disc = b * b - c;
+            travel = disc < 0f ? -1f : -b - Mathf.Sqrt(disc);
+            return travel >= 0f;
+        }
+
+        static Vector3 ClosestOnAxis(Volume volume, Vector3 point)
+        {
+            Vector3 axis = volume.High - volume.Low;
+            float axisSq = axis.sqrMagnitude;
+            if (axisSq <= 1e-12f)
+                return volume.Low;
+
+            float t = Mathf.Clamp01(Vector3.Dot(point - volume.Low, axis) / axisSq);
+            return volume.Low + axis * t;
         }
 
         static float ContactDistanceSq(Vector3 origin, Vector3 center, float targetRadius, Vector3 offset)
@@ -349,19 +428,36 @@ namespace Veerdonk.ProjectileSystem
             return closeness < bestCloseness;
         }
 
-        struct Volume
+        readonly struct IgnoredContact
         {
-            public Volume(TargetId id, Vector3 position, float radius, ProtectionLevel protection)
+            public IgnoredContact(TargetId id, Vector3 point)
             {
                 Id = id;
-                Position = position;
+                Point = point;
+            }
+
+            public TargetId Id { get; }
+            public Vector3 Point { get; }
+        }
+
+        // A sphere is a capsule whose Low and High are the same point.
+        struct Volume
+        {
+            public Volume(TargetId id, Vector3 low, Vector3 high, float radius, Vector3 aim, ProtectionLevel protection)
+            {
+                Id = id;
+                Low = low;
+                High = high;
                 Radius = radius;
+                Aim = aim;
                 Protection = protection;
             }
 
             public TargetId Id { get; }
-            public Vector3 Position { get; }
+            public Vector3 Low { get; }
+            public Vector3 High { get; }
             public float Radius { get; }
+            public Vector3 Aim { get; }
             public ProtectionLevel Protection { get; }
         }
     }

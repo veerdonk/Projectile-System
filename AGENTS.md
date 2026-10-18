@@ -33,17 +33,16 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 40 — Beam MaxRange and live homing target (done; phase 34 is next)**
+**Phase 41 — Upright capsule hit target (built in a cloud session; not compiled or tested yet; phase 34 is next)**
 
-- Package version is **0.2.6** (ADR-043, ADR-044; Trello cards #208 and #210). No git tag in the phase session; CI tags `v0.2.6` on merge. The human moves the cards.
-- `Recipe.MaxRange` only replaces the 10 km constant in `ResolvePolyline`; the shared `remaining` budget, the view end, and `HitscanEnd` already followed it. Straight / Arc never reach that code.
-- The set lock is two new `Projectile` fields (`BeamSetLockSet` / `BeamSetLockId`), restored at the top of `PrepareBeamPulse` before the spawn-assigned and self-acquired branches. `SetBeamLock` returns whether the lock changed against `CurrentBeamLock` (set, then current, then remembered); `AimBeam` raises `HomingLocked` (`Kind = Assigned`) on change. `default` clears every lock flag, including `HomingAssignedAtSpawn`, so the next redraw self-acquires through `Homing.Apply` and raises `Acquired` under the old rule; that redraw-time event is expected (see `SetThenDefault_SelfAcquiresTheCandidateAhead`). `RememberBeamLock` skips a set lock.
-- Default self-acquire is `ClosestInTravelDirectionAcquisition`, which prefers the nearer volume over the more central one. Place test volumes accordingly.
-- New tests: `Tests/Editor/MaxRangeTests.cs` (10 cases) and `Tests/Editor/BeamSetLockTests.cs` (9). All 305 Edit Mode tests pass. Play Mode was not run (no physics code changed).
-- The 40 m visual cap in `AppendBeamSpan` applies only to an uncapped (10 km) beam; a `MaxRange` beam draws to its cap (`beamDrawCap` is set per `ResolvePolyline`).
-- `HomingLocked` from a set is raised after the row is written and before the redraw; the redraw is skipped when the handler despawned the beam.
-- The open Unity Editor points at the main checkout (branch `phase-35-field-area-events`), not at Claude worktrees. To test worktree code, copy the **whole** package folder over, `refresh_unity` with `scope: all` + `mode: force` (an unfocused Editor does not reimport on its own), run the tests, then `git checkout -- Packages/com.veerdonk.projectile-system` there and delete the untracked files the copy added. `get_test_job` does not return assertion messages; a failing `AreEqual` on `TargetId` prints the raw ints.
-- Older notes that still apply: never move or delete a released `v*` tag (OpenUPM keeps what it built); `PhysicsHitQuery` NonAlloc buffers grow when full (phase 38); the ignore-set lifetime rules of phase 37; do **not** run **Projectile Lab > Rebuild** (it overwrites `Samples~/Yard/Scenes/Yard.unity`); `HomingAcquirePoint` is still the only aim point; catalog `Compact()` leftover from phase 29.
+- Package version is **0.2.7** (ADR-045; Trello card #239, game-side #238). No git tag in the phase session; CI tags `v0.2.7` on merge. The human moves the cards.
+- **The cloud session had no Unity Editor, .NET SDK, or Unity MCP.** Nothing was compiled. The first local session must compile, read the console, and run the full Edit Mode suite (305 old tests plus 17 in `Tests/Editor/CapsuleHitTargetTests.cs`) before review.
+- `HitTargetCatalog.Volume` is now `Low` / `High` (axis segment), `Radius`, `Aim` (homing point), `Protection`. The sphere `Set` stores `Low == High == Aim == position`, so sphere behaviour should be unchanged; every query goes through `ClosestOnAxis`. Ray entry is `TryEnterCapsule` (side wall within the segment, else the earlier end sphere; parallel rays skip the wall).
+- `NoteHit` now takes the contact point (`IgnoredContact`). `TryPierceExit` is the axis point nearest that contact plus `travel * radius`: the same approximation as the old sphere (centre + dir * radius). A steep shot through a capsule can get an exit point inside it; the ignore holds until it separates.
+- `SetHitTarget` crefs in `HitInfo.cs` became `<c>` text, because the overload made the cref ambiguous.
+- `npx sigmap` was not committed. It rewrites `.github/copilot-instructions.md` and `.github/context-cold.md` wholesale, and recent phases did not commit them either.
+- The open Unity Editor points at the main checkout, not at Claude worktrees. To test worktree code, copy the **whole** package folder over, `refresh_unity` with `scope: all` + `mode: force`, run the tests, then `git checkout -- Packages/com.veerdonk.projectile-system` there and delete the untracked files the copy added. `get_test_job` does not return assertion messages.
+- Older notes that still apply: never move or delete a released `v*` tag (OpenUPM keeps what it built); `PhysicsHitQuery` NonAlloc buffers grow when full (phase 38); the ignore-set lifetime rules of phase 37; do **not** run **Projectile Lab > Rebuild** (it overwrites `Samples~/Yard/Scenes/Yard.unity`); `HomingAcquirePoint` is still the only aim point; catalog `Compact()` leftover from phase 29; a Beam set lock (phase 40) reads the hit target's homing point like any lock.
 
 ## Do not
 

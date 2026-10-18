@@ -27,7 +27,7 @@ namespace Veerdonk.ProjectileSystem
 
     /// <summary>
     /// Collider marker level from <see cref="IProjectileProtection"/>, or the level passed to
-    /// <see cref="IProjectileWorld.SetHitTarget"/>. None is an unmarked collider or volume.
+    /// <c>IProjectileWorld.SetHitTarget</c>. None is an unmarked collider or volume.
     /// Basic still runs OnHit; Strong eats the instance.
     /// </summary>
     public enum ProtectionLevel
@@ -79,7 +79,7 @@ namespace Veerdonk.ProjectileSystem
         public Vector3 Point;
         /// <summary>Surface normal at the contact. Bounce reflects around this.</summary>
         public Vector3 Normal;
-        /// <summary>From <see cref="IDamageable"/> or <see cref="IProjectileWorld.SetHitTarget"/> when <see cref="Kind"/> is Target.</summary>
+        /// <summary>From <see cref="IDamageable"/> or <c>IProjectileWorld.SetHitTarget</c> when <see cref="Kind"/> is Target.</summary>
         public TargetId TargetId;
         /// <summary>Instance damage at sample time (Direct) or modifier damage (Area).</summary>
         public float Damage;

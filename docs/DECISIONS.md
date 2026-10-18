@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-045 — A published hit target can be an upright capsule with a homing point
+
+- **Date:** 2026-10-18
+- **Decision:** `IProjectileWorld` gains an overload `SetHitTarget(TargetId id, Vector3 bottom, float radius, float height, float homingHeight, ProtectionLevel protection = None)`. It publishes an upright (world-Y) capsule: `bottom` is its lowest point, `height` its total height including both caps (the `CapsuleCollider` convention). A height below `2 * radius` is raised to that, a sphere resting on `bottom`. `radius <= 0` removes the id, as for the sphere. Every query that tests a published sphere tests the capsule instead: the Direct cast (Straight, Arc, Hitscan, Beam pulses) sweeps the shot's sphere against it and picks the nearest contact as today; `AreaEffect` hits when the area centre is within `EffectRadius + radius` of the capsule's axis segment; `GroundField` uses the XZ distance to the axis (Y still ignored). `HitInfo.Point` is the contact on the capsule surface, `Normal` points away from the axis. Pierce exit and ignore release use the axis point nearest the contact. Homing (steering, both acquisitions, the Beam "still ahead" check) reads one point per target: `homingHeight` above `bottom`, clamped to `[0, height]`. The sphere form stays, and its homing point is its centre. Either form called again with the same id replaces the shape.
+- **Why:** A 2.85 to 2.96 m enemy cannot be covered by one sphere without a sphere much wider than the model, so high shots and beams passed through the head, and homing could only aim at the sphere's centre (WizardGame Trello cards #238, #239; game ADR 0081). A capsule is the shape a character collider already uses. Feet plus height matches the game's enemy transform. A height on the axis keeps the homing point on the body, so acquisition and steering still agree with the hit shape. Tilted capsules, boxes, and compound shapes have no caller yet.
+- **Consequences:** Extends ADR-030 and ADR-031 (the shape of a published volume; protection is unchanged). Homing reads the homing point, not the centre, for a capsule. Adding a member to `IProjectileWorld` breaks game-side fakes that implement it. Bump `package.json` to **0.2.7**. Phase 41.
+
 ## ADR-044 — The game can set a live Beam's homing target through AimBeam
 
 - **Date:** 2026-10-16
