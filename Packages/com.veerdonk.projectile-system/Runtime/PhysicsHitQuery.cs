@@ -275,7 +275,7 @@ namespace Veerdonk.ProjectileSystem
                 return false;
             }
 
-            HitTargets.NoteHit(instanceId, publishedHit.TargetId);
+            HitTargets.NoteHit(instanceId, publishedHit.TargetId, publishedHit.Point);
             pierceContactByInstance.Remove(instanceId);
             RememberOrClearIgnore(instanceId, ignore, origin, direction, radius, castCount);
             hit = publishedHit;

@@ -922,6 +922,32 @@ Two change requests from the WizardGame board: a Beam / Hitscan length cap (card
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 41 — Upright capsule hit target
+
+Change request from the WizardGame board: a published hit target that covers a tall upright model, with a homing point the game sets (card #239, game-side card #238). Runs before phase 34. ADR-045. One version.
+
+**In scope**
+
+- `IProjectileWorld.SetHitTarget(TargetId id, Vector3 bottom, float radius, float height, float homingHeight, ProtectionLevel protection = None)`: an upright capsule. `height` is total, caps included; below `2 * radius` it is raised to that. `homingHeight` is clamped to `[0, height]`. `radius <= 0` removes. The sphere overload is unchanged
+- `HitTargetCatalog` stores every volume as an axis segment, a radius, and a homing point; a sphere is a zero-length segment. Direct sweep (Straight, Arc, Hitscan, Beam), area sphere, ground disk (XZ to the axis), pierce exit, and ignore release test the segment. `TryGet` / `TryGetPosition` return the homing point
+- `HitInfo.Point` is the contact on the capsule
+- Edit Mode tests (`CapsuleHitTargetTests`, scripted query):
+  - Straight at head height (2.6 m) hits a capsule (feet at 0, radius 0.6, height 3.2); the old 0.6 m sphere at 1.5 m misses the same shot
+  - A shot beside the capsule, outside its radius, misses; one just inside hits
+  - Hitscan and a Beam pulse at head height hit; a Beam beside it misses
+  - `Pierce(2)` through two capsules hits both in order
+  - `AreaEffect` at the upper body hits the capsule but not the old sphere or a capsule beside it; `GroundField` uses the axis XZ distance
+  - Homing steers toward the homing point, not the centre, and acquires by it
+  - Catalog: sweep down the axis hits the top cap, a start inside hits at zero travel, a short capsule is a sphere with the homing point clamped, re-setting a sphere id as a capsule keeps one entry, radius 0 removes
+  - Existing published-target, Homing, Beam, and Hitscan tests stay green
+- Docs: ADR-045, the API sketch and the public API line in [ARCHITECTURE.md](ARCHITECTURE.md), the scenarios, the [ECS.md](ECS.md) `HitTargetCatalog.cs` row, package `AGENTS.md` / `README.md` / `Documentation/index.md`, XML on both `SetHitTarget` overloads. `CHANGELOG` **0.2.7**. Bump `package.json` to **0.2.7**. No git tag in the phase session
+
+**Out of scope:** tilted capsules, boxes, or compound shapes; capsule `IDamageable` colliders (PhysX already handles a `CapsuleCollider`); the game's per-model numbers and `HitTargetPublisher` (card #238); yard sample changes; Unity Physics; Entities Graphics
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

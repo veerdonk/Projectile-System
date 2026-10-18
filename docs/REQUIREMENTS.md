@@ -846,6 +846,24 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** the game calls `AimBeam(id, position, direction, default)`
 - **Then:** the Beam acquires a lock again as a Beam with no assigned target does
 
+### Phase 41 — A capsule target covers the head
+
+- **Given:** a capsule hit target with feet on the ground, radius 0.6 m, height 3.2 m
+- **When:** a Straight shot, a Hitscan, or a Beam pulse crosses it at 2.6 m
+- **Then:** a Direct `Hit` on that target, with `Point` on the capsule. A 0.6 m sphere at 1.5 m would have missed
+
+### Phase 41 — A shot beside the capsule misses
+
+- **Given:** the same capsule
+- **When:** a shot passes beside it, outside its radius
+- **Then:** no `Hit`
+
+### Phase 41 — Homing aims at the homing point
+
+- **Given:** a capsule published with `homingHeight` below its centre, and a Homing shot level with the centre
+- **When:** the shot acquires it and steers
+- **Then:** it bends toward the homing point, not the centre
+
 ## Product constraints
 
 - Sandbox uses URP

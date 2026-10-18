@@ -103,7 +103,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             {
                 hit = publishedHit;
                 hit.InstanceId = instanceId;
-                hitTargets.NoteHit(instanceId, hit.TargetId);
+                hitTargets.NoteHit(instanceId, hit.TargetId, hit.Point);
                 return true;
             }
 
