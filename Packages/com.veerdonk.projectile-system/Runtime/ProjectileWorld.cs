@@ -13,7 +13,7 @@ namespace Veerdonk.ProjectileSystem
         const int MaxPrewarmPerRecipe = 512;
         const float DefaultPredictionStep = 1f / 60f;
         const int DefaultPredictionSteps = 1024;
-        static readonly ProjectileId PredictionId = new ProjectileId(-1);
+        static readonly ProjectileId PredictionId = new ProjectileId(int.MinValue);
 
         readonly IHitQuery hitQuery;
         readonly HitTargetCatalog hitTargets = new HitTargetCatalog();

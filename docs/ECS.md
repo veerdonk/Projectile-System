@@ -65,7 +65,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 
 | File | Role |
 | --- | --- |
-| `Runtime/ProjectileWorld.cs` | Façade: owns the ECS `World`, `Tick`, `Spawn`, `Despawn`, `Dispose`. Arc Spawn calls `BallisticAim.TrySolve` before OnSpawn. Hitscan resolves inside `Spawn`. Beam anchors pose, pulses inside `Spawn`, and `Despawn` expires any live id. `AimBeam` redraws; the four-argument overload also sets the Beam's homing lock (ADR-044). `PredictPath` loops one Straight / Arc path on the managed side with the same integrate rule and `IHitQuery.TryCast` under a reserved id (-1); no entity (ADR-048) |
+| `Runtime/ProjectileWorld.cs` | Façade: owns the ECS `World`, `Tick`, `Spawn`, `Despawn`, `Dispose`. Arc Spawn calls `BallisticAim.TrySolve` before OnSpawn. Hitscan resolves inside `Spawn`. Beam anchors pose, pulses inside `Spawn`, and `Despawn` expires any live id. `AimBeam` redraws; the four-argument overload also sets the Beam's homing lock (ADR-044). `PredictPath` loops one Straight / Arc path on the managed side with the same integrate rule and `IHitQuery.TryCast` under a reserved id (`int.MinValue`); no entity (ADR-048) |
 | `Runtime/Ecs/ProjectileComponents.cs` | Component structs + delta-time singleton. `Delivery`, `BeamOrigin` / `BeamDirection`, `BeamPulseElapsed`, and the set lock (`BeamSetLockSet` / `BeamSetLockId`) live on the `Projectile` row |
 | `Runtime/Ecs/RecipeStore.cs` | RecipeIndex ↔ Recipe. Keyed by `Recipe.Id`; a later `Spawn` with the same id **replaces** the slot (live instances read the new lists). Phase 27 compositions must pass a new id |
 | `Runtime/ModifierKit.cs` | ScriptableObject layers (`RecipeStage` + modifiers) appended onto a cloned base Recipe (ADR-032). Not a second façade |

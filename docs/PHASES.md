@@ -990,7 +990,7 @@ Change request from the WizardGame board: the game asks where an Arc shot would 
   - Existing tests stay green
 - Docs: ADR-048, the API sketch and public API line in [ARCHITECTURE.md](ARCHITECTURE.md), glossary and a scenario, [ECS.md](ECS.md) row, package `AGENTS.md` / `README.md` / `Documentation/index.md`, XML on the new members. `CHANGELOG` **0.2.9**. Bump `package.json` to **0.2.9**. No git tag in the phase session
 
-**Out of scope:** steered (Homing) prediction; Bounce or Pierce continuation; Multicast extras or children; a polyline for Hitscan or Beam; custom modifier prediction; the game's preview line and marker (card #244); yard sample changes; Unity Physics; Entities Graphics
+**Out of scope:** steered (Homing) prediction; the Multicast turn of the main shot; Bounce or Pierce continuation; Multicast extras or children; a polyline for Hitscan or Beam; custom modifier prediction; the game's preview line and marker (card #244); yard sample changes; Unity Physics; Entities Graphics
 
 **Proof:** Edit and Play Mode tests above.
 

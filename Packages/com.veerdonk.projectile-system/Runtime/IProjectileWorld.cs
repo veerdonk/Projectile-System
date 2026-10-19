@@ -25,12 +25,14 @@ namespace Veerdonk.ProjectileSystem
         /// <paramref name="points"/> (cleared first) with the position at the start of every step plus the end point.
         /// The start matches <see cref="Spawn"/>, including the Arc ballistic solve. The shipped <see cref="Speed"/>,
         /// <see cref="Gravity"/>, and <see cref="Size"/> modifiers on OnSpawn and OnTravel apply; other modifiers,
-        /// OnTick, and Homing steering do not, so the path is unsteered. Each step runs the live tick order and the
+        /// OnTick, OnInterval, and Homing steering do not, so the path is unsteered and a <see cref="Multicast"/> turn
+        /// of the main shot is not shown. Each step runs the live tick order and the
         /// live Direct cast, with the request's ignore collider, ignore set, and ignore target.
         /// Returns true when a contact ends the path; its point is the last entry and <paramref name="hit"/> holds it.
         /// Returns false when the lifetime or <see cref="PathPrediction.MaxSteps"/> ends it (the last point is the
         /// position then), and with an empty list for Hitscan, Beam, or an unreachable Arc. Bounce and Pierce do not
-        /// continue the path. Raises no events and rents nothing; safe inside a <see cref="Hit"/> handler.
+        /// continue the path. Raises no events, rents no pool entity, and allocates nothing after warm-up. Safe inside a
+        /// <see cref="Hit"/> handler; not re-entrant from <see cref="IDamageable"/> or <see cref="IProjectileProtection"/> code.
         /// A live shot moves by the game's <see cref="Tick"/> dt, so a fixed step can differ from it by a few centimetres.
         /// </summary>
         bool PredictPath(in SpawnRequest request, in PathPrediction settings, List<Vector3> points, out PathHit hit);

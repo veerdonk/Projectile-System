@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools.Constraints;
+using Is = UnityEngine.TestTools.Constraints.Is;
 
 namespace Veerdonk.ProjectileSystem.Editor.Tests
 {
@@ -92,7 +94,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
 
                 Assert.AreEqual(1, expired.Count);
                 Assert.AreEqual(ExpireReason.Lifetime, expired[0].Reason);
-                Assert.Less(Vector3.Distance(expired[0].Position, points[points.Count - 1]), 0.05f);
+                Assert.Less(Vector3.Distance(expired[0].Position, points[points.Count - 1]), 1e-4f);
             }
         }
 
@@ -256,27 +258,106 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 var seen = new List<HitInfo>();
                 PathHit predicted = default;
                 bool predictedHit = false;
+                bool skipActiveAfterPrediction = false;
+                ProjectileId inside = default;
                 world.Hit += info =>
                 {
                     seen.Add(info);
-                    if (seen.Count == 1)
-                        predictedHit = world.PredictPath(Shot(recipe, skip: true), Settings, points, out predicted);
+                    if (seen.Count != 1)
+                        return;
+                    predictedHit = world.PredictPath(Shot(recipe, skip: false), Settings, points, out predicted);
+                    skipActiveAfterPrediction = ShooterSkipActive(world, inside);
                 };
 
-                world.Spawn(Shot(recipe, skip: true));
+                inside = world.Spawn(Shot(recipe, skip: true));
                 world.Tick(0.05f);
-                Assert.AreEqual(0, seen.Count);
-                Assert.IsTrue(world.PredictPath(Shot(recipe, skip: false), Settings, points, out PathHit between));
-                Assert.AreEqual(Shooter, between.TargetId);
+                Assert.IsTrue(ShooterSkipActive(world, inside));
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = new Vector3(0f, CapsuleHoming, 13.5f),
+                    Direction = Vector3.forward
+                });
+                world.Tick(0.05f);
+
+                Assert.AreEqual(1, seen.Count);
+                Assert.IsTrue(predictedHit);
+                Assert.AreEqual(Shooter, predicted.TargetId);
+                Assert.IsTrue(skipActiveAfterPrediction);
+                Assert.IsTrue(ShooterSkipActive(world, inside));
+                Assert.IsFalse(Catalog(world).TryGetShooter(new ProjectileId(int.MinValue), out _));
 
                 for (int i = 0; i < 20; i++)
                     world.Tick(0.05f);
 
-                Assert.AreEqual(1, seen.Count);
-                Assert.AreEqual(Enemy, seen[0].TargetId);
-                Assert.IsTrue(predictedHit);
-                Assert.AreEqual(Enemy, predicted.TargetId);
-                Assert.IsFalse(Catalog(world).TryGetShooter(new ProjectileId(-1), out _));
+                Assert.AreEqual(2, seen.Count);
+                Assert.AreEqual(Enemy, seen[1].TargetId);
+            }
+        }
+
+        [Test]
+        public void GravityOnSpawn_MatchesTheTwin()
+        {
+            Recipe recipe = ArcShot("predict-gravity");
+            recipe.OnSpawn = new IModifier[] { new Gravity(2f) };
+            AssertMatchesTwin(recipe, new Vector3(0f, 0f, 7f));
+        }
+
+        [Test]
+        public void SizeOnTravel_MatchesTheTwin()
+        {
+            Recipe recipe = ArcShot("predict-size");
+            recipe.OnTravel = new IModifier[] { new Size(3f) };
+            AssertMatchesTwin(recipe, new Vector3(0f, 0f, 12f));
+        }
+
+        [Test]
+        public void GravityOnStraight_DoesNotFall()
+        {
+            Recipe recipe = Arrow("predict-straight-gravity");
+            recipe.Gravity = 9.81f;
+            recipe.OnSpawn = new IModifier[] { new Gravity(2f) };
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var points = new List<Vector3>();
+                Assert.IsFalse(world.PredictPath(Shot(recipe, skip: false), Settings, points, out _));
+                for (int i = 0; i < points.Count; i++)
+                    Assert.AreEqual(CapsuleHoming, points[i].y, 1e-5f);
+            }
+        }
+
+        [Test]
+        public void DefaultSettings_UseOneSixtiethAnd1024Steps()
+        {
+            Recipe recipe = Arrow("predict-defaults");
+            recipe.LifetimeSeconds = 100f;
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var points = new List<Vector3>();
+                Assert.IsFalse(world.PredictPath(Shot(recipe, skip: false), default, points, out _));
+                Assert.AreEqual(1025, points.Count);
+                Assert.AreEqual(20f / 60f, points[1].z - points[0].z, 1e-4f);
+            }
+        }
+
+        [Test]
+        public void RepeatCall_DoesNotAllocate()
+        {
+            Recipe recipe = ArcShot("predict-alloc");
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                PublishCapsule(world, Shooter, Vector3.zero);
+                PublishCapsule(world, Enemy, new Vector3(0f, 0f, 12f));
+                SpawnRequest request = Shot(recipe, skip: true);
+                request.Direction = Lob;
+                request.IgnoreColliders = new Collider[0];
+                var points = new List<Vector3>();
+                world.PredictPath(request, Settings, points, out _);
+
+                Assert.That(() => { world.PredictPath(request, Settings, points, out _); }, Is.Not.AllocatingGCMemory());
             }
         }
 
@@ -317,6 +398,32 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             Assert.AreEqual(1, seen.Count);
             time = ticks * Step;
             return seen[0];
+        }
+
+        static void AssertMatchesTwin(Recipe recipe, Vector3 enemyBottom)
+        {
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                PublishCapsule(world, Enemy, enemyBottom);
+                var request = new SpawnRequest { Recipe = recipe, Position = Muzzle, Direction = Lob };
+                var points = new List<Vector3>();
+
+                Assert.IsTrue(world.PredictPath(request, Settings, points, out PathHit hit));
+                HitInfo twin = TwinHit(world, request, out float twinTime);
+                Assert.AreEqual(Enemy, hit.TargetId);
+                Assert.Less(Vector3.Distance(twin.Point, hit.Point), 1e-3f);
+                Assert.AreEqual(twinTime, hit.Time, Step * 0.5f);
+            }
+        }
+
+        static bool ShooterSkipActive(ProjectileWorld world, ProjectileId id)
+        {
+            var shooters = (System.Collections.IDictionary)typeof(HitTargetCatalog)
+                .GetField("shooters", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .GetValue(Catalog(world));
+            object skip = shooters[id];
+            return skip != null && (bool)skip.GetType().GetProperty("Active").GetValue(skip);
         }
 
         static HitTargetCatalog Catalog(ProjectileWorld world)
