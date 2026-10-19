@@ -41,6 +41,28 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void StatusCatalog_LeavesOutAStatusWithNoPublicParameterlessConstructor()
+        {
+            Type[] statuses = RecipeAssetEditor.StatusEffects();
+
+            Assert.IsFalse(Contains(statuses, typeof(PackedStatus)));
+            Assert.IsTrue(Contains(statuses, typeof(DummyStatusEffect)));
+        }
+
+        [Test]
+        public void ToRecipe_KeepsAStatusWithNoPublicParameterlessConstructor()
+        {
+            var packed = new PackedStatus("burn");
+            parent = ScriptableObject.CreateInstance<RecipeAsset>();
+            parent.Id = "packed-status";
+            parent.OnHit = new IModifier[] { new ApplyStatus(packed) };
+
+            Recipe recipe = parent.ToRecipe();
+
+            Assert.AreSame(packed, ((ApplyStatus)recipe.OnHit[0]).Effect);
+        }
+
+        [Test]
         public void ToRecipe_CopiesStatsAndPierceOnHit()
         {
             parent = ScriptableObject.CreateInstance<RecipeAsset>();
@@ -171,6 +193,17 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
 
             return false;
+        }
+
+        [Serializable]
+        sealed class PackedStatus : IStatusEffect
+        {
+            public PackedStatus(string id)
+            {
+                Id = id;
+            }
+
+            public string Id { get; }
         }
     }
 }

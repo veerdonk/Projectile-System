@@ -109,7 +109,7 @@ namespace Veerdonk.ProjectileSystem
         /// unassigned so a later tick can try again. Homing calls this whenever the lock is empty, including after
         /// a Target hit, except the first lock when <see cref="SpawnRequest.HomingAcquirePointSet"/> is true
         /// (that pick is <see cref="ClosestToPointAcquisition"/>). Skip <see cref="ModifierContext.HomingIgnoredTarget"/>
-        /// while it is set.
+        /// while it is set, and always skip <see cref="ModifierContext.ShooterTarget"/> (Homing drops a pick of it).
         /// </summary>
         bool TryAcquire(ModifierContext context, out HomingTarget target);
     }
@@ -181,6 +181,8 @@ namespace Veerdonk.ProjectileSystem
             ref Candidate best)
         {
             if (context.HomingIgnoredTarget.IsAssigned && id.Equals(context.HomingIgnoredTarget.Id))
+                return;
+            if (context.ShooterTarget.IsAssigned && id.Equals(context.ShooterTarget.Id))
                 return;
 
             Vector3 toTarget = position - context.Position;
@@ -264,6 +266,8 @@ namespace Veerdonk.ProjectileSystem
             ref Candidate best)
         {
             if (context.HomingIgnoredTarget.IsAssigned && id.Equals(context.HomingIgnoredTarget.Id))
+                return;
+            if (context.ShooterTarget.IsAssigned && id.Equals(context.ShooterTarget.Id))
                 return;
 
             float sqrDistance = (position - point).sqrMagnitude;

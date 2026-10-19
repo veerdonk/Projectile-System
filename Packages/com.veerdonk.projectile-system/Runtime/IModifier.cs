@@ -147,6 +147,9 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Last Target hit. Acquisition skips it while it stays in front of travel.</summary>
         public HomingTarget HomingIgnoredTarget { get; set; }
 
+        /// <summary>The spawn's <see cref="SpawnRequest.IgnoreTarget"/>, when set. Acquisition never locks it.</summary>
+        public HomingTarget ShooterTarget { get; internal set; }
+
         /// <summary>
         /// True when spawn stored a fire-time aim point. Homing’s first lock uses
         /// <see cref="ClosestToPointAcquisition"/> against <see cref="HomingAcquirePoint"/>.
@@ -358,6 +361,9 @@ namespace Veerdonk.ProjectileSystem
             DeltaTime = deltaTime;
             HomingTarget = state.HomingTarget;
             HomingIgnoredTarget = state.HomingIgnoredTarget;
+            ShooterTarget = HitTargets != null && HitTargets.TryGetShooter(state.InstanceId, out TargetId shooter)
+                ? HomingTarget.Assigned(shooter)
+                : default;
             HomingAcquirePointSet = state.HomingAcquirePointSet;
             HomingAcquirePoint = state.HomingAcquirePoint;
             HomingAimPointUsed = state.HomingAimPointUsed;

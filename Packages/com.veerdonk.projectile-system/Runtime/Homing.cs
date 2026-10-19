@@ -134,7 +134,7 @@ namespace Veerdonk.ProjectileSystem
                 return true;
             }
 
-            return Acquisition.TryAcquire(context, out target);
+            return Acquisition.TryAcquire(context, out target) && !SameTarget(target, context.ShooterTarget);
         }
 
         static void DropIgnoredIfPassed(ModifierContext context)

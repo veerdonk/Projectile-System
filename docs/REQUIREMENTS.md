@@ -40,6 +40,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **MaxRange** — `Recipe.MaxRange`, meters, default 0. Caps the total polyline length of a Beam pulse or a Hitscan query; `<= 0` is 10 km. Pierce, Bounce, and homing curves share the one length. Hits reach `MaxRange` + `Radius`. Straight / Arc ignore it. No modifier scales it (ADR-043, phase 40)
 - **Ignore collider** — `SpawnRequest.IgnoreCollider`. Direct overlap and sweep skip that collider until the shot body no longer overlaps it. Not a hit. After clear, a later contact is a normal hit. Same one-slot skip pierce/bounce already use after a hit ([DECISIONS.md](DECISIONS.md) ADR-037). Not `IProjectileProtection`
 - **Ignore colliders** — `SpawnRequest.IgnoreColliders` (ADR-041). A copied list of colliders skipped for the whole life of the shot by Direct, area, and ground queries. Not a hit. Null or empty is today’s behaviour.
+- **Ignore target** — `SpawnRequest.IgnoreTarget` with `IgnoreTargetSet` (ADR-046). The shooter's published hit target. Direct overlap and sweep skip it until the shot body no longer overlaps it; a Beam re-arms it each pulse. Not a hit. Homing never locks it. Area and ground queries still hit it
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
 - **Strength** for homing: degrees per second on Straight / Arc and along a Beam pulse (`distance / speed`); **degrees of kink** per segment on Hitscan (ADR-035, ADR-036)
@@ -863,6 +864,24 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** a capsule published with `homingHeight` below its centre, and a Homing shot level with the centre
 - **When:** the shot acquires it and steers
 - **Then:** it bends toward the homing point, not the centre
+
+### Phase 42 — An arrow from inside its shooter does not hit it
+
+- **Given:** a ranged enemy published as a capsule, and an arrow spawned on its axis with `IgnoreTarget` = that enemy
+- **When:** the arrow flies toward another enemy
+- **Then:** no `Hit` on the shooter; the other enemy gets a Direct `Hit`
+
+### Phase 42 — A homing shot never turns back to its shooter
+
+- **Given:** the same spawn with `Homing`, and the shooter the nearest candidate ahead
+- **When:** the shot acquires
+- **Then:** it locks the other enemy
+
+### Phase 42 — The status popup lists only authorable statuses
+
+- **Given:** a game status class with no public parameterless constructor
+- **When:** a Status popup is opened in a Recipe or Modifier Kit inspector
+- **Then:** the class is not listed
 
 ## Product constraints
 

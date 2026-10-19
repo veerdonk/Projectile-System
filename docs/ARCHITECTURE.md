@@ -54,7 +54,7 @@ Recipe
 
 `LifetimeSeconds` is the only despawn clock. When remaining lifetime reaches 0, run `OnExpire` and return the instance to the pool. `Despawn` (phase 32) is an explicit expire, not a second clock.
 
-**Authoring:** `RecipeAsset` is the Unity asset ([DECISIONS.md](DECISIONS.md) ADR-023). Tests and `Spawn` keep using `Recipe`. `ToRecipe()` copies stats and builds modifier instances. Multiply/Multicast children on the asset are other `RecipeAsset` references, resolved on build. Do not put `RecipeAsset` on `SpawnRequest`.
+**Authoring:** `RecipeAsset` is the Unity asset ([DECISIONS.md](DECISIONS.md) ADR-023). Inspector type popups list only types with a public parameterless constructor (ADR-047). Tests and `Spawn` keep using `Recipe`. `ToRecipe()` copies stats and builds modifier instances. Multiply/Multicast children on the asset are other `RecipeAsset` references, resolved on build. Do not put `RecipeAsset` on `SpawnRequest`.
 
 **Modifier kits:** a game may treat one Recipe as a **base** and append extras at fire time ([DECISIONS.md](DECISIONS.md) ADR-032). `ModifierKit` is a ScriptableObject of layers (`RecipeStage` + modifiers), not a second Recipe and not stats. `Recipe.Clone()`, `Append`, `ModifierKit.ApplyTo`, and `Recipe.Compose(basis, id, kits)` clone then append. Each composition needs its own `Recipe.Id` (`RecipeStore` replaces the slot when the same id is spawned again). Kits do not insert `Interval(n)` for you.
 
@@ -131,6 +131,7 @@ struct HitInfo
 - Projectile-vs-projectile: ignore until an ADR.
 - `IgnoreCollider` (ADR-037): Direct overlap and sweep skip that collider until the instance body no longer overlaps it. Not a hit. After clear, a later contact is a normal hit.
 - `IgnoreColliders` (ADR-041): a copied set of colliders skipped for the whole shot life by Direct, `Overlap`, and `OverlapDisk`. Not a hit. Multicast, Multiply, and `RequestSpawn` children copy the set; a ground field keeps its own copy.
+- `IgnoreTarget` (ADR-046, with `IgnoreTargetSet`): Direct overlap and sweep skip that published hit target until the instance body no longer overlaps it; a Beam re-arms it each pulse. Not a hit. Children copy it. Homing never acquires it. Area and ground queries still see it.
 
 The package does **not** apply HP, roll crits, spend mana, or tick DoT. Direct contact `HitInfo` is sampled before `OnHit` and raised after that list (ADR-016) so `AreaEffect` can suppress it; sampled damage still ignores OnHit `Damage(n)` on this contact. Sandbox listens to `Hit` for dummy health (`Hit.Damage`) when `Protection == None`, and to `StatusApplied` to call `IStatusReceiver.Apply`. Size is `Radius`. `Recipe.ManaCost` is the authored fire-time cost; `Mana(n)` scales the instance copy. `EffectRadius` is the `AreaEffect` overlap radius. A `GroundField` disk uses the modifier’s own radius and lifetime.
 
@@ -149,6 +150,8 @@ struct SpawnRequest
     Vector3 HomingAcquirePoint; // Homing first lock; Arc Spawn loft target; Hitscan / Beam aim. No second AimPoint field.
     Collider IgnoreCollider; // ADR-037. Direct skip until the shot body no longer overlaps it. Null = today.
     IReadOnlyList<Collider> IgnoreColliders; // ADR-041. Copied at Spawn; skipped for the whole shot life. Null/empty = none.
+    bool IgnoreTargetSet; // ADR-046. When true, Direct skips IgnoreTarget until clear; Homing never locks it.
+    TargetId IgnoreTarget; // The shooter's published hit target.
 }
 
 struct ProjectileId { /* opaque handle */ }
@@ -320,7 +323,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038). Phase 37 (0.2.3) adds `SpawnRequest.IgnoreColliders` (ADR-041). Phase 40 (0.2.6) adds `Recipe.MaxRange` (ADR-043) and the four-argument `AimBeam` that sets a live Beam's homing lock (ADR-044). Phase 41 (0.2.7) adds the upright capsule `SetHitTarget` overload with a homing point (ADR-045).
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038). Phase 37 (0.2.3) adds `SpawnRequest.IgnoreColliders` (ADR-041). Phase 40 (0.2.6) adds `Recipe.MaxRange` (ADR-043) and the four-argument `AimBeam` that sets a live Beam's homing lock (ADR-044). Phase 41 (0.2.7) adds the upright capsule `SetHitTarget` overload with a homing point (ADR-045). Phase 42 (0.2.8) adds `SpawnRequest.IgnoreTargetSet` / `IgnoreTarget` and `ModifierContext.ShooterTarget` (ADR-046), and authorable-only inspector popups (ADR-047).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 
