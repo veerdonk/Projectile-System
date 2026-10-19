@@ -41,6 +41,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Ignore collider** — `SpawnRequest.IgnoreCollider`. Direct overlap and sweep skip that collider until the shot body no longer overlaps it. Not a hit. After clear, a later contact is a normal hit. Same one-slot skip pierce/bounce already use after a hit ([DECISIONS.md](DECISIONS.md) ADR-037). Not `IProjectileProtection`
 - **Ignore colliders** — `SpawnRequest.IgnoreColliders` (ADR-041). A copied list of colliders skipped for the whole life of the shot by Direct, area, and ground queries. Not a hit. Null or empty is today’s behaviour.
 - **Ignore target** — `SpawnRequest.IgnoreTarget` with `IgnoreTargetSet` (ADR-046). The shooter's published hit target. Direct overlap and sweep skip it until the shot body no longer overlaps it; a Beam re-arms it each pulse. Not a hit. Homing never locks it. Area and ground queries still hit it
+- **Path prediction** — `IProjectileWorld.PredictPath` (ADR-048). Flies one Straight or Arc shot from a `SpawnRequest` with a fixed step and returns its points and first contact (`PathHit`) without spawning: no events, no pool rent. Applies `Speed` / `Gravity` / `Size` on OnSpawn and OnTravel; no Homing steering, Bounce, or Pierce. Ends at the first contact, the lifetime, or `PathPrediction.MaxSteps`
 - **Magnitude** — the number in `ModifierName(n)`:
   - **Count** for pierce, bounce, multicast, multiply (how many)
 - **Strength** for homing: degrees per second on Straight / Arc and along a Beam pulse (`distance / speed`); **degrees of kink** per segment on Hitscan (ADR-035, ADR-036)
@@ -882,6 +883,12 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** a game status class with no public parameterless constructor
 - **When:** a Status popup is opened in a Recipe or Modifier Kit inspector
 - **Then:** the class is not listed
+
+### Phase 43 — An Arc preview lands where the shot lands
+
+- **Given:** an Arc shot request aimed at flat ground, and the same request spawned as a live twin
+- **When:** the game calls `PredictPath` with a 1/60 s step, then ticks the twin by 1/60 s until it hits
+- **Then:** `PredictPath` returns true with a World hit within 0.05 m of the twin's `Hit.Point`, and raised no event of its own
 
 ## Product constraints
 
