@@ -9,6 +9,7 @@ namespace Veerdonk.ProjectileSystem
         readonly Dictionary<TargetId, int> indexById = new Dictionary<TargetId, int>();
         readonly Dictionary<ProjectileId, IgnoredContact> ignored = new Dictionary<ProjectileId, IgnoredContact>();
         readonly HashSet<ProjectileId> holdRelease = new HashSet<ProjectileId>();
+        readonly Dictionary<ProjectileId, ShooterSkip> shooters = new Dictionary<ProjectileId, ShooterSkip>();
         bool hasDeadSlots;
 
         public int Count => indexById.Count;
@@ -102,8 +103,30 @@ namespace Veerdonk.ProjectileSystem
             holdRelease.Add(instanceId);
         }
 
+        public void SetShooter(ProjectileId instanceId, TargetId id)
+        {
+            shooters[instanceId] = new ShooterSkip(id, active: true);
+        }
+
+        public bool TryGetShooter(ProjectileId instanceId, out TargetId id)
+        {
+            bool found = shooters.TryGetValue(instanceId, out ShooterSkip shooter);
+            id = shooter.Id;
+            return found;
+        }
+
+        public void ReleaseShooter(ProjectileId instanceId)
+        {
+            shooters.Remove(instanceId);
+        }
+
         public void ReleaseIfSeparated(ProjectileId instanceId, Vector3 origin, float radius)
         {
+            if (shooters.TryGetValue(instanceId, out ShooterSkip shooter)
+                && shooter.Active
+                && (!TryFind(shooter.Id, out Volume shooterVolume) || !Overlaps(origin, radius, shooterVolume, skin: 0.02f)))
+                shooters[instanceId] = new ShooterSkip(shooter.Id, active: false);
+
             if (holdRelease.Remove(instanceId))
                 return;
 
@@ -136,12 +159,16 @@ namespace Veerdonk.ProjectileSystem
         {
             ignored.Remove(instanceId);
             holdRelease.Remove(instanceId);
+            if (shooters.TryGetValue(instanceId, out ShooterSkip shooter))
+                shooters[instanceId] = new ShooterSkip(shooter.Id, active: true);
         }
 
         public void CopyIgnore(ProjectileId from, ProjectileId to)
         {
             if (from == to)
                 return;
+            if (shooters.TryGetValue(from, out ShooterSkip shooter))
+                shooters[to] = shooter;
             if (!ignored.TryGetValue(from, out IgnoredContact contact))
                 return;
 
@@ -165,11 +192,14 @@ namespace Veerdonk.ProjectileSystem
             bool found = false;
             bool hasIgnore = ignored.TryGetValue(instanceId, out IgnoredContact ignoredContact);
             TargetId ignoredId = ignoredContact.Id;
+            bool hasShooter = shooters.TryGetValue(instanceId, out ShooterSkip shooter) && shooter.Active;
 
             for (int i = 0; i < volumes.Count; i++)
             {
                 Volume volume = volumes[i];
                 if (hasIgnore && volume.Id.Equals(ignoredId))
+                    continue;
+                if (hasShooter && volume.Id.Equals(shooter.Id))
                     continue;
                 if (!Sweep(origin, direction, distance, radius, volume, out float volumeTravel, out float volumeClose, out Vector3 point, out Vector3 normal))
                     continue;
@@ -438,6 +468,18 @@ namespace Veerdonk.ProjectileSystem
 
             public TargetId Id { get; }
             public Vector3 Point { get; }
+        }
+
+        readonly struct ShooterSkip
+        {
+            public ShooterSkip(TargetId id, bool active)
+            {
+                Id = id;
+                Active = active;
+            }
+
+            public TargetId Id { get; }
+            public bool Active { get; }
         }
 
         // A sphere is a capsule whose Low and High are the same point.

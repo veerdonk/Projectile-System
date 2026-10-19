@@ -131,10 +131,10 @@ namespace Veerdonk.ProjectileSystem
                     return false;
 
                 context.HomingAimPointUsed = true;
-                return true;
+                return !SameTarget(target, context.ShooterTarget);
             }
 
-            return Acquisition.TryAcquire(context, out target);
+            return Acquisition.TryAcquire(context, out target) && !SameTarget(target, context.ShooterTarget);
         }
 
         static void DropIgnoredIfPassed(ModifierContext context)

@@ -948,6 +948,31 @@ Change request from the WizardGame board: a published hit target that covers a t
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 42 — Shooter hit-target skip and authorable status popup
+
+Two change requests from the WizardGame board: a spawn that skips the shooter's own published hit target (card #240) and a status popup that lists only authorable statuses (card #237). Runs before phase 34. ADR-046, ADR-047. One version.
+
+**In scope**
+
+- `SpawnRequest.IgnoreTargetSet` + `IgnoreTarget`: Direct overlap and sweep skip that published target until the body clears it; not a hit; a later contact is normal. Own slot in `HitTargetCatalog`, kept through Pierce / Bounce hits on others. Beam re-arms it each pulse. Children copy it. Released with the instance
+- Homing never acquires the shooter (shipped acquisitions skip `ModifierContext.ShooterTarget`; `Homing` drops a custom pick of it). An assigned spawn lock is kept. Area and ground queries unchanged
+- `RecipeAssetEditor`'s concrete-type list (modifier, pattern, and status popups) leaves out classes with no public parameterless constructor. `ToRecipe` clone fallback unchanged
+- Edit Mode tests (`IgnoreTargetTests`, `RecipeAssetTests`):
+  - Without the skip, an arrow from the axis of an Archer capsule (r 1.06, h 3.15) hits its shooter; with it, the arrow skips the shooter and hits another enemy 15 m away
+  - After the body clears, the shooter moved into the path is a normal hit
+  - Multicast extras copy the skip
+  - Homing locks the other enemy, never the shooter; the aim-point first lock does the same with the aim point on the shooter
+  - A Beam from inside its shooter hits only the other enemy on every pulse
+  - The status catalog leaves out a status with no public parameterless constructor; `ToRecipe` keeps such an instance by reference
+  - Existing tests stay green
+- Docs: ADR-046, ADR-047, the API sketch and public API line in [ARCHITECTURE.md](ARCHITECTURE.md), glossary and scenarios, [ECS.md](ECS.md) `HitTargetCatalog.cs` and `Homing.cs` rows, package `AGENTS.md` / `README.md` / `Documentation/index.md`, XML on the new fields. `CHANGELOG` **0.2.8**. Bump `package.json` to **0.2.8**. No git tag in the phase session
+
+**Out of scope:** a list of ignored targets; a whole-life Direct skip for targets; area / ground skips for the shooter; a `[NotAuthorable]` attribute; the game's muzzle placement; yard sample changes; Unity Physics; Entities Graphics
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

@@ -2,6 +2,20 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-047 — Inspector type popups list only types with a public parameterless constructor
+
+- **Date:** 2026-10-19
+- **Decision:** The Recipe and Modifier Kit inspectors build every type popup (modifiers, Multiply patterns, statuses) from `RecipeAssetEditor`'s concrete-type list, which now leaves out a class that has no public parameterless constructor. Structs stay. `RecipeAsset.CloneStatus` (and the other `ToRecipe` clones) keep their `MissingMethodException` fallback: such an instance built in code is still kept by reference.
+- **Why:** A pick is made with `Activator.CreateInstance(type)`. A game-built status (WizardGame `StatusSet`, Trello card #237) has no parameterless constructor on purpose, so it showed in every Status popup and threw when picked. The game cannot edit the package editor. A constructor check needs no game-side attribute and covers every popup that uses the same call.
+- **Consequences:** A type the game wants authorable needs a public parameterless constructor (already true for every shipped type). No runtime change. Ships with ADR-046 in **0.2.8**. Phase 42.
+
+## ADR-046 — Spawn can skip the shooter's own hit target until the shot has cleared it
+
+- **Date:** 2026-10-19
+- **Decision:** `SpawnRequest` gains `bool IgnoreTargetSet` and `TargetId IgnoreTarget` (a flag, because `default(TargetId)` is a valid id; the same shape as `HomingAcquirePointSet`). When set, Direct overlap and sweep (Straight, Arc, Hitscan, Beam) skip that published hit target until the instance body no longer overlaps it (0.02 m skin), like `IgnoreCollider` for a collider (ADR-037). The skip is not a hit: no `Hit`, despawn, spend, or status. After the body is clear, a later contact is a normal hit. A Beam arms the skip again at the start of every pulse, because each pulse starts at the muzzle. The skip lives in `HitTargetCatalog` in its own slot, not the post-hit slot, so a Pierce or Bounce hit on another target does not drop it. `CopyIgnore` copies it to Multicast extras, Multiply children, and `RequestSpawn` children. It is released with the instance (end of `FlushPendingSpawns`). **Homing** never acquires that target for the instance's whole life, including children: `ModifierContext.ShooterTarget` carries it, the two shipped acquisitions skip it, and `Homing` drops a custom acquisition's pick of it. A `HomingTarget` assigned at spawn is the caller's choice and is kept. `AreaEffect` and `GroundField` do not skip it. One id, not a list. A removed target ends the overlap skip.
+- **Why:** Enemies are published as capsules with no collider (game ADR 0084). A ranged enemy's arrow spawned on its axis starts inside its own capsule and hit the shooter on its first tick (WizardGame Trello card #240). `IgnoreCollider` / `IgnoreColliders` only hold colliders (ADR-041). One shooter per shot needs one id. A separate slot keeps the skip through Pierce and Bounce. Homing must not curve back into the shooter after it clears (user decision). Area hits next to the shooter still count, matching `IgnoreCollider` (user decision).
+- **Consequences:** Additive public fields; `ModifierContext` gains a read-only property. `IHitQuery` is unchanged. Extends ADR-037 to published targets; ADR-041's "published targets are not in the set" still holds. Bump `package.json` to **0.2.8** (one version with ADR-047). Phase 42.
+
 ## ADR-045 — A published hit target can be an upright capsule with a homing point
 
 - **Date:** 2026-10-18

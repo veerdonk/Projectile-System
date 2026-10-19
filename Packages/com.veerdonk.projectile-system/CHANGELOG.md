@@ -5,6 +5,17 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.8] - 2026-10-19
+
+### Added
+
+- `SpawnRequest.IgnoreTargetSet` and `SpawnRequest.IgnoreTarget`. Direct overlap and sweep (Straight, Arc, Hitscan, Beam) skip that published hit target until the shot body no longer overlaps it; the skip is not a hit, and a later contact is a normal hit. A Beam arms the skip again at the start of every pulse. Pierce and Bounce hits on other targets keep it. Multicast extras, Multiply children, and `RequestSpawn` children copy it. Homing never acquires that target. `AreaEffect` and `GroundField` still hit it.
+- `ModifierContext.ShooterTarget`: the spawn's `IgnoreTarget`, for custom `IHomingAcquisition`s.
+
+### Fixed
+
+- The Recipe and Modifier Kit inspector popups no longer list a class with no public parameterless constructor (such as a game-built status set), so picking an entry cannot throw `MissingMethodException`. `ToRecipe` still keeps such an instance by reference.
+
 ## [0.2.7] - 2026-10-18
 
 ### Added

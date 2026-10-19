@@ -173,7 +173,10 @@ namespace Veerdonk.ProjectileSystem
             return assets.ToArray();
         }
 
-        /// <summary>Shipped <see cref="IStatusEffect"/> implementations.</summary>
+        /// <summary>
+        /// Authorable <see cref="IStatusEffect"/> implementations. A class with no public parameterless constructor is left out,
+        /// because a pick is made with <see cref="Activator.CreateInstance(Type)"/>.
+        /// </summary>
         public static Type[] StatusEffects()
         {
             return ConcreteImplementations<IStatusEffect>();
@@ -185,6 +188,8 @@ namespace Veerdonk.ProjectileSystem
             foreach (Type type in TypeCache.GetTypesDerivedFrom<T>())
             {
                 if (type.IsAbstract || type.IsInterface || type.IsGenericTypeDefinition)
+                    continue;
+                if (!type.IsValueType && type.GetConstructor(Type.EmptyTypes) == null)
                     continue;
                 result.Add(type);
             }
