@@ -711,7 +711,7 @@ namespace Veerdonk.ProjectileSystem
             for (int i = 0; i < bridge.RetiredIds.Count; i++)
             {
                 hitQuery.ReleaseIgnoreSet(bridge.RetiredIds[i]);
-                hitTargets.ReleaseShooter(bridge.RetiredIds[i]);
+                hitTargets.Release(bridge.RetiredIds[i]);
             }
             bridge.RetiredIds.Clear();
         }

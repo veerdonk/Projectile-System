@@ -115,16 +115,19 @@ namespace Veerdonk.ProjectileSystem
             return found;
         }
 
-        public void ReleaseShooter(ProjectileId instanceId)
+        public void Release(ProjectileId instanceId)
         {
             shooters.Remove(instanceId);
+            ignored.Remove(instanceId);
+            holdRelease.Remove(instanceId);
         }
 
         public void ReleaseIfSeparated(ProjectileId instanceId, Vector3 origin, float radius)
         {
             if (shooters.TryGetValue(instanceId, out ShooterSkip shooter)
                 && shooter.Active
-                && (!TryFind(shooter.Id, out Volume shooterVolume) || !Overlaps(origin, radius, shooterVolume, skin: 0.02f)))
+                && TryFind(shooter.Id, out Volume shooterVolume)
+                && !Overlaps(origin, radius, shooterVolume, skin: 0.02f))
                 shooters[instanceId] = new ShooterSkip(shooter.Id, active: false);
 
             if (holdRelease.Remove(instanceId))

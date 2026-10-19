@@ -962,7 +962,9 @@ Two change requests from the WizardGame board: a spawn that skips the shooter's 
   - After the body clears, the shooter moved into the path is a normal hit
   - Multicast extras copy the skip
   - Homing locks the other enemy, never the shooter; the aim-point first lock does the same with the aim point on the shooter
-  - A Beam from inside its shooter hits only the other enemy on every pulse
+  - A Beam from inside its shooter hits only the other enemy, once per pulse; a Hitscan from inside it hits the other enemy
+  - A Bounce off another enemy inside the shooter keeps the skip; Multiply children spawned inside it copy the skip
+  - A custom acquisition that picks the shooter does not lock; a shooter published after `Spawn` is still skipped; a retired shot releases its record
   - The status catalog leaves out a status with no public parameterless constructor; `ToRecipe` keeps such an instance by reference
   - Existing tests stay green
 - Docs: ADR-046, ADR-047, the API sketch and public API line in [ARCHITECTURE.md](ARCHITECTURE.md), glossary and scenarios, [ECS.md](ECS.md) `HitTargetCatalog.cs` and `Homing.cs` rows, package `AGENTS.md` / `README.md` / `Documentation/index.md`, XML on the new fields. `CHANGELOG` **0.2.8**. Bump `package.json` to **0.2.8**. No git tag in the phase session

@@ -28,8 +28,9 @@ namespace Veerdonk.ProjectileSystem
         void OverlapDisk(ProjectileId instanceId, ProjectileId ignoreSetOwner, Vector3 center, float radius, List<HitInfo> results);
 
         /// <summary>
-        /// Child instances ignore the same collider the parent already overlapped, and copy its ignore set
-        /// (<see cref="CopyIgnoreSet"/>).
+        /// Child instances ignore the same collider the parent already overlapped, copy its ignore set
+        /// (<see cref="CopyIgnoreSet"/>), and copy its shooter hit-target skip as it stands (a skip the parent already cleared
+        /// starts cleared).
         /// </summary>
         void CopyIgnore(ProjectileId from, ProjectileId to);
 
@@ -51,7 +52,10 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Returns the instance's ignore set to the pool. Not part of <see cref="ClearIgnore"/>.</summary>
         void ReleaseIgnoreSet(ProjectileId instanceId);
 
-        /// <summary>Drops the one-slot collider skip and the published-target skip for this instance.</summary>
+        /// <summary>
+        /// Drops the one-slot collider skip and the post-hit published-target skip for this instance, and arms the shooter
+        /// hit-target skip again (<see cref="SpawnRequest.IgnoreTarget"/>). Beam calls this at the start of every pulse.
+        /// </summary>
         void ClearIgnore(ProjectileId instanceId);
 
         /// <summary>

@@ -164,13 +164,158 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 PublishArcher(world, Shooter, Vector3.zero);
                 PublishArcher(world, Other, new Vector3(0f, 0f, 10f));
                 world.Spawn(Shot(recipe));
+                Assert.AreEqual(1, seen.Count);
 
-                for (int i = 0; i < 5; i++)
+                for (int pulse = 2; pulse <= 5; pulse++)
+                {
                     world.Tick(0.1f);
+                    Assert.AreEqual(pulse, seen.Count);
+                }
 
-                Assert.Greater(seen.Count, 2);
                 for (int i = 0; i < seen.Count; i++)
                     Assert.AreEqual(Other, seen[i].TargetId);
+            }
+        }
+
+        [Test]
+        public void Hitscan_FromInsideItsShooter_HitsTheOtherEnemy()
+        {
+            Recipe recipe = Arrow("ignore-target-hitscan");
+            recipe.Delivery = Delivery.Hitscan;
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var seen = new List<HitInfo>();
+                world.Hit += info => seen.Add(info);
+                PublishArcher(world, Shooter, Vector3.zero);
+                PublishArcher(world, Other, new Vector3(0f, 0f, 10f));
+                world.Spawn(Shot(recipe));
+
+                Assert.AreEqual(1, seen.Count);
+                Assert.AreEqual(Other, seen[0].TargetId);
+            }
+        }
+
+        [Test]
+        public void BounceOffAnotherEnemyInsideTheShooter_KeepsTheShooterSkip()
+        {
+            Recipe recipe = Arrow("ignore-target-bounce");
+            recipe.OnHit = new IModifier[] { new Bounce(1) };
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var seen = new List<HitInfo>();
+                world.Hit += info => seen.Add(info);
+                PublishArcher(world, Shooter, Vector3.zero);
+                PublishArcher(world, Other, new Vector3(0f, 0f, 2f));
+                world.Spawn(Shot(recipe));
+
+                for (int i = 0; i < 20; i++)
+                    world.Tick(0.02f);
+
+                Assert.AreEqual(1, seen.Count);
+                Assert.AreEqual(Other, seen[0].TargetId);
+            }
+        }
+
+        [Test]
+        public void MultiplyChildren_SpawnedInsideTheShooter_CopyTheSkip()
+        {
+            Recipe child = Arrow("ignore-target-multiply-child");
+            Recipe parent = SimulationTestHelper.CreateRecipe("ignore-target-multiply", speed: 1f, lifetime: 0.5f, radius: 0.1f);
+            parent.OnSpawn = new IModifier[] { new Interval(0.1f) };
+            parent.OnInterval = new IModifier[] { new Multiply(2, child) };
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(parent);
+            using (world)
+            {
+                world.Prewarm(child, 8);
+                var seen = new List<HitInfo>();
+                world.Hit += info => seen.Add(info);
+                PublishArcher(world, Shooter, Vector3.zero);
+                world.Spawn(Shot(parent));
+
+                world.Tick(0.12f);
+                Assert.Greater(world.ActiveCount, 1);
+                for (int i = 0; i < 4; i++)
+                    world.Tick(0.05f);
+
+                Assert.AreEqual(0, seen.Count);
+            }
+        }
+
+        [Test]
+        public void CustomAcquisition_ThatPicksTheShooter_DoesNotLock()
+        {
+            Recipe recipe = Arrow("ignore-target-custom", onTick: new IModifier[] { new Homing(720f, new PickShooter()) });
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                int locks = 0;
+                world.HomingLocked += _ => locks++;
+                PublishArcher(world, Shooter, Vector3.zero);
+                world.Spawn(Shot(recipe));
+
+                for (int i = 0; i < 5; i++)
+                    world.Tick(0.05f);
+
+                Assert.AreEqual(0, locks);
+            }
+        }
+
+        [Test]
+        public void ShooterNotYetPublished_KeepsTheSkipUntilItIsPublishedAndCleared()
+        {
+            Recipe recipe = Arrow("ignore-target-late-publish");
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var seen = new List<HitInfo>();
+                world.Hit += info => seen.Add(info);
+                world.Spawn(Shot(recipe));
+                world.Tick(0.01f);
+                PublishArcher(world, Shooter, Vector3.zero);
+
+                for (int i = 0; i < 10; i++)
+                    world.Tick(0.02f);
+
+                Assert.AreEqual(0, seen.Count);
+            }
+        }
+
+        [Test]
+        public void RetiredShot_ReleasesTheShooterRecord()
+        {
+            Recipe recipe = Arrow("ignore-target-release");
+            recipe.LifetimeSeconds = 0.1f;
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                PublishArcher(world, Shooter, Vector3.zero);
+                ProjectileId id = world.Spawn(Shot(recipe));
+                HitTargetCatalog catalog = Catalog(world);
+                Assert.IsTrue(catalog.TryGetShooter(id, out _));
+
+                world.Tick(0.2f);
+                world.Tick(0.01f);
+
+                Assert.AreEqual(0, world.ActiveCount);
+                Assert.IsFalse(catalog.TryGetShooter(id, out _));
+            }
+        }
+
+        static HitTargetCatalog Catalog(ProjectileWorld world)
+        {
+            return (HitTargetCatalog)typeof(ProjectileWorld)
+                .GetField("hitTargets", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .GetValue(world);
+        }
+
+        sealed class PickShooter : IHomingAcquisition
+        {
+            public bool TryAcquire(ModifierContext context, out HomingTarget target)
+            {
+                target = HomingTarget.Assigned(Shooter);
+                return true;
             }
         }
 

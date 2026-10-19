@@ -181,7 +181,8 @@ namespace Veerdonk.ProjectileSystem
         /// When true, Direct overlap and sweep skip the published hit target <see cref="IgnoreTarget"/> until the instance body
         /// no longer overlaps it, like <see cref="IgnoreCollider"/> for a collider. The skip is not a hit. A Beam arms it again
         /// at the start of every pulse. Homing never acquires that target for the instance's whole life. Children (Multicast,
-        /// Multiply, `RequestSpawn`) copy it. Area and ground queries are unchanged.
+        /// Multiply, `RequestSpawn`) copy it. Area and ground queries are unchanged. A target that is not published (yet) keeps
+        /// the skip armed until it is published and the body has cleared it.
         /// </summary>
         public bool IgnoreTargetSet;
         /// <summary>Hit target that fired this shot. Ignored unless <see cref="IgnoreTargetSet"/> is true.</summary>

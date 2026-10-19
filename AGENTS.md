@@ -36,7 +36,7 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 **Phase 42 — Shooter hit-target skip and authorable status popup (done; phase 34 is next)**
 
 - Package version is **0.2.8** (ADR-046, ADR-047; WizardGame Trello cards #240 and #237). No git tag in the phase session; CI tags `v0.2.8` on merge. The human moves the cards.
-- Verified in the Editor on the main checkout: clean compile, Edit Mode **331/331** (322 old + 7 in `Tests/Editor/IgnoreTargetTests.cs` + 2 in `RecipeAssetTests`), Play Mode **54/54**.
+- Verified in the Editor on the main checkout: clean compile, Edit Mode **337/337** (322 old + 13 in `Tests/Editor/IgnoreTargetTests.cs` + 2 in `RecipeAssetTests`), Play Mode **54/54**. A subagent review found no major issues; its minors (more tests, `IHitQuery` XML) and nits (an unpublished shooter keeps the skip armed; retire drops all three catalog entries per instance) are fixed.
 - User decisions: Homing never acquires the shooter (whole life, children too); area and ground queries still hit the shooter. A spawn-assigned `HomingTarget` equal to the shooter is kept (caller's choice).
 - The shooter skip is `HitTargetCatalog.shooters` (`ShooterSkip` id + active), separate from the post-hit `ignored` slot. `ClearIgnore` re-arms it (Beam calls that every pulse); `ReleaseIfSeparated` deactivates it independently of `HoldIgnore`. `ProjectileWorld` sets it after `CopyIgnore` in `SpawnCore` and releases it with the retired ids. `IHitQuery` did not change.
 - Game side still owns: moving the muzzle back to the enemy's axis or bow hand (card #240 open question) and removing the `StatusSet` trap note from its `docs/systems/combat.md` after installing 0.2.8.
