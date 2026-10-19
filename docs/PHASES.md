@@ -975,6 +975,27 @@ Two change requests from the WizardGame board: a spawn that skips the shooter's 
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 43 — Predict a Straight or Arc path
+
+Change request from the WizardGame board: the game asks where an Arc shot would fly and what it would hit first, without spawning it, to draw a charge preview (card #245, blocks game card #244). Runs before phase 34. ADR-048. One version.
+
+**In scope**
+
+- `IProjectileWorld.PredictPath(in SpawnRequest, in PathPrediction, List<Vector3>, out PathHit)` and the public structs `PathPrediction` (`StepSeconds`, `MaxSteps`) and `PathHit` (`Point`, `Normal`, `Kind`, `TargetId`, `Time`)
+- Same start as `Spawn` (including the Arc ballistic solve), `Speed` / `Gravity` / `Size` on `OnSpawn` and `OnTravel`, the live tick order per fixed step, and `IHitQuery.TryCast` with the request's ignore rules under a reserved id that is released before return
+- Ends at the first contact (true), the lifetime, or the step cap (false). Hitscan and Beam return false with an empty list. No events, rent, or queued work
+- Tests:
+  - Edit Mode (`PathPredictionTests`, scripted query): a capsule target in the path returns Kind Target with its id at the point a spawned twin hits after the same fixed ticks; a `Speed(2)` on `OnTravel` path matches its twin; a lifetime end returns false with the twin's expire position last; no `Spawned` / `Hit` / `Expired`, unchanged active and pooled counts; a start inside the `IgnoreTarget` capsule does not hit it (and does without the skip); Hitscan and Beam return false and empty; a call inside a `Hit` handler leaves the live shot's skip as it was; the list does not grow on a repeat call
+  - Play Mode (`PathPredictionPlayModeTests`, PhysX): a level Arc over a flat collider lands within 0.05 m of its twin; a start inside `IgnoreCollider` does not hit it
+  - Existing tests stay green
+- Docs: ADR-048, the API sketch and public API line in [ARCHITECTURE.md](ARCHITECTURE.md), glossary and a scenario, [ECS.md](ECS.md) row, package `AGENTS.md` / `README.md` / `Documentation/index.md`, XML on the new members. `CHANGELOG` **0.2.9**. Bump `package.json` to **0.2.9**. No git tag in the phase session
+
+**Out of scope:** steered (Homing) prediction; the Multicast turn of the main shot; Bounce or Pierce continuation; Multicast extras or children; a polyline for Hitscan or Beam; custom modifier prediction; the game's preview line and marker (card #244); yard sample changes; Unity Physics; Entities Graphics
+
+**Proof:** Edit and Play Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

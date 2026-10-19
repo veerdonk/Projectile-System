@@ -11,6 +11,9 @@ namespace Veerdonk.ProjectileSystem
     {
         const int MaxPrewarmChainDepth = 8;
         const int MaxPrewarmPerRecipe = 512;
+        const float DefaultPredictionStep = 1f / 60f;
+        const int DefaultPredictionSteps = 1024;
+        static readonly ProjectileId PredictionId = new ProjectileId(int.MinValue);
 
         readonly IHitQuery hitQuery;
         readonly HitTargetCatalog hitTargets = new HitTargetCatalog();
@@ -183,6 +186,82 @@ namespace Veerdonk.ProjectileSystem
             ProjectileId id = SpawnCore(request);
             FlushPendingSpawns();
             return id;
+        }
+
+        /// <inheritdoc />
+        public bool PredictPath(
+            in SpawnRequest request,
+            in PathPrediction settings,
+            System.Collections.Generic.List<Vector3> points,
+            out PathHit hit)
+        {
+            ThrowIfDisposed();
+            if (points == null)
+                throw new ArgumentNullException(nameof(points));
+
+            points.Clear();
+            hit = default;
+            Recipe recipe = RequireRecipe(request);
+            if (recipe.Delivery == Delivery.Hitscan || recipe.Delivery == Delivery.Beam)
+                return false;
+            if (!TryResolveDirection(request, recipe, out Vector3 direction))
+                return false;
+
+            Vector3 velocity = direction * recipe.Speed;
+            float gravity = recipe.Gravity;
+            float radius = recipe.Radius;
+            ApplyMotionModifiers(recipe.OnSpawn, ref velocity, ref gravity, ref radius);
+            ApplyMotionModifiers(recipe.OnTravel, ref velocity, ref gravity, ref radius);
+
+            float dt = settings.StepSeconds > 0f ? settings.StepSeconds : DefaultPredictionStep;
+            int maxSteps = settings.MaxSteps > 0 ? settings.MaxSteps : DefaultPredictionSteps;
+            bool falls = recipe.Delivery == Delivery.Arc && gravity > 0f;
+            float remaining = recipe.LifetimeSeconds;
+            float elapsed = 0f;
+            Vector3 position = request.Position;
+            points.Add(position);
+
+            ArmPredictionIgnore(request);
+            try
+            {
+                for (int step = 0; step < maxSteps; step++)
+                {
+                    remaining -= dt;
+                    elapsed += dt;
+                    if (remaining <= 0f)
+                        return false;
+
+                    if (falls)
+                        velocity += Vector3.down * gravity * dt;
+
+                    Vector3 candidate = position + velocity * dt;
+                    Vector3 delta = candidate - position;
+                    float distance = delta.magnitude;
+                    Vector3 castDirection = distance > 1e-8f ? delta / distance : velocity;
+                    if (hitQuery.TryCast(PredictionId, position, castDirection, distance, radius, out HitInfo contact))
+                    {
+                        points.Add(contact.Point);
+                        hit = new PathHit
+                        {
+                            Point = contact.Point,
+                            Normal = contact.Normal,
+                            Kind = contact.Kind,
+                            TargetId = contact.TargetId,
+                            Time = elapsed
+                        };
+                        return true;
+                    }
+
+                    position = candidate;
+                    points.Add(position);
+                }
+
+                return false;
+            }
+            finally
+            {
+                ReleasePredictionIgnore();
+            }
         }
 
         /// <inheritdoc />
@@ -571,35 +650,87 @@ namespace Veerdonk.ProjectileSystem
             ecsWorld = null;
         }
 
-        ProjectileId SpawnCore(in SpawnRequest request)
+        static Recipe RequireRecipe(in SpawnRequest request)
         {
             Recipe recipe = request.Recipe;
             if (recipe == null)
                 throw new ArgumentException("SpawnRequest.Recipe is required.", nameof(request));
             if (string.IsNullOrEmpty(recipe.Id))
                 throw new ArgumentException("Recipe.Id is required.", nameof(request));
+            return recipe;
+        }
 
-            Vector3 direction = request.Direction;
+        static bool TryResolveDirection(in SpawnRequest request, Recipe recipe, out Vector3 direction)
+        {
+            direction = request.Direction;
             if (direction.sqrMagnitude < 1e-12f)
                 direction = Vector3.forward;
             else
                 direction.Normalize();
 
-            if (recipe.Delivery == Delivery.Arc && request.HomingAcquirePointSet)
-            {
-                if (!BallisticAim.TrySolve(
-                        request.Position,
-                        request.HomingAcquirePoint,
-                        recipe.Speed,
-                        recipe.Gravity,
-                        out direction))
-                    return default;
+            if (recipe.Delivery != Delivery.Arc || !request.HomingAcquirePointSet)
+                return true;
 
-                if (direction.sqrMagnitude < 1e-12f)
-                    direction = Vector3.forward;
-                else
-                    direction.Normalize();
+            if (!BallisticAim.TrySolve(
+                    request.Position,
+                    request.HomingAcquirePoint,
+                    recipe.Speed,
+                    recipe.Gravity,
+                    out direction))
+                return false;
+
+            if (direction.sqrMagnitude < 1e-12f)
+                direction = Vector3.forward;
+            else
+                direction.Normalize();
+            return true;
+        }
+
+        static void ApplyMotionModifiers(IModifier[] modifiers, ref Vector3 velocity, ref float gravity, ref float radius)
+        {
+            if (modifiers == null)
+                return;
+
+            for (int i = 0; i < modifiers.Length; i++)
+            {
+                switch (modifiers[i])
+                {
+                    case Speed speed when speed.Scale > 0f:
+                        velocity *= speed.Scale;
+                        break;
+                    case Gravity scale when scale.Scale > 0f:
+                        gravity *= scale.Scale;
+                        break;
+                    case Size size when size.Scale > 0f:
+                        radius *= size.Scale;
+                        break;
+                }
             }
+        }
+
+        void ArmPredictionIgnore(in SpawnRequest request)
+        {
+            ReleasePredictionIgnore();
+            hitQuery.CopyIgnore(request.InheritIgnoreFrom, PredictionId);
+            if (request.IgnoreCollider != null)
+                hitQuery.SetIgnore(PredictionId, request.IgnoreCollider);
+            hitQuery.SetIgnoreSet(PredictionId, request.IgnoreColliders);
+            if (request.IgnoreTargetSet)
+                hitTargets.SetShooter(PredictionId, request.IgnoreTarget);
+        }
+
+        void ReleasePredictionIgnore()
+        {
+            hitQuery.ClearIgnore(PredictionId);
+            hitQuery.ReleaseIgnoreSet(PredictionId);
+            hitTargets.Release(PredictionId);
+        }
+
+        ProjectileId SpawnCore(in SpawnRequest request)
+        {
+            Recipe recipe = RequireRecipe(request);
+            if (!TryResolveDirection(request, recipe, out Vector3 direction))
+                return default;
 
             int recipeIndex = recipes.GetOrAdd(recipe);
             bool attachView = recipe.Delivery != Delivery.Hitscan;

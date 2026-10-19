@@ -33,13 +33,13 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 42 — Shooter hit-target skip and authorable status popup (done; phase 34 is next)**
+**Phase 43 — Predict a Straight or Arc path (done; phase 34 is next)**
 
-- Package version is **0.2.8** (ADR-046, ADR-047; WizardGame Trello cards #240 and #237). No git tag in the phase session; CI tags `v0.2.8` on merge. The human moves the cards.
-- Verified in the Editor on the main checkout: clean compile, Edit Mode **337/337** (322 old + 13 in `Tests/Editor/IgnoreTargetTests.cs` + 2 in `RecipeAssetTests`), Play Mode **54/54**. A subagent review found no major issues; its minors (more tests, `IHitQuery` XML) and nits (an unpublished shooter keeps the skip armed; retire drops all three catalog entries per instance) are fixed.
-- User decisions: Homing never acquires the shooter (whole life, children too); area and ground queries still hit the shooter. A spawn-assigned `HomingTarget` equal to the shooter is kept (caller's choice).
-- The shooter skip is `HitTargetCatalog.shooters` (`ShooterSkip` id + active), separate from the post-hit `ignored` slot. `ClearIgnore` re-arms it (Beam calls that every pulse); `ReleaseIfSeparated` deactivates it independently of `HoldIgnore`. `ProjectileWorld` sets it after `CopyIgnore` in `SpawnCore` and releases it with the retired ids. `IHitQuery` did not change.
-- Game side still owns: moving the muzzle back to the enemy's axis or bow hand (card #240 open question) and removing the `StatusSet` trap note from its `docs/systems/combat.md` after installing 0.2.8.
+- Package version is **0.2.9** (ADR-048; WizardGame Trello card #245, blocks #244). No git tag in the phase session; CI tags `v0.2.9` on merge. The human moves the card.
+- Verified in the Editor on the main checkout: clean compile, Edit Mode **353/353** (337 old + 16 in `Tests/Editor/PathPredictionTests.cs`), Play Mode **56/56** (+2 in `Tests/Runtime/PathPredictionPlayModeTests.cs`). A subagent review found no major issues; its minors (a real in-handler skip test, Gravity / Size / OnSpawn twin tests, a no-allocation test, the Multicast turn documented) and nits (reserved id moved to `int.MinValue`, not re-entrant from `IDamageable` / protection code, defaults test, README false cases) are fixed. Open nit: a false return does not say lifetime vs `MaxSteps`.
+- Choices made against the card: `Recipe.MaxRange` does not end a prediction (live Straight / Arc ignore it, ADR-043); `PathHit.Time` is the elapsed time of the hitting step, not a sub-step fraction; Hitscan / Beam return false with an empty list. Only the shipped `Speed` / `Gravity` / `Size` run, by type, so no modifier code is called.
+- `PredictPath` lives in `ProjectileWorld` (managed loop, no entity). Ignore state uses `ProjectileId(int.MinValue)`, armed like `SpawnCore` and released in `finally` (`ClearIgnore`, `ReleaseIgnoreSet`, catalog `Release`). `SpawnCore` now shares `RequireRecipe` / `TryResolveDirection` with it.
+- Game side still owns: #244's preview line and marker, raising the manifest to 0.2.9, and updating fakes of `IProjectileWorld` (new member).
 - Older notes that still apply: Editor/worktree copy routine and the two connected Editors (`set_active_instance` to `My project@…`); `get_test_job` gives no assertion messages; `npx sigmap` output is not committed; never move or delete a released `v*` tag; do **not** run **Projectile Lab > Rebuild**; `HomingAcquirePoint` is the only aim point; catalog `Compact()` leftover from phase 29; capsule `TryPierceExit` approximation from phase 41.
 
 ## Do not
