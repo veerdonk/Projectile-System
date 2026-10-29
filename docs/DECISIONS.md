@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-049 — Critical chance has no upper clamp
+
+- **Date:** 2026-10-29
+- **Decision:** `Critical(n)` sets the instance chance to `max(0, chance * n)`; `n <= 0` stays a no-op (ADR-014). The Recipe, `ModifierContext`, and `HitInfo` critical chance range is "0 or more; above 1 is allowed, the game decides what it means". The package still does not roll a crit. Supersedes the `[0, 1]` clamp of phase 10.
+- **Why:** The game rolls a second (double) critical hit with the part of the chance over 100% (WizardGame Trello card #306, for #300 / REQ-045). The game stacks copies into one `Critical(product)` before the package applies it, so the clamp always won and the double crit could never happen.
+- **Consequences:** A game that reads `HitInfo.CriticalChance` as a probability must clamp it itself. No new public types. Bump `package.json` to **0.2.10**. Phase 44.
+
 ## ADR-048 — The world can predict a Straight or Arc shot's path and first hit without spawning it
 
 - **Date:** 2026-10-19

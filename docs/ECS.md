@@ -88,7 +88,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Gravity.cs` | Scale instance gravity by n. Same stages as `Speed`. Does not add `g * dt`; Burst still integrates, and only when `Delivery` is Arc |
 | `Runtime/BallisticAim.cs` | Helper. `TrySolve` returns the launch direction speed + gravity need to pass through a point (world down, flatter/shorter-time root: extra speed → nearly straight, level min speed → ~45°). Arc `Spawn` calls it when the aim point is set (ADR-035). Not a modifier, not a flight path, not a Range stat |
 | `Runtime/Damage.cs` | Scale instance damage by n. Same stages as `Speed`. Does not apply HP. OnHit scales do not rewrite the sampled Direct `HitInfo` |
-| `Runtime/Critical.cs` | Scale instance critical chance by n, then clamp to [0, 1]. Same stages as `Speed`. Does not roll a crit |
+| `Runtime/Critical.cs` | Scale instance critical chance by n, then raise a result below 0 to 0 (no upper clamp, ADR-049). Same stages as `Speed`. Does not roll a crit |
 | `Runtime/Mana.cs` | Scale the instance mana-cost copy by n. Same stages as `Speed`. Does not change `Recipe.ManaCost` or spend mana |
 | `Runtime/Size.cs` | Scale instance `Radius` by n. Same stages as `Speed`. SphereCast and the view follow the new radius |
 | `Runtime/Spread.cs` | Scale the instance copy of `Multiply.Spread` by n (meters on Square / Circle / RandomCircle, cone degrees on a grid). Same stages as `Speed`. Does not jitter the original shot or scale grid Spacing |

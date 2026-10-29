@@ -83,7 +83,7 @@ namespace Veerdonk.ProjectileSystem
         public TargetId TargetId;
         /// <summary>Instance damage at sample time (Direct) or modifier damage (Area).</summary>
         public float Damage;
-        /// <summary>Instance critical chance at sample time. The package does not roll it.</summary>
+        /// <summary>Instance critical chance at sample time, 0 or more; above 1 is allowed and the game decides what it means. The package does not roll it.</summary>
         public float CriticalChance;
         /// <summary>Instance effect radius at sample time.</summary>
         public float EffectRadius;

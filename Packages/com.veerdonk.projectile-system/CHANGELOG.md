@@ -5,6 +5,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.10] - 2026-10-29
+
+### Changed
+
+- `Critical(n)` no longer clamps the instance critical chance to 1: it multiplies by `n` and only raises a result below 0 to 0 (`n <= 0` is still a no-op). `HitInfo.CriticalChance` carries the unclamped value, so `Critical(2)` on 0.75 gives 1.5. The package still does not roll a crit; the game decides what a chance above 1 means. `GroundField` hits stay 0.
+
 ## [0.2.9] - 2026-10-19
 
 ### Added

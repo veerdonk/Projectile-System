@@ -25,7 +25,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Status effect** — a named gameplay condition requested on a Target hit (burn, poison, shock, …). The package delivers the request; the game simulates it. v1 ships `DummyStatusEffect` only
 - **Pool** — inactive instances reused on spawn; despawn returns an instance to the pool
 - **Damage** — authored hit amount copied onto the instance and `HitInfo`. The package does not apply HP
-- **Critical chance** — probability 0–1 on the instance and `HitInfo`. The package does not roll a crit
+- **Critical chance** — 0 or more on the instance and `HitInfo`; above 1 is allowed and the game decides what it means (ADR-049). The package does not roll a crit
 - **Mana cost** — authored fire-time cost on the Recipe. Phase 10 copies it onto the instance so `Mana(n)` can scale that copy; the package does not spend mana
 - **Spread** — `Multiply.Spread`, not a Recipe stat. Square / Circle / RandomCircle: meters between adjacent pips (`0` stacks). Authored grid: cone half-angle in degrees of the farthest numbered cell from the geometric center (`0` keeps children parallel). Consumed by `IMultiplyPattern`. `Spread(n)` scales the instance copy
 - **Spacing** — meters between adjacent cell centers on an authored Multiply grid (`MultiplyPatternAsset` / `GridMultiplyPattern`). Pattern data, not `Multiply.Spread`. `<= 0` stacks every pip at the origin
@@ -60,7 +60,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
 - **Interval(n)** — `OnSpawn`: seconds between `OnInterval` runs for this instance. One period per Recipe drives every modifier on that list; without it `OnInterval` never runs (see [DECISIONS.md](DECISIONS.md) ADR-012)
 - **Damage(n)** — scale instance damage by `n`. Same stages as `Speed(n)`. Package still does not apply HP
-- **Critical(n)** — scale instance critical chance by `n`, then clamp to `[0, 1]`. Same stages as `Speed(n)`. Package still does not roll a crit
+- **Critical(n)** — scale instance critical chance by `n`, then raise a result below 0 to 0; no upper clamp (ADR-049). Same stages as `Speed(n)`. Package still does not roll a crit
 - **Mana(n)** — scale the instance mana-cost copy by `n`. Same stages as `Speed(n)`. Does not change `Recipe.ManaCost` or spend mana
 - **Spread(n)** — scale the instance copy of `Multiply.Spread` by `n` (pip meters or cone degrees, depending on the pattern). Same stages as `Speed(n)`. Does not jitter the original shot and does not scale grid Spacing
 - **EffectRadius(n)** — scale instance effect radius by `n`. Same stages as `Speed(n)`. Phase 13 uses the result as the `AreaEffect` overlap radius
@@ -889,6 +889,12 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** an Arc shot request aimed at flat ground, and the same request spawned as a live twin
 - **When:** the game calls `PredictPath` with a 1/60 s step, then ticks the twin by 1/60 s until it hits
 - **Then:** `PredictPath` returns true with a World hit within 0.05 m of the twin's `Hit.Point`, and raised no event of its own
+
+### Phase 44 — A doubled 75% critical chance reaches the hit as 150%
+
+- **Given:** a Recipe with critical chance 0.75 and `Critical(2)` on `OnTravel`
+- **When:** the shot is spawned and hits a target
+- **Then:** `HitInfo.CriticalChance` is 1.5, and the Recipe still reads 0.75
 
 ## Product constraints
 

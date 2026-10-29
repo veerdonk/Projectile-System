@@ -212,7 +212,7 @@ Store game numbers on the Recipe (and on the instance when they can change in fl
 
 - `Damage(n)` / `Critical(n)` / `Mana(n)` on `OnTravel` (start), `OnInterval` (progressive), and `OnHit` (after bounce/pierce). Not `OnSpawn`. Interval period is still `Interval(n)` on `OnSpawn` (ADR-012)
 - Copy `ManaCost` onto the instance at spawn so `Mana(n)` mutates that copy, not the shared Recipe. `Recipe.ManaCost` stays the authored fire-time cost
-- Clamp critical chance to `[0, 1]` after a scale
+- Clamp critical chance to `[0, 1]` after a scale (the upper clamp is removed in phase 44, ADR-049)
 - `OnTravel` scales run before the first move, so the first `Hit` sees them. `OnHit` scales run after the current `Hit` event; later pierce/bounce hits see the new values
 - Edit Mode tests: OnTravel `Damage(2)` doubles `Hit.Damage`; OnHit `Damage(2)` plus Pierce(1) leaves the first hit unscaled and doubles the second; `Mana(0.5)` halves instance mana cost and leaves `Recipe.ManaCost` unchanged; `Critical(2)` clamps at 1
 - Sandbox Recipes: Damage(2) on travel (dummy loses more HP); Mana(2) HUD shows instance cost after fire without changing the Recipe readout
@@ -993,6 +993,24 @@ Change request from the WizardGame board: the game asks where an Arc shot would 
 **Out of scope:** steered (Homing) prediction; the Multicast turn of the main shot; Bounce or Pierce continuation; Multicast extras or children; a polyline for Hitscan or Beam; custom modifier prediction; the game's preview line and marker (card #244); yard sample changes; Unity Physics; Entities Graphics
 
 **Proof:** Edit and Play Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
+## Phase 44 — Critical chance above 100%
+
+Change request from the WizardGame board: the game needs a critical chance above 1 to roll a double crit (card #306, for game card #300). Runs before phase 34. ADR-049. One version.
+
+**In scope**
+
+- `Critical(n)` multiplies the instance chance by `n` with no upper clamp; a result below 0 becomes 0; `n <= 0` is a no-op
+- `HitInfo.CriticalChance` on Direct, Area, and occupancy hits carries the unclamped value. `GroundField` hits stay 0
+- XML on `Critical`, `Recipe.CriticalChance`, `ModifierContext.CriticalChance`, and `HitInfo.CriticalChance` names the range "0 or more; above 1 is allowed"
+- Edit Mode tests (`CombatScaleTests`): `Critical(2)` on 0.75 gives 1.5 on the instance and the `HitInfo`; `Critical(64)` on 0.025 gives 1.6; `Critical(0)` and `Critical(-2)` leave 1.5 as it was; `Critical(2)` on -0.5 gives 0. The phase 10 clamp test is replaced. Existing tests stay green
+- Docs: ADR-049, glossary and modifier line in [REQUIREMENTS.md](REQUIREMENTS.md), API sketch and public API line in [ARCHITECTURE.md](ARCHITECTURE.md), [ECS.md](ECS.md) row. `CHANGELOG` **0.2.10**. Bump `package.json` to **0.2.10**. No git tag in the phase session
+
+**Out of scope:** rolling a crit; clamping the Recipe's authored chance; the game's double crit (card #300); yard sample changes; Unity Physics; Entities Graphics
+
+**Proof:** Edit Mode tests above.
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 

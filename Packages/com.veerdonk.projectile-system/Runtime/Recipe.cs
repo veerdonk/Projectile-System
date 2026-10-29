@@ -59,7 +59,7 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Hit amount copied onto the instance and onto <see cref="HitInfo"/>. The package never applies HP.</summary>
         public float Damage { get; set; } = 1f;
 
-        /// <summary>Probability 0–1. The package never rolls a crit.</summary>
+        /// <summary>Critical chance, 0 or more; above 1 is allowed and the game decides what it means. The package never rolls a crit.</summary>
         public float CriticalChance { get; set; }
 
         /// <summary>
