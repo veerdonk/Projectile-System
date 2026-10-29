@@ -36,7 +36,7 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 **Phase 44 — Critical chance above 100% (done; phase 34 is next)**
 
 - Package version is **0.2.10** (ADR-049; WizardGame Trello card #306, for game card #300 / REQ-045). No git tag in the phase session; CI tags `v0.2.10` on merge. The human moves the card and names the version on it.
-- Verified in the Editor on the main checkout: clean compile, Edit Mode **357/357** (the phase 10 `Critical2_OnTravel_ClampsAtOne` test replaced by five cases in `CombatScaleTests`), Play Mode **56/56**.
+- Verified in the Editor on the main checkout: clean compile, Edit Mode **358/358** (the phase 10 `Critical2_OnTravel_ClampsAtOne` test replaced by five cases in `CombatScaleTests`, plus one in `AreaEffectTests`). A subagent review found no major issues; its minors (ADR-014 superseded note, an Area hit test) and nits (phase 10 annotations) are fixed, Play Mode **56/56**.
 - `Critical.Apply` is now `Mathf.Max(0f, chance * Scale)`; `Scale <= 0` is still a no-op. The authored `Recipe.CriticalChance` is not clamped anywhere (a negative authored chance reaches the hit as is unless a `Critical` runs). `GroundField` hits stay 0.
 - Older notes that still apply: Editor/worktree copy routine and the two connected Editors (`set_active_instance` to `My project@…`); `get_test_job` gives no assertion messages; `npx sigmap` output is not committed; never move or delete a released `v*` tag; do **not** run **Projectile Lab > Rebuild**; `HomingAcquirePoint` is the only aim point; catalog `Compact()` leftover from phase 29; capsule `TryPierceExit` approximation from phase 41; `PredictPath` false return does not say lifetime vs `MaxSteps` (phase 43).
 

@@ -52,6 +52,48 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void OnHit_Splash_CarriesCriticalChanceAboveOne()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "area-critical",
+                speed: 20f,
+                lifetime: 5f,
+                criticalChance: 0.75f,
+                effectRadius: 3f,
+                onTravel: new IModifier[] { new Critical(2f) },
+                onHit: new IModifier[] { new AreaEffect(3f) });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var contact = new TargetId(1);
+                var nearby = new TargetId(2);
+                var seen = new List<HitInfo>();
+                world.Hit += info => seen.Add(info);
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                Vector3 point = new Vector3(0f, 0f, 2f);
+                hits.Queue(HitKind.Target, point, Vector3.back, contact);
+                hits.AddOverlapTarget(contact, point);
+                hits.AddOverlapTarget(nearby, new Vector3(2f, 0f, 2f));
+                world.Tick(0.1f);
+
+                Assert.AreEqual(3, seen.Count);
+                Assert.AreEqual(HitSource.Direct, seen[0].Source);
+                Assert.AreEqual(1.5f, seen[0].CriticalChance, 1e-4f);
+                Assert.AreEqual(HitSource.Area, seen[1].Source);
+                Assert.AreEqual(1.5f, seen[1].CriticalChance, 1e-4f);
+                Assert.AreEqual(HitSource.Area, seen[2].Source);
+                Assert.AreEqual(1.5f, seen[2].CriticalChance, 1e-4f);
+            }
+        }
+
+        [Test]
         public void OnHit_AreaOnly_SuppressesDirectHit()
         {
             Recipe recipe = SimulationTestHelper.CreateRecipe(
