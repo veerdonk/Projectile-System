@@ -33,14 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 43 — Predict a Straight or Arc path (done; phase 34 is next)**
+**Phase 44 — Critical chance above 100% (done; phase 34 is next)**
 
-- Package version is **0.2.9** (ADR-048; WizardGame Trello card #245, blocks #244). No git tag in the phase session; CI tags `v0.2.9` on merge. The human moves the card.
-- Verified in the Editor on the main checkout: clean compile, Edit Mode **353/353** (337 old + 16 in `Tests/Editor/PathPredictionTests.cs`), Play Mode **56/56** (+2 in `Tests/Runtime/PathPredictionPlayModeTests.cs`). A subagent review found no major issues; its minors (a real in-handler skip test, Gravity / Size / OnSpawn twin tests, a no-allocation test, the Multicast turn documented) and nits (reserved id moved to `int.MinValue`, not re-entrant from `IDamageable` / protection code, defaults test, README false cases) are fixed. Open nit: a false return does not say lifetime vs `MaxSteps`.
-- Choices made against the card: `Recipe.MaxRange` does not end a prediction (live Straight / Arc ignore it, ADR-043); `PathHit.Time` is the elapsed time of the hitting step, not a sub-step fraction; Hitscan / Beam return false with an empty list. Only the shipped `Speed` / `Gravity` / `Size` run, by type, so no modifier code is called.
-- `PredictPath` lives in `ProjectileWorld` (managed loop, no entity). Ignore state uses `ProjectileId(int.MinValue)`, armed like `SpawnCore` and released in `finally` (`ClearIgnore`, `ReleaseIgnoreSet`, catalog `Release`). `SpawnCore` now shares `RequireRecipe` / `TryResolveDirection` with it.
-- Game side still owns: #244's preview line and marker, raising the manifest to 0.2.9, and updating fakes of `IProjectileWorld` (new member).
-- Older notes that still apply: Editor/worktree copy routine and the two connected Editors (`set_active_instance` to `My project@…`); `get_test_job` gives no assertion messages; `npx sigmap` output is not committed; never move or delete a released `v*` tag; do **not** run **Projectile Lab > Rebuild**; `HomingAcquirePoint` is the only aim point; catalog `Compact()` leftover from phase 29; capsule `TryPierceExit` approximation from phase 41.
+- Package version is **0.2.10** (ADR-049; WizardGame Trello card #306, for game card #300 / REQ-045). No git tag in the phase session; CI tags `v0.2.10` on merge. The human moves the card and names the version on it.
+- Verified in the Editor on the main checkout: clean compile, Edit Mode **358/358** (the phase 10 `Critical2_OnTravel_ClampsAtOne` test replaced by five cases in `CombatScaleTests`, plus one in `AreaEffectTests`). A subagent review found no major issues; its minors (ADR-014 superseded note, an Area hit test) and nits (phase 10 annotations) are fixed, Play Mode **56/56**.
+- `Critical.Apply` is now `Mathf.Max(0f, chance * Scale)`; `Scale <= 0` is still a no-op. The authored `Recipe.CriticalChance` is not clamped anywhere (a negative authored chance reaches the hit as is unless a `Critical` runs). `GroundField` hits stay 0.
+- Older notes that still apply: Editor/worktree copy routine and the two connected Editors (`set_active_instance` to `My project@…`); `get_test_job` gives no assertion messages; `npx sigmap` output is not committed; never move or delete a released `v*` tag; do **not** run **Projectile Lab > Rebuild**; `HomingAcquirePoint` is the only aim point; catalog `Compact()` leftover from phase 29; capsule `TryPierceExit` approximation from phase 41; `PredictPath` false return does not say lifetime vs `MaxSteps` (phase 43).
 
 ## Do not
 

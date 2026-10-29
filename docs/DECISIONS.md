@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-049 — Critical chance has no upper clamp
+
+- **Date:** 2026-10-29
+- **Decision:** `Critical(n)` sets the instance chance to `max(0, chance * n)`; `n <= 0` stays a no-op (ADR-014). The Recipe, `ModifierContext`, and `HitInfo` critical chance range is "0 or more; above 1 is allowed, the game decides what it means". The package still does not roll a crit. Supersedes the `[0, 1]` clamp of phase 10.
+- **Why:** The game rolls a second (double) critical hit with the part of the chance over 100% (WizardGame Trello card #306, for #300 / REQ-045). The game stacks copies into one `Critical(product)` before the package applies it, so the clamp always won and the double crit could never happen.
+- **Consequences:** A game that reads `HitInfo.CriticalChance` as a probability must clamp it itself. No new public types. Bump `package.json` to **0.2.10**. Phase 44.
+
 ## ADR-048 — The world can predict a Straight or Arc shot's path and first hit without spawning it
 
 - **Date:** 2026-10-19
@@ -243,7 +250,7 @@ Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if
 ## ADR-014 — Stat modifiers are scales; Spread(n) scales Multiply spacing
 
 - **Date:** 2026-09-16
-- **Decision:** `Damage(n)`, `Critical(n)`, `Mana(n)`, `EffectRadius(n)`, `Size(n)`, and `Spread(n)` use the same scale contract as `Speed(n)`: `n > 1` increases, `0 < n < 1` decreases, `n <= 0` is a no-op. They run on `OnTravel`, `OnInterval`, and `OnHit`, not `OnSpawn`. `Size(n)` scales `Radius`. `Critical(n)` clamps to `[0, 1]`. `ManaCost` is copied onto the instance at spawn so `Mana(n)` mutates that copy; `Recipe.ManaCost` stays the authored fire-time cost. **Spread is not a Recipe stat** and does not jitter the original shot. `Spread(n)` scales the instance copy of `Multiply.Spread` (pip spacing for `IMultiplyPattern`, ADR-015; default scale 1). **Superseded in part by ADR-038:** that instance value is meters for Square / Circle / RandomCircle and cone degrees for an authored grid. Multicast still uses `IMulticastPattern` (ADR-006). `OnHit` scales do not rewrite the `Hit` event that already fired.
+- **Decision:** `Damage(n)`, `Critical(n)`, `Mana(n)`, `EffectRadius(n)`, `Size(n)`, and `Spread(n)` use the same scale contract as `Speed(n)`: `n > 1` increases, `0 < n < 1` decreases, `n <= 0` is a no-op. They run on `OnTravel`, `OnInterval`, and `OnHit`, not `OnSpawn`. `Size(n)` scales `Radius`. `Critical(n)` clamps to `[0, 1]`. **Superseded in part by ADR-049:** no upper clamp; a result below 0 becomes 0. `ManaCost` is copied onto the instance at spawn so `Mana(n)` mutates that copy; `Recipe.ManaCost` stays the authored fire-time cost. **Spread is not a Recipe stat** and does not jitter the original shot. `Spread(n)` scales the instance copy of `Multiply.Spread` (pip spacing for `IMultiplyPattern`, ADR-015; default scale 1). **Superseded in part by ADR-038:** that instance value is meters for Square / Circle / RandomCircle and cone degrees for an authored grid. Multicast still uses `IMulticastPattern` (ADR-006). `OnHit` scales do not rewrite the `Hit` event that already fired.
 - **Why:** Phase 9 stored combat numbers on the Recipe. Spread belongs to how Multiply lays out children, not to every shot's muzzle. A Recipe field would jitter singles that never multiply. A scale modifier can widen pip spacing the way `Speed(n)` widens speed.
 - **Consequences:** Six new public modifier types. Phase 11 authors `Multiply.Spread` and the patterns (ADR-015); this ADR's `Spread(n)` / `Size` / `EffectRadius` wait until phase 12. `ModifierContext.Radius` must be writable. Views and SphereCast follow `Size`. Do not roll crit, run AoE queries, or spend mana. Do not add additive (`+5` damage) variants in these phases.
 

@@ -109,14 +109,51 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         [Test]
-        public void Critical2_OnTravel_ClampsAtOne()
+        public void Critical2_OnTravel_GoesAboveOne()
+        {
+            (float crit, float hitCrit, Recipe recipe) = SpawnAndHitCritical(0.75f, new Critical(2f));
+
+            Assert.AreEqual(1.5f, crit, 1e-4f);
+            Assert.AreEqual(1.5f, hitCrit, 1e-4f);
+            Assert.AreEqual(0.75f, recipe.CriticalChance, 1e-4f);
+        }
+
+        [Test]
+        public void Critical64_OnTravel_ScalesSmallChanceAboveOne()
+        {
+            (float crit, float hitCrit, _) = SpawnAndHitCritical(0.025f, new Critical(64f));
+
+            Assert.AreEqual(1.6f, crit, 1e-4f);
+            Assert.AreEqual(1.6f, hitCrit, 1e-4f);
+        }
+
+        [TestCase(0f)]
+        [TestCase(-2f)]
+        public void Critical_NonPositiveScale_LeavesChanceAboveOne(float scale)
+        {
+            (float crit, float hitCrit, _) = SpawnAndHitCritical(1.5f, new Critical(scale));
+
+            Assert.AreEqual(1.5f, crit, 1e-4f);
+            Assert.AreEqual(1.5f, hitCrit, 1e-4f);
+        }
+
+        [Test]
+        public void Critical2_OnNegativeChance_RaisesToZero()
+        {
+            (float crit, float hitCrit, _) = SpawnAndHitCritical(-0.5f, new Critical(2f));
+
+            Assert.AreEqual(0f, crit, 1e-4f);
+            Assert.AreEqual(0f, hitCrit, 1e-4f);
+        }
+
+        static (float crit, float hitCrit, Recipe recipe) SpawnAndHitCritical(float criticalChance, Critical critical)
         {
             Recipe recipe = SimulationTestHelper.CreateRecipe(
-                "critical-clamp",
+                "critical-scale",
                 speed: 20f,
                 lifetime: 5f,
-                criticalChance: 0.6f,
-                onTravel: new IModifier[] { new Critical(2f) });
+                criticalChance: criticalChance,
+                onTravel: new IModifier[] { critical });
             (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
             using (world)
             {
@@ -131,14 +168,12 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 });
 
                 Assert.IsTrue(world.TryGetCombatStats(id, out _, out float crit, out _, out _));
-                Assert.AreEqual(1f, crit, 1e-4f);
-                Assert.AreEqual(0.6f, recipe.CriticalChance, 1e-4f);
 
                 hits.Queue(HitKind.Target, new Vector3(0f, 0f, 2f), Vector3.back, new TargetId(1));
                 world.Tick(0.1f);
 
                 Assert.IsTrue(hit.HasValue);
-                Assert.AreEqual(1f, hit.Value.CriticalChance, 1e-4f);
+                return (crit, hit.Value.CriticalChance, recipe);
             }
         }
 

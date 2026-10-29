@@ -108,7 +108,7 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Instance damage, copied from the Recipe at spawn. Sampled onto <see cref="HitInfo"/> at contact.</summary>
         public float Damage { get; set; }
 
-        /// <summary>Instance critical chance 0–1, copied from the Recipe at spawn. The package does not roll it.</summary>
+        /// <summary>Instance critical chance, 0 or more; above 1 is allowed and the game decides what it means. Copied from the Recipe at spawn. The package does not roll it.</summary>
         public float CriticalChance { get; set; }
 
         /// <summary>
