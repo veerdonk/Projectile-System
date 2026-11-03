@@ -83,7 +83,7 @@ namespace Veerdonk.ProjectileSystem
         public Vector3 Center;
         /// <summary>Overlap radius (<c>EffectRadius</c>).</summary>
         public float Radius;
-        /// <summary>Stage that requested the overlap: OnHit, OnTravel, OnInterval, or OnTick.</summary>
+        /// <summary>Stage that requested the overlap: OnHit, OnTravel, OnInterval, OnTick, or OnExpire.</summary>
         public RecipeStage Stage;
         /// <summary>True for an occupancy overlap, which raises this only when it is first made.</summary>
         public bool Occupancy;

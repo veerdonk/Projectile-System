@@ -1034,6 +1034,24 @@ Change request veerdonk/Projectile-System#78 from the game board (veerdonk/Untit
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 46 — AreaEffect on OnExpire
+
+Change request veerdonk/Projectile-System#79 from the game board (veerdonk/UntitledTowerGame#517, for the effect items card #509). Runs before phase 34. ADR-051. Same version as phase 45.
+
+**In scope**
+
+- `AreaEffect` allowed on `OnExpire`: overlap at the instance position, Area hits with its damage and status, one `AreaBurst` with `Stage = OnExpire` before them
+- Runs on Lifetime, HitscanEnd, and `Despawn`; nothing when the shot ends on a hit; Strong still skips OnExpire. `Occupancy`, `IncludeDirectHit`, `IncludeDirectStatus` ignored there
+- A `Despawn` of the same instance during its own OnExpire is a no-op
+- Edit Mode tests (`AreaEffectOnExpireTests`): `Append` to OnExpire; lifetime burst hits the Target inside the radius at the expire position, not the one outside, order burst / Area hit / Expired; burst over no Target; a Target- or World-hit-ended shot and a Strong absorb raise no burst; a pierced shot still bursts at lifetime; status per Target; occupancy ignored; Hitscan end and `Despawn` burst at the expire position (a straight Hitscan's is its muzzle); a handler that despawns the shot during its burst expires it once. Existing tests stay green
+- Docs: ADR-051, [REQUIREMENTS.md](REQUIREMENTS.md) AreaEffect line and scenario, [ARCHITECTURE.md](ARCHITECTURE.md) stage table and area paragraph, [ECS.md](ECS.md), package `Documentation/index.md`. `CHANGELOG` **0.2.11** (no bump; phase 45 and 46 ship as one version)
+
+**Out of scope:** a burst after a delay; a burst after a hit; other modifiers' stages; the game's effect items (#509); yard sample changes
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

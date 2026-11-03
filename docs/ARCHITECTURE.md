@@ -28,7 +28,7 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 | `OnTick` | Every `ProjectileWorld.Tick` | `Homing(n)`, `AreaEffect` (phase 26) |
 | `OnInterval` | Each time the instance’s interval elapses during flight | `Multiply(n)`, scale modifiers, `AreaEffect` (aura) |
 | `OnHit` | On each hit from the pipeline | `Pierce`, `Bounce`, `Multiply` spawn, scale modifiers, `ApplyStatus`, `AreaEffect`, `GroundField` |
-| `OnExpire` | When the instance is ending | `Multiply` on death, `GroundField` |
+| `OnExpire` | When the instance is ending | `Multiply` on death, `GroundField`, `AreaEffect` (not after a hit) |
 
 **Hit then expire:** a hit that despawns the instance runs `OnHit` first, then `OnExpire`.
 
@@ -93,7 +93,7 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Views:** the pool asks `IProjectileViewFactory` for a GameObject view from `Recipe.PresentationId` ([DECISIONS.md](DECISIONS.md) ADR-021). Default is a sphere primitive. Hits stay SphereCast of `Radius`; the mesh is not the collider. Hitscan creates **no** view (ADR-035). Beam uses a primitive **cylinder per polyline segment** (ADR-036); sample red via `PresentationId`. Ground-field disks use a separate `IGroundFieldViewFactory` (ADR-026); default is a thin cylinder. A game prefab is not rescaled.
 
-**Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` / `OnTick` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016, ADR-031). Area damage is on the modifier. Interval and OnTick are auras on the live instance (OnTick overlaps every Tick). Direct contact can be suppressed. Overlap includes `IDamageable` colliders **and** published hit volumes (ADR-030). `occupancy` (default false) replaces pulses with `HitSource.OccupancyEnter` / `OccupancyExit` (ADR-031).
+**Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` / `OnTick` / `OnExpire` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016, ADR-031). Area damage is on the modifier. Interval and OnTick are auras on the live instance (OnTick overlaps every Tick). OnExpire bursts once at the expire position on Lifetime, HitscanEnd, and `Despawn`, never after a hit, and ignores occupancy (ADR-051). Direct contact can be suppressed. Overlap includes `IDamageable` colliders **and** published hit volumes (ADR-030). `occupancy` (default false) replaces pulses with `HitSource.OccupancyEnter` / `OccupancyExit` (ADR-031).
 
 **Ground field:** `GroundField` on `OnHit` / `OnExpire` / `OnTravel` plants a lingering horizontal disk ([DECISIONS.md](DECISIONS.md) ADR-022). Size, lifetime, damage, optional status, and pulse period are on the modifier. The disk is not a Recipe and has no stage lists. `IHitQuery.OverlapDisk` tests XZ distance (colliders and published volumes, ADR-030); pulses reuse Area `Hit` / `StatusApplied`. `occupancy` (default false) replaces those pulses with enter/exit (ADR-031). Views come from `IGroundFieldViewFactory` (ADR-026).
 
