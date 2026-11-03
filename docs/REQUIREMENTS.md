@@ -66,7 +66,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **EffectRadius(n)** — scale instance effect radius by `n`. Same stages as `Speed(n)`. Phase 13 uses the result as the `AreaEffect` overlap radius
 - **Size(n)** — scale `Radius` by `n`. Same stages as `Speed(n)`. There is no separate size field
 - **ApplyStatus** — `OnHit` + `Target`: request one or more `IStatusEffect`s on the hit Target. The package does not simulate the effects (see [DECISIONS.md](DECISIONS.md) ADR-011)
-- **AreaEffect** — overlap Targets in instance `EffectRadius` and raise Area `Hit` / `StatusApplied`. Own damage on the modifier. `OnHit` (splash at the hit point), `OnTravel` (burst at spawn), `OnInterval` and `OnTick` (aura on the flying instance; OnTick overlaps every Tick). Flags choose whether the projectile’s own contact damage/status still apply. See [DECISIONS.md](DECISIONS.md) ADR-016. `occupancy` (default false) uses enter/exit instead of pulses (ADR-031)
+- **AreaEffect** — overlap Targets in instance `EffectRadius` and raise Area `Hit` / `StatusApplied`. Own damage on the modifier. `OnHit` (splash at the hit point), `OnTravel` (burst at spawn), `OnInterval` and `OnTick` (aura on the flying instance; OnTick overlaps every Tick), `OnExpire` (one burst where the lifetime, Hitscan, or `Despawn` ends it; not after a World or Target hit, ADR-051). Flags choose whether the projectile’s own contact damage/status still apply. See [DECISIONS.md](DECISIONS.md) ADR-016. `occupancy` (default false) uses enter/exit instead of pulses (ADR-031)
 - **GroundField** — plant a lingering horizontal disk (`OnHit` at the hit point, `OnExpire` at the instance, `OnTravel` at spawn). Own radius, lifetime, damage, optional status, and pulse period on the modifier. Same `Hit` / `StatusApplied` events as `AreaEffect`. See [DECISIONS.md](DECISIONS.md) ADR-022. `occupancy` (default false) uses enter/exit instead of pulses (ADR-031)
 - **Gravity(n)** — scale instance gravity by `n`. Same stages as `Speed(n)`. Burst still applies gravity **on Arc only**; this modifier does not add `g * dt` itself
 - **Lifetime** — `Recipe.LifetimeSeconds` is the despawn clock. There is no separate `Timer` modifier (see [DECISIONS.md](DECISIONS.md)). Beam still expires when it elapses, even if the fire button is held. `Despawn` is an explicit expire (phase 32)
@@ -901,6 +901,12 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** a `MultiplyPatternAsset` with cells numbered 1 (left of center), 2 (above center), 3 (right of center), picked as the pattern of a `Multicast(3)` with Spread 20 in a Modifier Kit
 - **When:** the kit is applied to a Recipe and the shot is spawned forward
 - **Then:** the original flies 20° toward the left cell and the two extras 20° toward the upper and right cells. With `Multicast(5)` the two extras past the cells fly straight ahead. A Multicast with no pattern still scatters in a random 15° cone
+
+### Phase 46 — An explosion bursts where the shot's lifetime ends
+
+- **Given:** a Recipe with `AreaEffect` damage 4 on `OnExpire` and `EffectRadius` 2; one dummy within 2 m of the point where the shot's lifetime ends and one farther away
+- **When:** the shot flies until its lifetime runs out
+- **Then:** one `AreaBurst` with `Stage = OnExpire` at the expire position, then one Area `Hit` of 4 on the near dummy, then `Expired`; the far dummy takes nothing. The same shot ending on a Direct hit raises no burst
 
 ## Product constraints
 

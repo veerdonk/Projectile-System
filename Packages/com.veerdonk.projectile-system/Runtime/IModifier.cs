@@ -161,6 +161,9 @@ namespace Veerdonk.ProjectileSystem
 
         internal bool HomingAimPointUsed { get; set; }
 
+        /// <summary>True while the OnExpire list runs.</summary>
+        internal bool Expiring { get; set; }
+
         /// <summary>Published homing poses for this world.</summary>
         public HomingCatalog HomingCatalog { get; }
 

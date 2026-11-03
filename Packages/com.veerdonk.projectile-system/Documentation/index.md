@@ -15,7 +15,7 @@ A `Recipe` is base stats plus six ordered `IModifier` lists. List order is apply
 | `OnTick` | `Homing` |
 | `OnInterval` | `Multiply`, scales, `AreaEffect` aura (needs `Interval` on `OnSpawn`) |
 | `OnHit` | `Pierce`, `Bounce`, `Multiply`, scales, `ApplyStatus`, `AreaEffect`, `GroundField` |
-| `OnExpire` | `Multiply`, `GroundField` |
+| `OnExpire` | `Multiply`, `GroundField`, `AreaEffect` (bursts where the shot expires; not after a hit) |
 
 Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectile > Recipe`) and call `ToRecipe()` before `Spawn`. Extras at fire time are a `ModifierKit` (`Create > Projectile > Modifier Kit`): `Recipe.Compose(base.ToRecipe(), uniqueId, kits)`. Each composition needs its own `Recipe.Id`. An OnInterval kit layer does nothing unless `Interval` is already on the base or on an OnSpawn layer.
 

@@ -43,6 +43,7 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>
         /// Runs OnExpire, returns the instance to the pool, and raises <see cref="Expired"/>.
         /// Unknown or already pooled ids do nothing. Allowed on any live instance, including Beam.
+        /// An instance already running its OnExpire (from an event handler) is left to finish it.
         /// </summary>
         void Despawn(ProjectileId id);
 
