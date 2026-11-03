@@ -28,7 +28,7 @@ Every Recipe has these lists, each ordered; modifiers in a list run in index ord
 | `OnTick` | Every `ProjectileWorld.Tick` | `Homing(n)`, `AreaEffect` (phase 26) |
 | `OnInterval` | Each time the instance’s interval elapses during flight | `Multiply(n)`, scale modifiers, `AreaEffect` (aura) |
 | `OnHit` | On each hit from the pipeline | `Pierce`, `Bounce`, `Multiply` spawn, scale modifiers, `ApplyStatus`, `AreaEffect`, `GroundField` |
-| `OnExpire` | When the instance is ending | `Multiply` on death, `GroundField` |
+| `OnExpire` | When the instance is ending | `Multiply` on death, `GroundField`, `AreaEffect` (not after a hit) |
 
 **Hit then expire:** a hit that despawns the instance runs `OnHit` first, then `OnExpire`.
 
@@ -87,13 +87,13 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Multicast:** `Multicast(n)` on `OnSpawn` requests `n-1` extra instances from an explicit sibling Recipe. By default extra instances do **not** run `Multicast` again: the spawn path skips it for them, so a sibling Recipe that carries one cannot explode. `Recipe.MulticastGenerations` buys further generations, counted down per extra so a chain always terminates ([DECISIONS.md](DECISIONS.md) ADR-007). `Recipe.MultiplyGenerations` is the same budget for `Multiply` children, which likewise do not inherit multiply by default.
 
-**Prewarm:** `Prewarm(recipe, count)` also prewarms the Recipes those modifiers chain into, using the same generations ([DECISIONS.md](DECISIONS.md) ADR-008). Do not hand-prewarm the children as well. Directions for all `n` slots, the original included, come from an `IMulticastPattern` ([DECISIONS.md](DECISIONS.md) ADR-006); v1 ships `RandomConePattern`.
+**Prewarm:** `Prewarm(recipe, count)` also prewarms the Recipes those modifiers chain into, using the same generations ([DECISIONS.md](DECISIONS.md) ADR-008). Do not hand-prewarm the children as well. Directions for all `n` slots, the original included, come from an `IMulticastPattern` ([DECISIONS.md](DECISIONS.md) ADR-006); v1 ships `RandomConePattern`; phase 45 serializes the pattern and its half-angle and adds `GridMulticastPattern`, which aims slot `i` at the designer grid's cell `i + 1` and sends slots past the cells straight ahead ([DECISIONS.md](DECISIONS.md) ADR-050).
 
 **Multiply spread:** `Multiply` authors `Spread`. Square / Circle / RandomCircle read it as **meters** between adjacent pips (`0` stacks); children keep travel direction, or the hit normal on a hit that is not pierced through ([DECISIONS.md](DECISIONS.md) ADR-015). A Target or Basic hit with Pierce charges still left spawns those children past that body along the travel direction captured at the start of the hit. List order of Pierce and Multiply does not change that. When the charges are already spent, children leave along the normal. An authored grid (`GridMultiplyPattern` from `MultiplyPatternAsset`) places with its own **Spacing** (meters between cell centers; `<= 0` stacks) and reads `Spread` as the cone **half-angle in degrees** of the farthest numbered cell from the geometric center (`<= 0` keeps every child parallel) (ADR-038). `Spread(n)` scales the instance copy of `Multiply.Spread` (meters or degrees, depending on the pattern). The original shot is not jittered.
 
 **Views:** the pool asks `IProjectileViewFactory` for a GameObject view from `Recipe.PresentationId` ([DECISIONS.md](DECISIONS.md) ADR-021). Default is a sphere primitive. Hits stay SphereCast of `Radius`; the mesh is not the collider. Hitscan creates **no** view (ADR-035). Beam uses a primitive **cylinder per polyline segment** (ADR-036); sample red via `PresentationId`. Ground-field disks use a separate `IGroundFieldViewFactory` (ADR-026); default is a thin cylinder. A game prefab is not rescaled.
 
-**Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` / `OnTick` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016, ADR-031). Area damage is on the modifier. Interval and OnTick are auras on the live instance (OnTick overlaps every Tick). Direct contact can be suppressed. Overlap includes `IDamageable` colliders **and** published hit volumes (ADR-030). `occupancy` (default false) replaces pulses with `HitSource.OccupancyEnter` / `OccupancyExit` (ADR-031).
+**Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` / `OnTick` / `OnExpire` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016, ADR-031). Area damage is on the modifier. Interval and OnTick are auras on the live instance (OnTick overlaps every Tick). OnExpire bursts once at the expire position on Lifetime, HitscanEnd, and `Despawn`, never after a hit, and ignores occupancy (ADR-051). Direct contact can be suppressed. Overlap includes `IDamageable` colliders **and** published hit volumes (ADR-030). `occupancy` (default false) replaces pulses with `HitSource.OccupancyEnter` / `OccupancyExit` (ADR-031).
 
 **Ground field:** `GroundField` on `OnHit` / `OnExpire` / `OnTravel` plants a lingering horizontal disk ([DECISIONS.md](DECISIONS.md) ADR-022). Size, lifetime, damage, optional status, and pulse period are on the modifier. The disk is not a Recipe and has no stage lists. `IHitQuery.OverlapDisk` tests XZ distance (colliders and published volumes, ADR-030); pulses reuse Area `Hit` / `StatusApplied`. `occupancy` (default false) replaces those pulses with enter/exit (ADR-031). Views come from `IGroundFieldViewFactory` (ADR-026).
 
@@ -239,6 +239,13 @@ class GridMultiplyPattern : IMultiplyPattern
     // Serializable copy of an asset (Spacing + cell numbers). Live Recipe does not alias the SO.
 }
 
+class GridMulticastPattern : IMulticastPattern
+{
+    // ADR-050. Copy of a GridMultiplyPattern + Spread (degrees). Slot i → cell i + 1; past the cells → forward.
+    GridMultiplyPattern Grid { get; }
+    float Spread { get; set; }
+}
+
 static class BallisticAim
 {
     // Direction so speed+gravity pass through target. Always the flatter (shorter-time) root.
@@ -324,7 +331,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038). Phase 37 (0.2.3) adds `SpawnRequest.IgnoreColliders` (ADR-041). Phase 40 (0.2.6) adds `Recipe.MaxRange` (ADR-043) and the four-argument `AimBeam` that sets a live Beam's homing lock (ADR-044). Phase 41 (0.2.7) adds the upright capsule `SetHitTarget` overload with a homing point (ADR-045). Phase 42 (0.2.8) adds `SpawnRequest.IgnoreTargetSet` / `IgnoreTarget` and `ModifierContext.ShooterTarget` (ADR-046), and authorable-only inspector popups (ADR-047). Phase 43 (0.2.9) adds `IProjectileWorld.PredictPath` with `PathPrediction` and `PathHit` (ADR-048). Phase 44 (0.2.10) removes the upper clamp on critical chance (ADR-049).
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038). Phase 37 (0.2.3) adds `SpawnRequest.IgnoreColliders` (ADR-041). Phase 40 (0.2.6) adds `Recipe.MaxRange` (ADR-043) and the four-argument `AimBeam` that sets a live Beam's homing lock (ADR-044). Phase 41 (0.2.7) adds the upright capsule `SetHitTarget` overload with a homing point (ADR-045). Phase 42 (0.2.8) adds `SpawnRequest.IgnoreTargetSet` / `IgnoreTarget` and `ModifierContext.ShooterTarget` (ADR-046), and authorable-only inspector popups (ADR-047). Phase 43 (0.2.9) adds `IProjectileWorld.PredictPath` with `PathPrediction` and `PathHit` (ADR-048). Phase 44 (0.2.10) removes the upper clamp on critical chance (ADR-049). Phase 45 (0.2.11) serializes `Multicast.Pattern` and `RandomConePattern`'s half-angle and adds `GridMulticastPattern` (ADR-050).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 

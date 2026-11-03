@@ -15,7 +15,7 @@ A `Recipe` is base stats plus six ordered `IModifier` lists. List order is apply
 | `OnTick` | `Homing` |
 | `OnInterval` | `Multiply`, scales, `AreaEffect` aura (needs `Interval` on `OnSpawn`) |
 | `OnHit` | `Pierce`, `Bounce`, `Multiply`, scales, `ApplyStatus`, `AreaEffect`, `GroundField` |
-| `OnExpire` | `Multiply`, `GroundField` |
+| `OnExpire` | `Multiply`, `GroundField`, `AreaEffect` (bursts where the shot expires; not after a hit) |
 
 Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectile > Recipe`) and call `ToRecipe()` before `Spawn`. Extras at fire time are a `ModifierKit` (`Create > Projectile > Modifier Kit`): `Recipe.Compose(base.ToRecipe(), uniqueId, kits)`. Each composition needs its own `Recipe.Id`. An OnInterval kit layer does nothing unless `Interval` is already on the base or on an OnSpawn layer.
 
@@ -27,7 +27,7 @@ Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectil
 
 **Modifiers:** `Pierce`, `Bounce`, `Multiply`, `Multicast`, `Homing`, `Interval`, `Speed`, `Damage`, `Critical`, `Mana`, `Size`, `Spread`, `EffectRadius`, `Gravity`, `ApplyStatus`, `AreaEffect`, `GroundField`
 
-**Patterns:** `IMultiplyPattern` (`SquarePattern`, `CirclePattern`, `RandomCirclePattern`, `GridMultiplyPattern`), `MultiplyPatternAsset` (`Create > Projectile > Multiply Pattern`), `IMulticastPattern` (`RandomConePattern`). Square / Circle / RandomCircle use `Multiply.Spread` as meters and keep parent direction (hit normal on a hit; travel direction past the body when Pierce still has charges). A grid copies onto the Recipe: `Spacing` places the numbered cells, and `Spread` is the cone half-angle in degrees.
+**Patterns:** `IMultiplyPattern` (`SquarePattern`, `CirclePattern`, `RandomCirclePattern`, `GridMultiplyPattern`), `MultiplyPatternAsset` (`Create > Projectile > Multiply Pattern`), `IMulticastPattern` (`RandomConePattern`, `GridMulticastPattern`). Square / Circle / RandomCircle use `Multiply.Spread` as meters and keep parent direction (hit normal on a hit; travel direction past the body when Pierce still has charges). A grid copies onto the Recipe: `Spacing` places the numbered cells, and `Spread` is the cone half-angle in degrees. Multicast picks a pattern the same way: a random cone with an authored half-angle (15° by default), or a designer grid copied onto `GridMulticastPattern`, which aims instance `i` at cell `i + 1` and sends instances past the cells straight ahead.
 
 **Status:** `IStatusEffect`, `DummyStatusEffect`, `IStatusReceiver`
 
@@ -39,7 +39,7 @@ Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectil
 
 **Views:** `IProjectileViewFactory`, `PrimitiveViewFactory`, `PrefabViewFactory`, `IGroundFieldViewFactory`, `PrimitiveGroundFieldViewFactory`, `PrefabGroundFieldViewFactory`, `ProjectileView`
 
-**Authoring:** `RecipeAsset`, `ModifierKit`, `ModifierKitLayer`, `MultiplyPatternAsset`, `GridMultiplyPattern`, `Recipe.Clone`, `Recipe.Append`, `Recipe.Compose`, `RecipeStage`, `ModifierStageAttribute`
+**Authoring:** `RecipeAsset`, `ModifierKit`, `ModifierKitLayer`, `MultiplyPatternAsset`, `GridMultiplyPattern`, `GridMulticastPattern`, `Recipe.Clone`, `Recipe.Append`, `Recipe.Compose`, `RecipeStage`, `ModifierStageAttribute`
 
 Internal ECS types under `Runtime/Ecs/` are not a consumer API.
 

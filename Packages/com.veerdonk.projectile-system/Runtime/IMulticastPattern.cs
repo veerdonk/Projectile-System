@@ -14,18 +14,28 @@ namespace Veerdonk.ProjectileSystem
     }
 
     /// <summary>Random cone around the spawn direction. Uses the world seed, so the same seed gives the same cone.</summary>
+    [Serializable]
     public sealed class RandomConePattern : IMulticastPattern
     {
         /// <summary>Default half-angle of the cone, in degrees.</summary>
         public const float DefaultHalfAngleDegrees = 15f;
 
-        public RandomConePattern(float halfAngleDegrees = DefaultHalfAngleDegrees)
+        [SerializeField] float halfAngleDegrees;
+
+        /// <summary>Cone of <see cref="DefaultHalfAngleDegrees"/>.</summary>
+        public RandomConePattern()
+            : this(DefaultHalfAngleDegrees)
         {
-            HalfAngleDegrees = halfAngleDegrees;
         }
 
-        /// <summary>Half-angle of the cone, in degrees.</summary>
-        public float HalfAngleDegrees { get; }
+        /// <summary>Cone of <paramref name="halfAngleDegrees"/>.</summary>
+        public RandomConePattern(float halfAngleDegrees)
+        {
+            this.halfAngleDegrees = halfAngleDegrees;
+        }
+
+        /// <summary>Half-angle of the cone, in degrees. <c>&lt;= 0</c> keeps every instance on the spawn direction.</summary>
+        public float HalfAngleDegrees => halfAngleDegrees;
 
         /// <inheritdoc />
         public Vector3 GetDirection(ModifierContext context, Vector3 forward, int index, int count)

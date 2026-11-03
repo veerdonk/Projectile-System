@@ -33,12 +33,13 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 44 — Critical chance above 100% (done; phase 34 is next)**
+**Phase 46 — AreaEffect on OnExpire (done; phase 34 is next)**
 
-- Package version is **0.2.10** (ADR-049; WizardGame Trello card #306, for game card #300 / REQ-045). No git tag in the phase session; CI tags `v0.2.10` on merge. The human moves the card and names the version on it.
-- Verified in the Editor on the main checkout: clean compile, Edit Mode **358/358** (the phase 10 `Critical2_OnTravel_ClampsAtOne` test replaced by five cases in `CombatScaleTests`, plus one in `AreaEffectTests`). A subagent review found no major issues; its minors (ADR-014 superseded note, an Area hit test) and nits (phase 10 annotations) are fixed, Play Mode **56/56**.
-- `Critical.Apply` is now `Mathf.Max(0f, chance * Scale)`; `Scale <= 0` is still a no-op. The authored `Recipe.CriticalChance` is not clamped anywhere (a negative authored chance reaches the hit as is unless a `Critical` runs). `GroundField` hits stay 0.
-- Older notes that still apply: Editor/worktree copy routine and the two connected Editors (`set_active_instance` to `My project@…`); `get_test_job` gives no assertion messages; `npx sigmap` output is not committed; never move or delete a released `v*` tag; do **not** run **Projectile Lab > Rebuild**; `HomingAcquirePoint` is the only aim point; catalog `Compact()` leftover from phase 29; capsule `TryPierceExit` approximation from phase 41; `PredictPath` false return does not say lifetime vs `MaxSteps` (phase 43).
+- Ships in **0.2.11** together with phase 45 (user decision: the game's #506 and #517 cards land on one version). This branch is stacked on `phase-45-multicast-patterns`; merge this PR into that branch first, then PR #80 into `main`, or CI tags `v0.2.11` without it. No version bump, no git tag. Change request veerdonk/Projectile-System#79, game card veerdonk/UntitledTowerGame#517.
+- Verified in the Editor on the main checkout: clean compile, Edit Mode **380/380** (twelve new in `AreaEffectOnExpireTests`), Play Mode **56/56**. A subagent review found nothing major; its minors are fixed or documented in ADR-051.
+- The burst sits at `ExpireInfo.Position`: a lifetime expiry is checked before that tick's move, and a Hitscan or Beam reports its muzzle. An Arc that lands on the ground is a World hit and does not burst. If the game wants "end of the ray" for Hitscan, that is a new change request.
+- Known limit, shared with the OnHit flush: a `Hit` / `AreaBurst` handler that despawns or spawns *another* instance during a flush reuses the world's area buffers. Same-instance `Despawn` during its own OnExpire is guarded (`expiringIds`).
+- Older notes that still apply: phase 45 notes (`MulticastPatternOptionIndex(null)`, `EditorJsonUtility` drops `extraRecipe`); `run_tests` can start before a requested compile finishes (check the test DLL time in `Library/ScriptAssemblies`); Editor/worktree copy routine and the two connected Editors (`set_active_instance` to `My project@…`); `get_test_job` gives no assertion messages unless `include_failed_tests`; `npx sigmap` output is not committed; never move or delete a released `v*` tag; do **not** run **Projectile Lab > Rebuild**; `HomingAcquirePoint` is the only aim point; catalog `Compact()` leftover from phase 29; capsule `TryPierceExit` approximation from phase 41; `PredictPath` false return does not say lifetime vs `MaxSteps` (phase 43).
 
 ## Do not
 

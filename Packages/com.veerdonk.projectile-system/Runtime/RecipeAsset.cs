@@ -294,7 +294,8 @@ namespace Veerdonk.ProjectileSystem
                 case Multicast multicast:
                     return new Multicast(
                         multicast.Count,
-                        ResolveChild(multicast.ExtraAsset, multicast.ExtraRecipe, visited));
+                        ResolveChild(multicast.ExtraAsset, multicast.ExtraRecipe, visited),
+                        CloneMulticastPattern(multicast.Pattern));
                 default:
                     return modifier;
             }
@@ -314,6 +315,21 @@ namespace Veerdonk.ProjectileSystem
             if (pattern is GridMultiplyPattern grid)
                 return grid.Clone();
             return Create<IMultiplyPattern>(pattern.GetType()) ?? new SquarePattern();
+        }
+
+        static IMulticastPattern CloneMulticastPattern(IMulticastPattern pattern)
+        {
+            switch (pattern)
+            {
+                case null:
+                    return new RandomConePattern();
+                case RandomConePattern cone:
+                    return new RandomConePattern(cone.HalfAngleDegrees);
+                case GridMulticastPattern grid:
+                    return grid.Clone();
+                default:
+                    return Create<IMulticastPattern>(pattern.GetType()) ?? pattern;
+            }
         }
 
         static IStatusEffect CloneStatus(IStatusEffect effect)

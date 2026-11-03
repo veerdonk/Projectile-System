@@ -15,8 +15,9 @@ namespace Veerdonk.ProjectileSystem
         [SerializeField] int count;
         [SerializeField] RecipeAsset extraAsset;
 
+        [SerializeReference] IMulticastPattern pattern;
+
         Recipe extraRecipe;
-        IMulticastPattern pattern;
 
         public Multicast()
         {
@@ -50,8 +51,20 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Authored extra asset. Resolved by <see cref="RecipeAsset.ToRecipe"/>.</summary>
         public RecipeAsset ExtraAsset => extraAsset;
 
-        /// <summary>Aims every instance, including the original. Default is <see cref="RandomConePattern"/>.</summary>
-        public IMulticastPattern Pattern => pattern;
+        /// <summary>
+        /// Aims every instance, including the original. Null, or missing on an older asset, is a
+        /// <see cref="RandomConePattern"/> of <see cref="RandomConePattern.DefaultHalfAngleDegrees"/>.
+        /// </summary>
+        public IMulticastPattern Pattern
+        {
+            get
+            {
+                if (pattern == null)
+                    pattern = new RandomConePattern();
+                return pattern;
+            }
+            set => pattern = value ?? new RandomConePattern();
+        }
 
         void IDeserializationCallback.OnDeserialization(object sender)
         {
@@ -79,9 +92,10 @@ namespace Veerdonk.ProjectileSystem
                 speed = context.Speed;
             }
 
+            IMulticastPattern aim = Pattern;
             for (int i = 0; i < total; i++)
             {
-                Vector3 direction = Aim(Pattern.GetDirection(context, forward, i, total), forward);
+                Vector3 direction = Aim(aim.GetDirection(context, forward, i, total), forward);
                 if (i == 0)
                     context.Velocity = direction * speed;
                 else

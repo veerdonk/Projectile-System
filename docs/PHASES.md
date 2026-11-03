@@ -1014,6 +1014,44 @@ Change request from the WizardGame board: the game needs a critical chance above
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 45 — Multicast patterns from the pattern designer
+
+Change request veerdonk/Projectile-System#78 from the game board (veerdonk/UntitledTowerGame#506, for the effect items card #509). Runs before phase 34. ADR-050. One version.
+
+**In scope**
+
+- `Multicast.pattern` serialized as `[SerializeReference] IMulticastPattern` with a `Pattern` setter; null or missing is `RandomConePattern(15)`
+- `RandomConePattern` serializable, with a serialized half-angle and a parameterless 15° constructor
+- `GridMulticastPattern`: copy of a `GridMultiplyPattern` plus `Spread` degrees. Slot `i` aims at cell `i + 1`; slots past the numbered cells fly straight; `Spread <= 0` is parallel. `Clone`, `HasSameLayout` (ignores Spread)
+- `RecipeAsset.ToRecipe` and `ModifierKit.ApplyTo` copy the Multicast pattern
+- Recipe and Modifier Kit inspectors: Multicast Pattern dropdown (Random Cone, then each `MultiplyPatternAsset`), with the half-angle or Spread field under it
+- Edit Mode tests (`MulticastPatternTests`): three-cell grid aims all three shots, the original included; shots past the cells fly straight; Spread 0 is parallel; no pattern keeps the 15° cone (also after a null serialized value); JSON round trip keeps an authored grid and a 40° cone; `ToRecipe` and kits copy without aliasing; an authored 40° cone is used and 0° is straight; dropdown option order, matching, copy, and Spread kept on a grid swap. Existing tests stay green
+- Docs: ADR-050, glossary line and scenario in [REQUIREMENTS.md](REQUIREMENTS.md), API sketch and public API line in [ARCHITECTURE.md](ARCHITECTURE.md), [ECS.md](ECS.md) row, package `Documentation/index.md`. `CHANGELOG` **0.2.11**. Bump `package.json` to **0.2.11**. No git tag in the phase session
+
+**Out of scope:** shots spaced over time; offsetting Multicast spawn positions by the grid; `Spread(n)` scaling a Multicast grid; Multiply's pattern; the game's effect items and stacking (#509, REQ-024 there); yard sample changes; Unity Physics; Entities Graphics
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
+## Phase 46 — AreaEffect on OnExpire
+
+Change request veerdonk/Projectile-System#79 from the game board (veerdonk/UntitledTowerGame#517, for the effect items card #509). Runs before phase 34. ADR-051. Same version as phase 45.
+
+**In scope**
+
+- `AreaEffect` allowed on `OnExpire`: overlap at the instance position, Area hits with its damage and status, one `AreaBurst` with `Stage = OnExpire` before them
+- Runs on Lifetime, HitscanEnd, and `Despawn`; nothing when the shot ends on a hit; Strong still skips OnExpire. `Occupancy`, `IncludeDirectHit`, `IncludeDirectStatus` ignored there
+- A `Despawn` of the same instance during its own OnExpire is a no-op
+- Edit Mode tests (`AreaEffectOnExpireTests`): `Append` to OnExpire; lifetime burst hits the Target inside the radius at the expire position, not the one outside, order burst / Area hit / Expired; burst over no Target; a Target- or World-hit-ended shot and a Strong absorb raise no burst; a pierced shot still bursts at lifetime; status per Target; occupancy ignored; Hitscan end and `Despawn` burst at the expire position (a straight Hitscan's is its muzzle); a handler that despawns the shot during its burst expires it once. Existing tests stay green
+- Docs: ADR-051, [REQUIREMENTS.md](REQUIREMENTS.md) AreaEffect line and scenario, [ARCHITECTURE.md](ARCHITECTURE.md) stage table and area paragraph, [ECS.md](ECS.md), package `Documentation/index.md`. `CHANGELOG` **0.2.11** (no bump; phase 45 and 46 ship as one version)
+
+**Out of scope:** a burst after a delay; a burst after a hit; other modifiers' stages; the game's effect items (#509); yard sample changes
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

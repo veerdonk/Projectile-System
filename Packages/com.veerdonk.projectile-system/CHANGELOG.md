@@ -5,6 +5,23 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.11] - 2026-11-02
+
+### Added
+
+- `GridMulticastPattern`: a Multicast pattern that holds a copy of a `GridMultiplyPattern` (usually from the pattern designer, `MultiplyPatternAsset`) and a `Spread` in degrees. Instance `i` flies toward numbered cell `i + 1`, the original included; instances past the numbered cells fly straight ahead. `Spread` is the cone half-angle of the farthest cell in use, and `<= 0` keeps every instance parallel.
+- The Recipe and Modifier Kit inspectors show a Pattern dropdown on Multicast: Random Cone, then every `MultiplyPatternAsset` in the project, with the cone's half-angle or the grid's spread under it.
+- `AreaEffect` is allowed on `OnExpire`. It bursts once at the instance's expire position (Lifetime, Hitscan end, or `Despawn`) with its damage and status, and raises `AreaBurst` with `Stage = OnExpire` first. A shot that ends on a hit, World or Target, raises nothing from it. A Hitscan or Beam bursts at its muzzle, where `Expired` reports it. `Occupancy`, `IncludeDirectHit`, and `IncludeDirectStatus` are ignored there.
+
+### Changed
+
+- `Multicast.pattern` is serialized (`[SerializeReference] IMulticastPattern`) and `Multicast.Pattern` has a setter. Null or missing (assets saved before 0.2.11) is `RandomConePattern(15)`, so existing assets fire as before.
+- `RandomConePattern` is `[Serializable]` with a serialized half-angle and a parameterless constructor (15°). The optional-argument constructor `RandomConePattern(float = 15)` is now two overloads: source still compiles, but code built against 0.2.10 must be rebuilt.
+- A Multicast whose serialized pattern is null shows "Default (Random Cone 15°)" in the inspector until a pattern is picked.
+- `RecipeAsset.ToRecipe` and `ModifierKit.ApplyTo` copy the Multicast pattern; before this they always rebuilt a 15° cone.
+- `RequestAreaOverlap` from a custom modifier on `OnExpire` is now flushed (an OnExpire `AreaBurst` and Area hits); before this it was dropped.
+- `IProjectileWorld.Despawn` of an instance that is already running its OnExpire (called from a `Hit` or `AreaBurst` handler) does nothing; the running expire finishes and returns it once.
+
 ## [0.2.10] - 2026-10-29
 
 ### Changed

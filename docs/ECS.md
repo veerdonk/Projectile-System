@@ -50,7 +50,8 @@ SampleLab.Update
                  then IHitQuery.Overlap for each queued AreaEffect; Area Hit / StatusApplied per Target (World colliders ignored)
                  despawn unless Pierce/Bounce CancelDespawn
                  CancelDespawn: keep remaining counts, place at hit point along current velocity
-                 killing hit: OnHit then Direct Hit/status then Area flush then OnExpire (`HasHit` still true so Multiply uses the hit point/normal)
+                 killing hit: OnHit then Direct Hit/status then Area flush then OnExpire (`HasHit` still true so Multiply uses the hit point/normal; AreaEffect skips itself)
+                 OnExpire: `ModifierContext.Expiring` is set while the list runs; its AreaEffect overlaps flush after it (`AreaBurst.Stage = OnExpire`), then ground fields, then pool. The instance id sits in `expiringIds` until then, so a re-entrant `Despawn` of it is a no-op (ADR-051)
                  Multiply children spawn slightly off the surface along that normal and inherit the parent's ignored collider so they do not immediately overlap-hit the same dummy
                  else: Position = Candidate, sync ProjectileView
        → flush RequestSpawn queue (child Recipes)
@@ -76,7 +77,8 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Multiply.cs` | Explicit child Recipe; OnHit / OnExpire / OnInterval. Positions from `IMultiplyPattern` (default `SquarePattern`). Procedural patterns keep travel or hit-normal direction; `Spread` is meters between pips (0 stacks). Authored grid also aims via `GetDirection` (`Spread` is cone degrees; placement is Spacing). Children multiply again only if `Recipe.MultiplyGenerations` pays for it |
 | `Runtime/ChainBudget.cs` | The counted-down "how many more generations" value both chaining modifiers ride on |
 | `Runtime/Multicast.cs` | `OnSpawn`: total instances is `n`; extras use an explicit sibling Recipe and only multicast again if `Recipe.MulticastGenerations` pays for it |
-| `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math |
+| `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math; its half-angle is serialized |
+| `Runtime/GridMulticastPattern.cs` | Multicast pattern from a designer grid: copy of a `GridMultiplyPattern` + Spread degrees. Slot `i` aims at cell `i + 1`; slots past the cells go straight |
 | `Runtime/IMultiplyPattern.cs` | Where Multiply child offsets (and grid aim) come from. Plane is perpendicular to travel or the hit normal; local +X right, +Y up. `GetOffset` / `GetDirection` / `ResolveCount` (ADR-038) |
 | `Runtime/SquarePattern.cs` | Dice pips through 9, then odd-sized grids. Default Multiply pattern. Place-only; Spread is meters |
 | `Runtime/CirclePattern.cs` | Triangle, then center + ring, then inner hexagon and outer rings |
@@ -95,7 +97,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/EffectRadius.cs` | Scale instance effect radius by n. Same stages as `Speed`. Does not run an overlap query |
 | `Runtime/Interval.cs` | `OnSpawn`: seconds between `OnInterval` runs, onto `Projectile.IntervalSeconds`. One period per instance drives the whole list |
 | `Runtime/ApplyStatus.cs` | `OnHit` Target: request an `IStatusEffect`. Each request on the list is flushed as Direct `StatusApplied` after the list, in order, unless suppressed. World hits do nothing |
-| `Runtime/AreaEffect.cs` | Overlap Targets in instance `EffectRadius`. Own damage/status. OnHit at the contact point, OnTravel at spawn, OnInterval and OnTick auras on the flying instance. `occupancy` tracks enter/exit instead of pulses. Queues on `ModifierContext`; does not call Physics |
+| `Runtime/AreaEffect.cs` | Overlap Targets in instance `EffectRadius`. Own damage/status. OnHit at the contact point, OnTravel at spawn, OnInterval and OnTick auras on the flying instance, OnExpire at the expire position (not after a hit; occupancy ignored). `occupancy` tracks enter/exit instead of pulses. Queues on `ModifierContext`; does not call Physics |
 | `Runtime/GroundField.cs` | Plants a lingering horizontal disk on OnHit / OnExpire / OnTravel. Own radius, lifetime, damage, optional status, pulse period, occupancy. Owned by `ProjectileWorld`, ticked from the same `Tick`. Not a Recipe |
 | `Runtime/IGroundFieldViewFactory.cs` | `Create(radius, poolParent)` plus default `PrimitiveGroundFieldViewFactory` (thin cylinder scaled to `2 * radius` on XZ) |
 | `Runtime/PrefabGroundFieldViewFactory.cs` | Map `GroundField.PresentationId` → prefab; does not rescale; unknown ids fall back to the primitive |

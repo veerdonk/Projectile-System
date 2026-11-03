@@ -30,12 +30,14 @@ namespace Veerdonk.ProjectileSystem
         const int OccupancyOnTick = 2;
         const int OccupancyOnInterval = 3;
         const int OccupancyOnHit = 4;
+        const int OccupancyOnExpire = 5;
 
         readonly List<HitInfo> overlapResults = new List<HitInfo>();
         readonly List<Vector3> beamPoints = new List<Vector3>();
         readonly List<TargetId> seenAreaTargets = new List<TargetId>();
         readonly List<TargetId> occupancyCurrent = new List<TargetId>();
         readonly List<OccupancyKey> occupancyRemove = new List<OccupancyKey>();
+        readonly List<int> expiringIds = new List<int>();
         readonly Dictionary<OccupancyKey, List<TargetId>> occupancyInside = new Dictionary<OccupancyKey, List<TargetId>>();
 
         public SimulationBridge Bridge;
@@ -721,6 +723,9 @@ namespace Veerdonk.ProjectileSystem
                 return false;
 
             Projectile projectile = em.GetComponentData<Projectile>(entity);
+            if (expiringIds.Contains(projectile.Id))
+                return false;
+
             Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
 
             if (runOnHit && hit.Protection == ProtectionLevel.Strong)
@@ -757,8 +762,26 @@ namespace Veerdonk.ProjectileSystem
                     return false;
             }
 
-            RunStage(recipe.OnExpire, entity, hasHit: runOnHit, hit, dt: 0f);
-            FlushGroundFields(entity);
+            expiringIds.Add(projectile.Id);
+            try
+            {
+                Bridge.ModifierContext.Expiring = true;
+                try
+                {
+                    RunStage(recipe.OnExpire, entity, hasHit: runOnHit, hit, dt: 0f);
+                }
+                finally
+                {
+                    Bridge.ModifierContext.Expiring = false;
+                }
+
+                FlushAreaOverlaps(entity, OccupancyOnExpire);
+                FlushGroundFields(entity);
+            }
+            finally
+            {
+                expiringIds.Remove(projectile.Id);
+            }
 
             ReturnToPool(
                 entity,
@@ -983,6 +1006,7 @@ namespace Veerdonk.ProjectileSystem
                 case OccupancyOnTravel: return RecipeStage.OnTravel;
                 case OccupancyOnTick: return RecipeStage.OnTick;
                 case OccupancyOnInterval: return RecipeStage.OnInterval;
+                case OccupancyOnExpire: return RecipeStage.OnExpire;
                 default: return RecipeStage.OnHit;
             }
         }
