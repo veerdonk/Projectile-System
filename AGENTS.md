@@ -33,11 +33,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 44 — Critical chance above 100% (done; phase 34 is next)**
+**Phase 45 — Multicast patterns from the pattern designer (done; phase 34 is next)**
 
-- Package version is **0.2.10** (ADR-049; WizardGame Trello card #306, for game card #300 / REQ-045). No git tag in the phase session; CI tags `v0.2.10` on merge. The human moves the card and names the version on it.
-- Verified in the Editor on the main checkout: clean compile, Edit Mode **358/358** (the phase 10 `Critical2_OnTravel_ClampsAtOne` test replaced by five cases in `CombatScaleTests`, plus one in `AreaEffectTests`). A subagent review found no major issues; its minors (ADR-014 superseded note, an Area hit test) and nits (phase 10 annotations) are fixed, Play Mode **56/56**.
-- `Critical.Apply` is now `Mathf.Max(0f, chance * Scale)`; `Scale <= 0` is still a no-op. The authored `Recipe.CriticalChance` is not clamped anywhere (a negative authored chance reaches the hit as is unless a `Critical` runs). `GroundField` hits stay 0.
+- Package version is **0.2.11** (ADR-050; change request veerdonk/Projectile-System#78, for game card veerdonk/UntitledTowerGame#506). No git tag in the phase session; CI tags `v0.2.11` on merge. The game installs it and wires its effect item field (#509) and REQ-024 stacking there; `GridMulticastPattern.HasSameLayout` plus `Spread` and `RandomConePattern.HalfAngleDegrees` are what it compares.
+- Verified in the Editor on the main checkout: clean compile, Edit Mode **368/368** (ten new in `MulticastPatternTests`), Play Mode **56/56**. A subagent review found no major issues; its minors (no way to author the angle on a null pattern, a real missing-field test, these notes) and most nits are fixed. Multicast's `IDeserializationCallback` is kept to match `Multiply`, though Unity never calls it; the lazy `Pattern` getter is what covers null.
+- `MulticastPatternOptionIndex(null)` reports Random Cone, but the inspector shows a null pattern as "Default (Random Cone 15°)" so picking Random Cone writes a real cone. `EditorJsonUtility` drops a runtime-only `extraRecipe`, so do not call `ToRecipe` on a JSON copy of a test asset.
+- `run_tests` can start before a requested compile finishes; check the test DLL time in `Library/ScriptAssemblies` against the run start if a fixed test still fails.
 - Older notes that still apply: Editor/worktree copy routine and the two connected Editors (`set_active_instance` to `My project@…`); `get_test_job` gives no assertion messages; `npx sigmap` output is not committed; never move or delete a released `v*` tag; do **not** run **Projectile Lab > Rebuild**; `HomingAcquirePoint` is the only aim point; catalog `Compact()` leftover from phase 29; capsule `TryPierceExit` approximation from phase 41; `PredictPath` false return does not say lifetime vs `MaxSteps` (phase 43).
 
 ## Do not

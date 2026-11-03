@@ -55,7 +55,7 @@ Use these words only. Do not introduce synonyms in code or docs without an ADR.
 - **Pierce(n)** — `OnHit` + `Target`: pass through `n` targets; despawn on hit `n+1`
 - **Bounce(n)** — `OnHit`: reflect off `n` `World` or `Target` hits; despawn on hit `n+1`. `Hit` still fires on `Target`, so dummy HP still drops
 - **Homing(n)** — Straight / Arc `OnTick`: steer toward a homing target; higher `n` turns faster (°/s). Hitscan: max degrees each polyline segment may kink toward a lock (ADR-035). Beam: the same °/s, stepped along the pulse by distance / speed, so the beam curves (ADR-036). A `Target` hit drops the lock and the instance may acquire another candidate once that dummy is no longer in front of travel. Published hit volumes count as candidates (ADR-031); the same id in `SetHomingCandidate` is one candidate and the hit-target position wins. `SetHomingCandidate` remains for a pose that is not hittable. If `SpawnRequest.HomingAcquirePointSet`, the **first** lock is the candidate closest to that world point (ADR-033); retarget after a Target hit still uses travel direction. That same point is the Arc loft target and the Hitscan / Beam aim point (no second field). A live Beam's lock can be replaced through `AimBeam(id, position, direction, target)`: the set lock is kept across redraws and pulses even when it is not in front of the muzzle, a Target hit drops it for the rest of that pulse only, and `default` returns the Beam to self-acquire (ADR-044, phase 40)
-- **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras)
+- **Multicast(n)** — `OnSpawn`: total instances created at spawn is `n` (the original plus `n-1` extras). Its authored pattern aims all `n`: a random cone (15° half-angle by default) or a designer grid (`GridMulticastPattern`, ADR-050)
 - **Multiply(n)** — extra instances spawned from `OnInterval`, `OnHit`, or `OnExpire` (not from `OnSpawn`). Layout comes from an `IMultiplyPattern` (default `SquarePattern`). Optional `Spread` is meters between adjacent pips on Square / Circle / RandomCircle, or cone half-angle in degrees on an authored grid. Grid placement uses **Spacing**, not Spread. On a hit, children leave along the hit normal. When `Pierce` still has charges on that Target (or Basic) hit, they spawn past the body along the shot's travel direction instead. A later hit with no charges left uses the normal again
 - **Speed(n)** — scale current speed by `n` (`n > 1` faster, `0 < n < 1` slower). `OnTravel` (start), `OnInterval` (progressive), `OnHit` (after bounce or pierce). Not `OnSpawn`
 - **Interval(n)** — `OnSpawn`: seconds between `OnInterval` runs for this instance. One period per Recipe drives every modifier on that list; without it `OnInterval` never runs (see [DECISIONS.md](DECISIONS.md) ADR-012)
@@ -895,6 +895,12 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **Given:** a Recipe with critical chance 0.75 and `Critical(2)` on `OnTravel`
 - **When:** the shot is spawned and hits a target
 - **Then:** `HitInfo.CriticalChance` is 1.5, and the Recipe still reads 0.75
+
+### Phase 45 — A Multicast fires along a drawn pattern
+
+- **Given:** a `MultiplyPatternAsset` with cells numbered 1 (left of center), 2 (above center), 3 (right of center), picked as the pattern of a `Multicast(3)` with Spread 20 in a Modifier Kit
+- **When:** the kit is applied to a Recipe and the shot is spawned forward
+- **Then:** the original flies 20° toward the left cell and the two extras 20° toward the upper and right cells. With `Multicast(5)` the two extras past the cells fly straight ahead. A Multicast with no pattern still scatters in a random 15° cone
 
 ## Product constraints
 

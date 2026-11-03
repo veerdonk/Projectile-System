@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-050 — Multicast patterns are authored, and a designer grid can aim them
+
+- **Date:** 2026-11-02
+- **Decision:** `Multicast.pattern` is `[SerializeReference] IMulticastPattern`; null or missing is `RandomConePattern(15)`. `RandomConePattern` serializes its half-angle. New `GridMulticastPattern` holds a copy of a `GridMultiplyPattern` (from `MultiplyPatternAsset`, as Multiply's dropdown copies it) and its own `Spread` in degrees: slot `i` aims at numbered cell `i + 1` (slot 0 is the original, re-aimed as before); slots past the numbered cells fly along the spawn direction; `Spread` is the cone half-angle of the farthest cell in use, `<= 0` is parallel. Positions are not offset; Multicast still spawns every slot at the spawn point. The Recipe and Kit inspectors offer Random Cone, then every `MultiplyPatternAsset`; swapping between grids keeps the Spread. `RecipeAsset.ToRecipe` and kits copy the pattern.
+- **Why:** The game's effect items need a Multicast to fire in a drawn shape (veerdonk/Projectile-System#78, for veerdonk/UntitledTowerGame#506). Only code could pass a pattern, and the asset clone rebuilt a 15° cone. Shots past the cells fly straight so no shot is lost (decided by the game's user, 2026-11-02). Spread lives on the pattern, not on `Multicast`, because the cone's half-angle already does, and `Spread(n)` stays a Multiply-only scale.
+- **Consequences:** One new public type (`GridMulticastPattern`) and a `Multicast.Pattern` setter. Not changed: Multicast's stage, extras not multicasting again, `SpawnCause.Multicast`, events. Bump `package.json` to **0.2.11**. Phase 45.
+
 ## ADR-049 — Critical chance has no upper clamp
 
 - **Date:** 2026-10-29

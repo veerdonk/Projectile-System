@@ -7,8 +7,8 @@ namespace Veerdonk.ProjectileSystem
     /// <summary>
     /// Inspector for <see cref="ModifierKit"/>: one stage dropdown and a filtered Add menu per layer.
     /// <see cref="IStatusEffect"/> and <see cref="IMultiplyPattern"/> fields use the same shipped-type
-    /// dropdowns as <see cref="RecipeAsset"/>. Pattern has no empty choice; a missing pattern shows
-    /// <see cref="SquarePattern"/>.
+    /// dropdowns as <see cref="RecipeAsset"/>, and so do <see cref="IMulticastPattern"/> fields. Pattern has no empty
+    /// choice; a missing pattern shows <see cref="SquarePattern"/> on Multiply and <see cref="RandomConePattern"/> on Multicast.
     /// </summary>
     [CustomEditor(typeof(ModifierKit))]
     public sealed class ModifierKitEditor : UnityEditor.Editor
@@ -154,6 +154,8 @@ namespace Veerdonk.ProjectileSystem
                     DrawStatusPopup(child);
                 else if (IsMultiplyPatternField(child))
                     DrawPatternPopup(child);
+                else if (IsMulticastPatternField(child))
+                    RecipeAssetEditor.DrawMulticastPatternLayout(child);
                 else
                     EditorGUILayout.PropertyField(child, true);
                 if (!child.NextVisible(false))
@@ -169,6 +171,11 @@ namespace Veerdonk.ProjectileSystem
         static bool IsMultiplyPatternField(SerializedProperty property)
         {
             return IsManagedReference(property, ".IMultiplyPattern");
+        }
+
+        static bool IsMulticastPatternField(SerializedProperty property)
+        {
+            return IsManagedReference(property, ".IMulticastPattern");
         }
 
         static bool IsManagedReference(SerializedProperty property, string typeSuffix)

@@ -76,7 +76,8 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/Multiply.cs` | Explicit child Recipe; OnHit / OnExpire / OnInterval. Positions from `IMultiplyPattern` (default `SquarePattern`). Procedural patterns keep travel or hit-normal direction; `Spread` is meters between pips (0 stacks). Authored grid also aims via `GetDirection` (`Spread` is cone degrees; placement is Spacing). Children multiply again only if `Recipe.MultiplyGenerations` pays for it |
 | `Runtime/ChainBudget.cs` | The counted-down "how many more generations" value both chaining modifiers ride on |
 | `Runtime/Multicast.cs` | `OnSpawn`: total instances is `n`; extras use an explicit sibling Recipe and only multicast again if `Recipe.MulticastGenerations` pays for it |
-| `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math |
+| `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math; its half-angle is serialized |
+| `Runtime/GridMulticastPattern.cs` | Multicast pattern from a designer grid: copy of a `GridMultiplyPattern` + Spread degrees. Slot `i` aims at cell `i + 1`; slots past the cells go straight |
 | `Runtime/IMultiplyPattern.cs` | Where Multiply child offsets (and grid aim) come from. Plane is perpendicular to travel or the hit normal; local +X right, +Y up. `GetOffset` / `GetDirection` / `ResolveCount` (ADR-038) |
 | `Runtime/SquarePattern.cs` | Dice pips through 9, then odd-sized grids. Default Multiply pattern. Place-only; Spread is meters |
 | `Runtime/CirclePattern.cs` | Triangle, then center + ring, then inner hexagon and outer rings |

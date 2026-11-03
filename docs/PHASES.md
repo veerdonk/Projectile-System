@@ -1014,6 +1014,26 @@ Change request from the WizardGame board: the game needs a critical chance above
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 45 — Multicast patterns from the pattern designer
+
+Change request veerdonk/Projectile-System#78 from the game board (veerdonk/UntitledTowerGame#506, for the effect items card #509). Runs before phase 34. ADR-050. One version.
+
+**In scope**
+
+- `Multicast.pattern` serialized as `[SerializeReference] IMulticastPattern` with a `Pattern` setter; null or missing is `RandomConePattern(15)`
+- `RandomConePattern` serializable, with a serialized half-angle and a parameterless 15° constructor
+- `GridMulticastPattern`: copy of a `GridMultiplyPattern` plus `Spread` degrees. Slot `i` aims at cell `i + 1`; slots past the numbered cells fly straight; `Spread <= 0` is parallel. `Clone`, `HasSameLayout` (ignores Spread)
+- `RecipeAsset.ToRecipe` and `ModifierKit.ApplyTo` copy the Multicast pattern
+- Recipe and Modifier Kit inspectors: Multicast Pattern dropdown (Random Cone, then each `MultiplyPatternAsset`), with the half-angle or Spread field under it
+- Edit Mode tests (`MulticastPatternTests`): three-cell grid aims all three shots, the original included; shots past the cells fly straight; Spread 0 is parallel; no pattern keeps the 15° cone (also after a null serialized value); JSON round trip keeps an authored grid and a 40° cone; `ToRecipe` and kits copy without aliasing; an authored 40° cone is used and 0° is straight; dropdown option order, matching, copy, and Spread kept on a grid swap. Existing tests stay green
+- Docs: ADR-050, glossary line and scenario in [REQUIREMENTS.md](REQUIREMENTS.md), API sketch and public API line in [ARCHITECTURE.md](ARCHITECTURE.md), [ECS.md](ECS.md) row, package `Documentation/index.md`. `CHANGELOG` **0.2.11**. Bump `package.json` to **0.2.11**. No git tag in the phase session
+
+**Out of scope:** shots spaced over time; offsetting Multicast spawn positions by the grid; `Spread(n)` scaling a Multicast grid; Multiply's pattern; the game's effect items and stacking (#509, REQ-024 there); yard sample changes; Unity Physics; Entities Graphics
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

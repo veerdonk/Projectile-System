@@ -157,6 +157,107 @@ namespace Veerdonk.ProjectileSystem
                 : Activator.CreateInstance(option.Type);
         }
 
+        /// <summary>Shipped procedural <see cref="IMulticastPattern"/> implementations. <see cref="GridMulticastPattern"/> is omitted; assets supply that.</summary>
+        public static Type[] MulticastPatterns()
+        {
+            Type[] all = ConcreteImplementations<IMulticastPattern>();
+            var result = new List<Type>(all.Length);
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] == typeof(GridMulticastPattern))
+                    continue;
+                result.Add(all[i]);
+            }
+
+            return result.ToArray();
+        }
+
+        /// <summary><see cref="MulticastPatterns"/>, then every <see cref="MultiplyPatternAsset"/> in the project, by name.</summary>
+        public static PatternOption[] MulticastPatternOptions()
+        {
+            Type[] types = MulticastPatterns();
+            MultiplyPatternAsset[] assets = FindPatternAssets();
+            var options = new PatternOption[types.Length + assets.Length];
+            for (int i = 0; i < types.Length; i++)
+                options[i] = new PatternOption(types[i], null);
+            for (int i = 0; i < assets.Length; i++)
+                options[types.Length + i] = new PatternOption(null, assets[i]);
+            return options;
+        }
+
+        /// <summary>
+        /// Index into <see cref="MulticastPatternOptions"/>. A grid whose layout matches an asset selects that asset.
+        /// An unmatched grid returns -1. Null and unknown values are <see cref="RandomConePattern"/>.
+        /// </summary>
+        public static int MulticastPatternOptionIndex(object currentValue)
+        {
+            return MulticastPatternOptionIndex(MulticastPatternOptions(), currentValue);
+        }
+
+        static int MulticastPatternOptionIndex(PatternOption[] options, object currentValue)
+        {
+            int cone = 0;
+            for (int i = 0; i < options.Length; i++)
+            {
+                if (options[i].Type == typeof(RandomConePattern))
+                {
+                    cone = i;
+                    break;
+                }
+            }
+
+            if (currentValue == null)
+                return cone;
+
+            if (currentValue is GridMulticastPattern grid)
+            {
+                for (int i = 0; i < options.Length; i++)
+                {
+                    MultiplyPatternAsset asset = options[i].Asset;
+                    if (asset != null && asset.ToPattern().HasSameLayout(grid.Grid))
+                        return i;
+                }
+
+                return -1;
+            }
+
+            Type type = currentValue.GetType();
+            for (int i = 0; i < options.Length; i++)
+            {
+                if (options[i].Type == type)
+                    return i;
+            }
+
+            return cone;
+        }
+
+        /// <summary>
+        /// Writes a procedural Multicast pattern, or a <see cref="GridMulticastPattern"/> holding a field copy of a
+        /// <see cref="MultiplyPatternAsset"/>, onto a SerializeReference field. Indexes follow
+        /// <see cref="MulticastPatternOptions"/>. A grid keeps the Spread of the grid it replaces.
+        /// </summary>
+        public static void AssignMulticastPatternOption(SerializedProperty property, int index)
+        {
+            if (property == null)
+                throw new ArgumentNullException(nameof(property));
+
+            PatternOption[] options = MulticastPatternOptions();
+            if (index < 0 || index >= options.Length)
+                throw new ArgumentOutOfRangeException(nameof(index));
+
+            PatternOption option = options[index];
+            if (option.Asset == null)
+            {
+                property.managedReferenceValue = Activator.CreateInstance(option.Type);
+                return;
+            }
+
+            float spread = property.managedReferenceValue is GridMulticastPattern current
+                ? current.Spread
+                : GridMulticastPattern.DefaultSpreadDegrees;
+            property.managedReferenceValue = new GridMulticastPattern(option.Asset.ToPattern(), spread);
+        }
+
         static MultiplyPatternAsset[] FindPatternAssets()
         {
             string[] guids = AssetDatabase.FindAssets("t:MultiplyPatternAsset");
@@ -322,7 +423,7 @@ namespace Veerdonk.ProjectileSystem
                 case ApplyStatus:
                     return 1;
                 case Multicast:
-                    return 2;
+                    return 4;
                 case Multiply:
                     return 4;
                 case AreaEffect:
@@ -385,6 +486,7 @@ namespace Veerdonk.ProjectileSystem
             else if (value is Multicast)
             {
                 DrawProperty(ref line, element, "extraAsset", "Extra Recipe");
+                DrawMulticastPattern(ref line, element.FindPropertyRelative("pattern"));
             }
             else if (value is AreaEffect)
             {
@@ -419,7 +521,8 @@ namespace Veerdonk.ProjectileSystem
             if (property == null)
                 return;
 
-            BuildPatternPopup(property.managedReferenceValue, out string[] labels, out int current, out int optionCount);
+            object value = property.managedReferenceValue;
+            BuildPatternPopup(PatternOptions(), PatternOptionIndex(value), value, out string[] labels, out int current, out int optionCount);
             int next = EditorGUI.Popup(line, "Pattern", current, labels);
             if (next != current && next >= 0 && next < optionCount)
                 AssignPatternOption(property, next);
@@ -431,27 +534,100 @@ namespace Veerdonk.ProjectileSystem
             if (property == null)
                 return;
 
-            BuildPatternPopup(property.managedReferenceValue, out string[] labels, out int current, out int optionCount);
+            object value = property.managedReferenceValue;
+            BuildPatternPopup(PatternOptions(), PatternOptionIndex(value), value, out string[] labels, out int current, out int optionCount);
             int next = EditorGUILayout.Popup("Pattern", current, labels);
             if (next != current && next >= 0 && next < optionCount)
                 AssignPatternOption(property, next);
         }
 
-        static void BuildPatternPopup(object currentValue, out string[] labels, out int current, out int optionCount)
+        static void DrawMulticastPattern(ref Rect line, SerializedProperty property)
         {
-            PatternOption[] options = PatternOptions();
+            if (property == null)
+                return;
+
+            BuildMulticastPatternPopup(property.managedReferenceValue, out string[] labels, out int current, out int optionCount);
+            int next = EditorGUI.Popup(line, "Pattern", current, labels);
+            line.y += Line;
+            if (next != current && next >= 0 && next < optionCount)
+            {
+                AssignMulticastPatternOption(property, next);
+                return;
+            }
+
+            SerializedProperty angle = MulticastPatternAngle(property, out string label);
+            if (angle == null)
+                return;
+            EditorGUI.PropertyField(line, angle, new GUIContent(label));
+            line.y += Line;
+        }
+
+        internal static void DrawMulticastPatternLayout(SerializedProperty property)
+        {
+            if (property == null)
+                return;
+
+            BuildMulticastPatternPopup(property.managedReferenceValue, out string[] labels, out int current, out int optionCount);
+            int next = EditorGUILayout.Popup("Pattern", current, labels);
+            if (next != current && next >= 0 && next < optionCount)
+            {
+                AssignMulticastPatternOption(property, next);
+                return;
+            }
+
+            SerializedProperty angle = MulticastPatternAngle(property, out string label);
+            if (angle != null)
+                EditorGUILayout.PropertyField(angle, new GUIContent(label));
+        }
+
+        static void BuildMulticastPatternPopup(object currentValue, out string[] labels, out int current, out int optionCount)
+        {
+            PatternOption[] options = MulticastPatternOptions();
+            int matched = currentValue == null ? -1 : MulticastPatternOptionIndex(options, currentValue);
+            BuildPatternPopup(options, matched, currentValue, out labels, out current, out optionCount);
+        }
+
+        static SerializedProperty MulticastPatternAngle(SerializedProperty property, out string label)
+        {
+            switch (property.managedReferenceValue)
+            {
+                case RandomConePattern _:
+                    label = "Half Angle (°)";
+                    return property.FindPropertyRelative("halfAngleDegrees");
+                case GridMulticastPattern _:
+                    label = "Spread (°)";
+                    return property.FindPropertyRelative("spread");
+                default:
+                    label = null;
+                    return null;
+            }
+        }
+
+        static void BuildPatternPopup(
+            PatternOption[] options,
+            int matched,
+            object currentValue,
+            out string[] labels,
+            out int current,
+            out int optionCount)
+        {
             optionCount = options.Length;
-            current = PatternOptionIndex(currentValue);
+            current = matched;
             labels = new string[optionCount + (current < 0 ? 1 : 0)];
             for (int i = 0; i < optionCount; i++)
                 labels[i] = options[i].Label;
             if (current >= 0)
                 return;
 
-            string name = currentValue is GridMultiplyPattern grid && !string.IsNullOrEmpty(grid.SourceName)
+            string sourceName = currentValue is GridMultiplyPattern grid
                 ? grid.SourceName
-                : "Grid";
-            labels[optionCount] = name;
+                : currentValue is GridMulticastPattern multicastGrid
+                    ? multicastGrid.SourceName
+                    : null;
+            if (currentValue == null)
+                labels[optionCount] = "Default (Random Cone 15°)";
+            else
+                labels[optionCount] = string.IsNullOrEmpty(sourceName) ? "Grid" : sourceName;
             current = optionCount;
         }
 
