@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-054 — Release a signed tarball; OpenUPM serves it
+
+- **Date:** 2026-11-05
+- **Decision:** `.github/workflows/release-package.yml` signs the package with the Unity UPM CLI (`upm pack`, Unity 6.3+ signing) before it creates the `v{version}` GitHub Release, and attaches the signed `.tgz` to that release. It checks that the tarball holds `package/.attestation.p7m` and the expected name and version. The signing identity is a Unity Cloud service account with the **Package Manager Package Signer** role, given to the workflow as the repo secrets `UPM_SERVICE_ACCOUNT_KEY_ID`, `UPM_SERVICE_ACCOUNT_KEY_SECRET`, and `UPM_ORG_ID`. OpenUPM tracks this package with `trackingMode: githubRelease` and serves the release asset unchanged instead of building from the tag. A manual run with `sign_only` signs and uploads a workflow artifact without tagging. Setup steps: [RELEASING.md](RELEASING.md).
+- **Why:** Since Unity 6.3, Package Manager warns on every unsigned tarball package, and OpenUPM builds from a tag are unsigned. OpenUPM does not sign for authors.
+- **Consequences:** Amends ADR-042: OpenUPM no longer builds from the tag; the repo now holds publish secrets. Without the secrets the workflow still releases, with a warning and no asset, and OpenUPM in `githubRelease` mode does not publish that version. Versions released before the switch stay unsigned. Users outside the signing organization see the softer "signed by an organization you are not a member of" notice. Git URL and copied-folder installs are not tarballs and are not affected. Tag and `package.json` rules from ADR-042 still hold.
+
 ## ADR-053 — Multiply can send children up and give each child its own lock
 
 - **Date:** 2026-11-04

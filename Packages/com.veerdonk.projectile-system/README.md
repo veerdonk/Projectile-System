@@ -38,7 +38,7 @@ Or add the registry and dependency to `Packages/manifest.json` yourself:
 
 With the [openupm-cli](https://openupm.com/docs/getting-started-cli.html): `openupm add com.veerdonk.projectile-system`.
 
-Merges to `main` that introduce a new `package.json` version create tag `v{version}` and a GitHub Release (notes from `CHANGELOG.md` plus merged PRs). OpenUPM builds that tag into a registry version shortly after.
+Merges to `main` that introduce a new `package.json` version create tag `v{version}` and a GitHub Release (notes from `CHANGELOG.md` plus merged PRs). The release carries a Unity-signed tarball, which OpenUPM serves as the registry version shortly after.
 
 **Moving from a Git URL install:** remove the package in Package Manager (or delete its line in `manifest.json`), add the scoped registry, then install from **My Registries**. A Git install does not see registry updates.
 
