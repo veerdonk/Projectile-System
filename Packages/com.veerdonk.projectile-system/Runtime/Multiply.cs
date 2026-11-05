@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 using UnityEngine;
 
@@ -12,6 +13,10 @@ namespace Veerdonk.ProjectileSystem
     /// <see cref="GridMultiplyPattern"/> places with its own Spacing and aims a cone using
     /// <see cref="Spread"/> as degrees. The Spread modifier scales that instance copy, not Spacing.
     /// On OnInterval the period comes from <see cref="Interval"/> on the Recipe's OnSpawn list.
+    /// <see cref="Direction"/> <see cref="MultiplyDirection.Up"/> sends every child along world up instead.
+    /// <see cref="LockRange"/> above 0 spreads spawn homing locks over the nearby candidates: child <c>i</c> locks the
+    /// <c>i mod m</c>-th nearest of the <c>m</c> in range.
+    /// Children spawned by a Target hit start with that target as their Homing fallback.
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnInterval | RecipeStage.OnHit | RecipeStage.OnExpire)]
@@ -23,8 +28,12 @@ namespace Veerdonk.ProjectileSystem
         [SerializeField] RecipeAsset childAsset;
         [SerializeField] float spread;
         [SerializeReference] IMultiplyPattern pattern;
+        [SerializeField] MultiplyDirection direction;
+        [SerializeField, Min(0f)] float lockRange;
 
         Recipe childRecipe;
+
+        static readonly List<LockCandidate> LockCandidates = new List<LockCandidate>();
 
         public Multiply()
         {
@@ -44,6 +53,34 @@ namespace Veerdonk.ProjectileSystem
         {
             this.childAsset = childAsset ?? throw new ArgumentNullException(nameof(childAsset));
             childRecipe = null;
+        }
+
+        /// <summary>Like the four-argument constructor, plus <see cref="Direction"/> and <see cref="LockRange"/>.</summary>
+        public Multiply(
+            int count,
+            Recipe childRecipe,
+            float spread,
+            IMultiplyPattern pattern,
+            MultiplyDirection direction,
+            float lockRange = 0f)
+            : this(count, childRecipe, spread, pattern)
+        {
+            this.direction = direction;
+            this.lockRange = lockRange;
+        }
+
+        /// <summary>Like the four-argument asset constructor, plus <see cref="Direction"/> and <see cref="LockRange"/>.</summary>
+        public Multiply(
+            int count,
+            RecipeAsset childAsset,
+            float spread,
+            IMultiplyPattern pattern,
+            MultiplyDirection direction,
+            float lockRange = 0f)
+            : this(count, childAsset, spread, pattern)
+        {
+            this.direction = direction;
+            this.lockRange = lockRange;
         }
 
         /// <summary>Children to spawn. Positions come from <see cref="Pattern"/>.</summary>
@@ -77,6 +114,27 @@ namespace Veerdonk.ProjectileSystem
             set => pattern = value ?? new SquarePattern();
         }
 
+        /// <summary>
+        /// Which way the children leave. <see cref="MultiplyDirection.Surface"/> (default) is the hit normal, travel past a
+        /// pierced body, or travel without a hit. <see cref="MultiplyDirection.Up"/> is world up in every case.
+        /// </summary>
+        public MultiplyDirection Direction
+        {
+            get => direction;
+            set => direction = value;
+        }
+
+        /// <summary>
+        /// Meters around the split origin (hit point, pierce exit, or position) whose candidates the children's spawn homing
+        /// locks are spread over: child <c>i</c> locks the <c>i mod m</c>-th nearest of the <c>m</c> in range, and the parent's
+        /// hit target only when it is the only one. 0 (default) assigns nothing.
+        /// </summary>
+        public float LockRange
+        {
+            get => lockRange;
+            set => lockRange = value;
+        }
+
         void IDeserializationCallback.OnDeserialization(object sender)
         {
             if (pattern == null)
@@ -102,6 +160,7 @@ namespace Veerdonk.ProjectileSystem
 
             Vector3 origin;
             Vector3 forward;
+            bool onSurface = false;
             if (context.HasHit && ContinuesPastTarget(context))
             {
                 forward = ContactTravel(context);
@@ -111,6 +170,7 @@ namespace Veerdonk.ProjectileSystem
             {
                 origin = context.Hit.Point;
                 forward = context.Hit.Normal;
+                onSurface = true;
             }
             else
             {
@@ -118,14 +178,122 @@ namespace Veerdonk.ProjectileSystem
                 forward = context.Velocity;
             }
 
+            Vector3 layoutForward = forward;
+            Quaternion turn = Quaternion.identity;
+            bool flattenIntoSurface = false;
+            if (Direction == MultiplyDirection.Up)
+            {
+                layoutForward = Vector3.up;
+                turn = TurnTowardTravel(context.HasHit ? context.ContactVelocity : context.Velocity, context.Velocity);
+                flattenIntoSurface = onSurface && forward.sqrMagnitude > 1e-12f;
+            }
+
+            Vector3 normal = flattenIntoSurface ? forward.normalized : Vector3.zero;
+
+            HomingTarget hitTarget = context.HasHit && context.Hit.Kind == HitKind.Target
+                ? HomingTarget.Assigned(context.Hit.TargetId)
+                : default;
+            int locks = GatherLocks(context, origin, hitTarget);
+
             for (int i = 0; i < n; i++)
             {
-                Vector3 spawnPosition = origin + layout.GetOffset(context, forward, context.Spread, i, n);
+                Vector3 offset = turn * layout.GetOffset(context, layoutForward, context.Spread, i, n);
+                if (flattenIntoSurface)
+                {
+                    float into = Vector3.Dot(offset, normal);
+                    if (into < 0f)
+                        offset -= normal * into;
+                }
+
+                Vector3 spawnPosition = origin + offset;
                 if (context.HasHit)
                     spawnPosition = OffsetOffSurface(spawnPosition, forward, ChildRecipe.Radius);
-                Vector3 direction = layout.GetDirection(context, forward, context.Spread, i, n);
-                context.RequestMultiplyChild(ChildRecipe, spawnPosition, direction);
+                Vector3 childDirection = turn * layout.GetDirection(context, layoutForward, context.Spread, i, n);
+                HomingTarget childLock = locks > 0 ? HomingTarget.Assigned(LockCandidates[i % locks].Id) : default;
+                context.RequestMultiplyChild(ChildRecipe, spawnPosition, childDirection, childLock, hitTarget);
             }
+
+            LockCandidates.Clear();
+        }
+
+        static Quaternion TurnTowardTravel(Vector3 travel, Vector3 otherwise)
+        {
+            if (travel.sqrMagnitude <= 1e-12f)
+                travel = otherwise;
+            var flat = new Vector3(travel.x, 0f, travel.z);
+            if (flat.sqrMagnitude <= 1e-8f)
+                return Quaternion.identity;
+            return Quaternion.LookRotation(flat, Vector3.up);
+        }
+
+        int GatherLocks(ModifierContext context, Vector3 origin, HomingTarget hitTarget)
+        {
+            LockCandidates.Clear();
+            if (!(LockRange > 0f))
+                return 0;
+
+            float maxSqr = LockRange * LockRange;
+            bool hitTargetInRange = false;
+            HitTargetCatalog hitTargets = context.HitTargets;
+            if (hitTargets != null)
+            {
+                int hitCount = hitTargets.Count;
+                for (int i = 0; i < hitCount; i++)
+                {
+                    if (hitTargets.TryGet(i, out TargetId id, out Vector3 position))
+                        ConsiderLock(context, id, position, origin, maxSqr, hitTarget, ref hitTargetInRange);
+                }
+            }
+
+            HomingCatalog catalog = context.HomingCatalog;
+            int count = catalog.Count;
+            for (int i = 0; i < count; i++)
+            {
+                if (!catalog.TryGet(i, out TargetId id, out Vector3 position))
+                    continue;
+                if (hitTargets != null && hitTargets.Contains(id))
+                    continue;
+                ConsiderLock(context, id, position, origin, maxSqr, hitTarget, ref hitTargetInRange);
+            }
+
+            if (LockCandidates.Count == 0 && hitTargetInRange)
+                LockCandidates.Add(new LockCandidate { Id = hitTarget.Id });
+
+            return LockCandidates.Count;
+        }
+
+        static void ConsiderLock(
+            ModifierContext context,
+            TargetId id,
+            Vector3 position,
+            Vector3 origin,
+            float maxSqr,
+            HomingTarget hitTarget,
+            ref bool hitTargetInRange)
+        {
+            if (context.ShooterTarget.IsAssigned && id.Equals(context.ShooterTarget.Id))
+                return;
+
+            float sqrDistance = (position - origin).sqrMagnitude;
+            if (sqrDistance > maxSqr)
+                return;
+
+            if (hitTarget.IsAssigned && id.Equals(hitTarget.Id))
+            {
+                hitTargetInRange = true;
+                return;
+            }
+
+            int at = LockCandidates.Count;
+            while (at > 0 && LockCandidates[at - 1].SqrDistance > sqrDistance)
+                at--;
+            LockCandidates.Insert(at, new LockCandidate { Id = id, SqrDistance = sqrDistance });
+        }
+
+        struct LockCandidate
+        {
+            public TargetId Id;
+            public float SqrDistance;
         }
 
         static bool ContinuesPastTarget(ModifierContext context)

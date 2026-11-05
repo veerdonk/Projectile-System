@@ -1161,6 +1161,7 @@ namespace Veerdonk.ProjectileSystem
                 MultiplyGenerationsLeft = projectile.MultiplyGenerationsLeft,
                 HomingTarget = homing,
                 HomingIgnoredTarget = ignored,
+                HomingIgnoredPassed = projectile.HomingHasIgnoredTarget && projectile.HomingIgnoredPassed,
                 HomingAcquirePointSet = projectile.HomingAcquirePointSet,
                 HomingAcquirePoint = ToVector3(projectile.HomingAcquirePoint),
                 HomingAimPointUsed = projectile.HomingAimPointUsed

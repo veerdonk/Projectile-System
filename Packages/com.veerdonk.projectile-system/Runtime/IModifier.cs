@@ -144,8 +144,17 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Lock for this instance. Homing writes here after a successful acquire.</summary>
         public HomingTarget HomingTarget { get; set; }
 
-        /// <summary>Last Target hit. Acquisition skips it while it stays in front of travel.</summary>
+        /// <summary>
+        /// Last Target hit while it stays in front of travel. Acquisition skips it. Once it is behind travel Homing
+        /// moves it to the instance's fallback and this is unassigned.
+        /// </summary>
         public HomingTarget HomingIgnoredTarget { get; set; }
+
+        /// <summary>Last Target hit after it went behind travel. The default acquisition locks it only when it is the only candidate in the cone.</summary>
+        internal HomingTarget HomingFallbackTarget { get; set; }
+
+        /// <summary>Cone half-angle of the Homing modifier now acquiring. Set by <see cref="Homing"/> before it calls its acquisition.</summary>
+        internal float HomingAcquireHalfAngleDegrees { get; set; } = Homing.DefaultAcquireHalfAngleDegrees;
 
         /// <summary>The spawn's <see cref="SpawnRequest.IgnoreTarget"/>, when set. Acquisition never locks it.</summary>
         public HomingTarget ShooterTarget { get; internal set; }
@@ -290,9 +299,19 @@ namespace Veerdonk.ProjectileSystem
             Enqueue(recipe, position, direction, ChainBudget.Inherit(MulticastGenerationsForExtras), default, SpawnCause.Multicast, copyAimPoint: true);
         }
 
-        internal void RequestMultiplyChild(Recipe recipe, Vector3 position, Vector3 direction)
+        internal void RequestMultiplyChild(
+            Recipe recipe,
+            Vector3 position,
+            Vector3 direction,
+            HomingTarget homingTarget = default,
+            HomingTarget homingFallback = default)
         {
             Enqueue(recipe, position, direction, default, ChainBudget.Inherit(MultiplyGenerationsLeft - 1), SpawnCause.Multiply);
+            SpawnRequest request = pendingSpawns[pendingSpawns.Count - 1];
+            request.HomingTarget = homingTarget;
+            request.HomingFallbackSet = homingFallback.IsAssigned;
+            request.HomingFallback = homingFallback.Id;
+            pendingSpawns[pendingSpawns.Count - 1] = request;
         }
 
         void Enqueue(
@@ -363,7 +382,9 @@ namespace Veerdonk.ProjectileSystem
             suppressDirectStatus = false;
             DeltaTime = deltaTime;
             HomingTarget = state.HomingTarget;
-            HomingIgnoredTarget = state.HomingIgnoredTarget;
+            HomingIgnoredTarget = state.HomingIgnoredPassed ? default : state.HomingIgnoredTarget;
+            HomingFallbackTarget = state.HomingIgnoredPassed ? state.HomingIgnoredTarget : default;
+            HomingAcquireHalfAngleDegrees = Homing.DefaultAcquireHalfAngleDegrees;
             ShooterTarget = HitTargets != null && HitTargets.TryGetShooter(state.InstanceId, out TargetId shooter)
                 ? HomingTarget.Assigned(shooter)
                 : default;
@@ -388,8 +409,18 @@ namespace Veerdonk.ProjectileSystem
             projectile.IntervalSeconds = IntervalSeconds;
             projectile.HomingHasTarget = HomingTarget.IsAssigned;
             projectile.HomingTargetId = HomingTarget.Id;
-            projectile.HomingHasIgnoredTarget = HomingIgnoredTarget.IsAssigned;
-            projectile.HomingIgnoredTargetId = HomingIgnoredTarget.Id;
+            if (HomingIgnoredTarget.IsAssigned)
+            {
+                projectile.HomingHasIgnoredTarget = true;
+                projectile.HomingIgnoredTargetId = HomingIgnoredTarget.Id;
+                projectile.HomingIgnoredPassed = false;
+            }
+            else
+            {
+                projectile.HomingHasIgnoredTarget = HomingFallbackTarget.IsAssigned;
+                projectile.HomingIgnoredTargetId = HomingFallbackTarget.Id;
+                projectile.HomingIgnoredPassed = HomingFallbackTarget.IsAssigned;
+            }
             projectile.HomingAcquirePointSet = HomingAcquirePointSet;
             projectile.HomingAcquirePoint = new Unity.Mathematics.float3(
                 HomingAcquirePoint.x,
@@ -481,6 +512,7 @@ namespace Veerdonk.ProjectileSystem
         public int MultiplyGenerationsLeft;
         public HomingTarget HomingTarget;
         public HomingTarget HomingIgnoredTarget;
+        public bool HomingIgnoredPassed;
         public bool HomingAcquirePointSet;
         public Vector3 HomingAcquirePoint;
         public bool HomingAimPointUsed;

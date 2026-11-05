@@ -419,13 +419,14 @@ namespace Veerdonk.ProjectileSystem
                 case EffectRadius:
                 case Size:
                 case Gravity:
-                case Homing:
                 case ApplyStatus:
                     return 1;
+                case Homing:
+                    return 2;
                 case Multicast:
                     return 4;
                 case Multiply:
-                    return 4;
+                    return 6;
                 case AreaEffect:
                     return 4;
                 case GroundField:
@@ -471,6 +472,7 @@ namespace Veerdonk.ProjectileSystem
                     break;
                 case Homing:
                     DrawProperty(ref line, element, "turnRateDegreesPerSecond", "Turn Rate (°/s)");
+                    DrawProperty(ref line, element, "acquireHalfAngleDegrees", "Acquire Half-Angle (°)");
                     break;
                 case ApplyStatus:
                     DrawStatus(ref line, element.FindPropertyRelative("effect"));
@@ -482,6 +484,8 @@ namespace Veerdonk.ProjectileSystem
                 DrawProperty(ref line, element, "spread");
                 DrawProperty(ref line, element, "childAsset", "Child Recipe");
                 DrawPattern(ref line, element.FindPropertyRelative("pattern"));
+                DrawProperty(ref line, element, "direction");
+                DrawProperty(ref line, element, "lockRange", "Lock Range (m)");
             }
             else if (value is Multicast)
             {

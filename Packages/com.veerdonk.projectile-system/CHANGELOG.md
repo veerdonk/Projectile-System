@@ -5,6 +5,20 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.12] - Unreleased
+
+### Added
+
+- `Homing.AcquireHalfAngleDegrees` (serialized, default 90, clamped to 0..180) and the constructor `Homing(turnRate, acquireHalfAngleDegrees, acquisition = null)`. The default acquisition takes the nearest candidate less than that angle off travel: 90 is the old in-front rule, 180 takes every direction. It applies to every self-acquire and re-acquire, not to the aim-point first lock or a kept lock. The Recipe inspector shows it; `RecipeAsset.ToRecipe` and kits copy it.
+- `MultiplyDirection { Surface, Up }` and `Multiply.Direction` (serialized, default `Surface`). `Up` sends every child along world up on a hit, past a pierced target, on OnExpire, and on OnInterval; the pattern lies in the horizontal plane with its top row along the parent's horizontal travel. The off-surface push on a hit stays along the hit normal, and on a hit that is not pierced an offset that would point into the surface is flattened onto the hit plane.
+- `Multiply.LockRange` (serialized, meters, default 0 = off). Above 0 each child gets a spawn homing lock (`HomingLocked` with `Kind = Assigned`) spread over the candidates within that range of the split: child `i` locks the `i mod m`-th nearest; the parent's hit target only when it is the only one.
+- New constructor overloads `Multiply(count, child, spread, pattern, direction, lockRange = 0)` for a Recipe or RecipeAsset child. The Recipe inspector shows Direction and Lock Range.
+
+### Changed
+
+- After a Target hit, Homing no longer forgets that target once it is behind travel: it stays a fallback, skipped while any other candidate is in the acquire cone and locked only when it is the only one. At the default 90° a target behind travel is outside the cone, so this only matters when the shot curves round to face it again with another candidate in the cone.
+- Multiply children spawned by a Target hit start with that target as their Homing fallback.
+
 ## [0.2.11] - 2026-11-02
 
 ### Added

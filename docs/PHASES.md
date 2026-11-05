@@ -1052,6 +1052,43 @@ Change request veerdonk/Projectile-System#79 from the game board (veerdonk/Untit
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 47 — Homing acquire cone and fallback re-lock
+
+Change request veerdonk/Projectile-System#83 from the game board (veerdonk/UntitledTowerGame#561). Runs before phase 34. ADR-052. Ships in **0.2.12** with phase 48.
+
+**In scope**
+
+- `Homing.acquireHalfAngleDegrees`: serialized (default 90), constructor overload `Homing(turnRate, acquireHalfAngleDegrees, acquisition = null)`, property `AcquireHalfAngleDegrees`, clamped to 0..180 when set. Recipe inspector draws it under the turn rate; the Modifier Kit inspector shows it with the other fields. `RecipeAsset` clone (`case Homing homing`) copies it
+- `ClosestInTravelDirectionAcquisition` takes a candidate when the angle between travel and the offset to it is less than the half-angle: 90 is exactly today's `dot > 0`, 180 takes every candidate, 0 takes none. Nearest still wins. It reads the half-angle of the `Homing` that calls it, so the cone covers every self-acquire through `Acquisition` (no spawn lock, no aim point, every re-acquire) on Straight, Arc, Hitscan, and Beam. `ClosestToPointAcquisition` (first lock with an aim point) and a kept lock are unchanged
+- Fallback: a Target hit still ignores that target fully while it is ahead of travel. Once it is behind, it becomes the instance's fallback for the rest of its life instead of being cleared: the default acquisition skips it while any other candidate is in the cone and locks it only when it is the only one. A later Target hit replaces it. A Beam clears it at the start of every pulse, as it clears the ignored target today
+- Multiply children spawned by a Target hit start with that target as their fallback
+- Edit Mode tests (`HomingAcquireConeTests`): half-angle 180 locks the only Target behind travel and turns back, 90 does not lock it; a Target 60° off travel locks at 90 and not at 45; `RecipeAsset.ToRecipe` keeps the half-angle (and a missing serialized value is 90); after a Target hit at 180 a second Target in the cone is locked, and with no second Target the first is locked again once behind; a Multiply child at 180 locks another Target before its parent's hit Target, and the parent's only when no other is in the cone. Existing tests stay green
+- Docs: ADR-052, [REQUIREMENTS.md](REQUIREMENTS.md) Homing line, [ARCHITECTURE.md](ARCHITECTURE.md) public API line, [ECS.md](ECS.md) row, package `Documentation/index.md`. `CHANGELOG` **0.2.12** (Unreleased). No version bump and no git tag in the phase session
+
+**Out of scope:** a cone on `ClosestToPointAcquisition` or on a kept lock; the cone and fallback on a custom `IHomingAcquisition` (it sees the fallback as an ordinary candidate, as it saw a passed target before); a list of ignored targets; the Beam set lock (`AimBeam` with a target); events; yard sample changes
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Multiply direction and one lock per child is **phase 48**.
+
+## Phase 48 — Multiply child direction and one lock per child
+
+Change request veerdonk/Projectile-System#84 from the game board (veerdonk/UntitledTowerGame#561). Runs before phase 34. ADR-053. Same version as phase 47.
+
+**In scope**
+
+- `MultiplyDirection { Surface, Up }` and serialized `Multiply.direction` (default `Surface`, today's rule) with a property and a constructor overload `Multiply(count, child, spread, pattern, direction, lockRange = 0)`. `Up` sends every child along world up on a hit, past a pierced target, on OnExpire, and on OnInterval. The pattern is laid out around world up: its offsets come from the pattern with forward = up, then turn about up so the pattern's top row points along the parent's travel projected on the ground (contact travel on a hit). With no horizontal travel the pattern's world-fixed basis stays (top row +Z). The off-surface offset on a hit stays along today's direction (the hit normal, or travel past a pierced target); on a hit that is not pierced, an offset pointing into the surface is first flattened onto the hit plane, so no child starts behind it
+- Serialized `Multiply.lockRange` (meters, default 0 = off) with a property. Above 0, each child gets a spawn lock (`SpawnRequest.HomingTarget`, `HomingLocked` Kind `Assigned`): candidates from both catalogs (hit-target position wins, shooter skipped) within `lockRange` of the split origin (hit point, pierce exit, or position), nearest first, ties in catalog order; child `i` takes candidate `i mod m`. The parent's hit target is left out unless it is the only candidate. No candidate leaves the children unlocked
+- Recipe inspector draws Direction and Lock Range under Multiply; the Modifier Kit inspector shows them with the other fields. `RecipeAsset` and kits copy both
+- Edit Mode tests (`MultiplyDirectionLockTests`): `Up` children fly world up on a hit, past a pierced target, and on OnExpire; `Surface` keeps today's directions; `Up` with a grid turns the top row with the parent's horizontal travel and keeps the fixed basis with none; `Up` into a wall (normal against travel) spawns every child on the normal side of the hit plane; `lockRange` 10 with three Targets and the hit Target locks the three others one each; one other Target and the hit Target lock both children on the other; only the hit Target locks it; a Target beyond `lockRange` is not assigned; `lockRange` 0 assigns nothing; three children over two candidates lock near, far, near; an equal-distance pair across the hit and homing catalogs keeps catalog order; `ToRecipe` copies both fields. Existing tests stay green
+- Docs: ADR-053, [REQUIREMENTS.md](REQUIREMENTS.md) Multiply line, [ARCHITECTURE.md](ARCHITECTURE.md) Multiply spread paragraph and public API line, [ECS.md](ECS.md) row, package `Documentation/index.md`. `CHANGELOG` **0.2.12** (Unreleased)
+
+**Out of scope:** directions other than Surface and Up; a lock range on Multicast; spreading locks by angle or HP; changing patterns' layouts under `Surface`; the game's multiply item (#561); yard sample changes
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

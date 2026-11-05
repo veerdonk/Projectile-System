@@ -110,12 +110,16 @@ namespace Veerdonk.ProjectileSystem
         /// a Target hit, except the first lock when <see cref="SpawnRequest.HomingAcquirePointSet"/> is true
         /// (that pick is <see cref="ClosestToPointAcquisition"/>). Skip <see cref="ModifierContext.HomingIgnoredTarget"/>
         /// while it is set, and always skip <see cref="ModifierContext.ShooterTarget"/> (Homing drops a pick of it).
+        /// The cone (<see cref="Homing.AcquireHalfAngleDegrees"/>) and the last hit target's fallback rule are applied by
+        /// <see cref="ClosestInTravelDirectionAcquisition"/>; a custom acquisition sees a passed hit target as an ordinary candidate.
         /// </summary>
         bool TryAcquire(ModifierContext context, out HomingTarget target);
     }
 
     /// <summary>
-    /// Locks the nearest registered candidate whose offset from the instance has a positive dot with travel.
+    /// Locks the nearest registered candidate whose offset from the instance is less than the calling
+    /// <see cref="Homing.AcquireHalfAngleDegrees"/> off travel (90: a positive dot with travel; 180: every candidate).
+    /// The instance's last hit target, once it is behind travel, is locked only when it is the only candidate in that cone.
     /// Later strategies (player view, random) are other <see cref="IHomingAcquisition"/> implementations.
     /// </summary>
     public sealed class ClosestInTravelDirectionAcquisition : IHomingAcquisition
@@ -136,7 +140,9 @@ namespace Veerdonk.ProjectileSystem
                 return false;
             }
 
+            var cone = new Cone(context.HomingAcquireHalfAngleDegrees, travel);
             var best = new Candidate();
+            bool fallbackInCone = false;
             HitTargetCatalog hitTargets = context.HitTargets;
             if (hitTargets != null)
             {
@@ -145,7 +151,7 @@ namespace Veerdonk.ProjectileSystem
                 {
                     if (!hitTargets.TryGet(i, out TargetId id, out Vector3 position))
                         continue;
-                    Consider(context, id, position, travel, ref best);
+                    Consider(context, id, position, cone, ref best, ref fallbackInCone);
                 }
             }
 
@@ -157,28 +163,32 @@ namespace Veerdonk.ProjectileSystem
                     continue;
                 if (hitTargets != null && hitTargets.Contains(id))
                     continue;
-                Consider(context, id, position, travel, ref best);
+                Consider(context, id, position, cone, ref best, ref fallbackInCone);
             }
 
-            TargetId bestId = best.Id;
-            bool found = best.Found;
-
-            if (!found)
+            if (best.Found)
             {
-                target = default;
-                return false;
+                target = HomingTarget.Assigned(best.Id);
+                return true;
             }
 
-            target = HomingTarget.Assigned(bestId);
-            return true;
+            if (fallbackInCone)
+            {
+                target = context.HomingFallbackTarget;
+                return true;
+            }
+
+            target = default;
+            return false;
         }
 
         static void Consider(
             ModifierContext context,
             TargetId id,
             Vector3 position,
-            Vector3 travel,
-            ref Candidate best)
+            in Cone cone,
+            ref Candidate best,
+            ref bool fallbackInCone)
         {
             if (context.HomingIgnoredTarget.IsAssigned && id.Equals(context.HomingIgnoredTarget.Id))
                 return;
@@ -186,8 +196,14 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             Vector3 toTarget = position - context.Position;
-            if (Vector3.Dot(toTarget, travel) <= 0f)
+            if (!cone.Contains(toTarget))
                 return;
+
+            if (context.HomingFallbackTarget.IsAssigned && id.Equals(context.HomingFallbackTarget.Id))
+            {
+                fallbackInCone = true;
+                return;
+            }
 
             float sqrDistance = toTarget.sqrMagnitude;
             if (best.Found && sqrDistance >= best.SqrDistance)
@@ -196,6 +212,37 @@ namespace Veerdonk.ProjectileSystem
             best.SqrDistance = sqrDistance;
             best.Id = id;
             best.Found = true;
+        }
+
+        readonly struct Cone
+        {
+            readonly Vector3 travel;
+            readonly float cos;
+            readonly bool all;
+            readonly bool none;
+
+            public Cone(float halfAngleDegrees, Vector3 travel)
+            {
+                this.travel = travel;
+                float half = Mathf.Clamp(halfAngleDegrees, 0f, 180f);
+                all = half >= 180f;
+                none = half <= 0f;
+                // 90° must be exactly dot > 0; Mathf.Cos(PI / 2) is a few 1e-8 off zero.
+                cos = Mathf.Approximately(half, 90f) ? 0f : Mathf.Cos(half * Mathf.Deg2Rad);
+            }
+
+            public bool Contains(Vector3 toTarget)
+            {
+                if (all)
+                    return true;
+                if (none)
+                    return false;
+
+                float dot = Vector3.Dot(toTarget, travel);
+                if (cos == 0f)
+                    return dot > 0f;
+                return dot > cos * toTarget.magnitude * travel.magnitude;
+            }
         }
 
         struct Candidate
