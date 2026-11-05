@@ -12,6 +12,7 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 | `docs/DECISIONS.md` | ADRs |
 | `docs/SANDBOX.md` | Play Mode proofs |
 | `docs/ECS.md` | Hybrid ECS map (what each piece does) |
+| `docs/RELEASING.md` | Signed release workflow and the owner's one-time setup |
 | `docs/MCP.md` | SigMap (signatures) and Unity MCP (Editor): start, recover, how agents should call them |
 | `Packages/com.veerdonk.projectile-system/` | Product runtime/editor/tests, and `Samples~/Yard` |
 | `Assets/` | Host project. The imported yard under `Assets/Samples/` is gitignored |

@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      sign_only:
+        description: "Sign the package and keep it as a workflow artifact; no tag or release"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -11,6 +16,10 @@ permissions:
 concurrency:
   group: release-package
   cancel-in-progress: false
+
+env:
+  PACKAGE_DIR: Packages/com.veerdonk.projectile-system
+  DIST_DIR: ${{ github.workspace }}/dist
 
 jobs:
   release:
@@ -24,7 +33,7 @@ jobs:
       - name: Read package version
         id: pkg
         run: |
-          version=$(jq -r .version Packages/com.veerdonk.projectile-system/package.json)
+          version=$(jq -r .version "$PACKAGE_DIR/package.json")
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.+-].+)?$ ]]; then
             echo "Invalid package.json version: $version"
             exit 1
@@ -36,12 +45,82 @@ jobs:
         id: check
         run: |
           tag="${{ steps.pkg.outputs.tag }}"
-          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null; then
+          if [[ "${{ inputs.sign_only }}" == "true" ]]; then
+            echo "Sign-only run; no release."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          elif git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null; then
             echo "Tag ${tag} already exists; skipping release."
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Check signing secrets
+        id: signing
+        if: steps.check.outputs.exists == 'false' || inputs.sign_only
+        env:
+          UPM_SERVICE_ACCOUNT_KEY_ID: ${{ secrets.UPM_SERVICE_ACCOUNT_KEY_ID }}
+          UPM_SERVICE_ACCOUNT_KEY_SECRET: ${{ secrets.UPM_SERVICE_ACCOUNT_KEY_SECRET }}
+          UPM_ORG_ID: ${{ secrets.UPM_ORG_ID }}
+        run: |
+          if [[ -n "$UPM_SERVICE_ACCOUNT_KEY_ID" && -n "$UPM_SERVICE_ACCOUNT_KEY_SECRET" && -n "$UPM_ORG_ID" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ inputs.sign_only }}" == "true" ]]; then
+            echo "::error::UPM_SERVICE_ACCOUNT_KEY_ID, UPM_SERVICE_ACCOUNT_KEY_SECRET and UPM_ORG_ID must all be set to sign."
+            exit 1
+          else
+            echo "::warning::Signing secrets are not set; releasing without a signed tarball. OpenUPM in githubRelease mode will not publish this version."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Unity UPM CLI
+        if: steps.signing.outputs.enabled == 'true'
+        run: |
+          curl -fsSL https://cdn.packages.unity.com/upm-cli/install.sh -o "$RUNNER_TEMP/upm-install.sh"
+          bash "$RUNNER_TEMP/upm-install.sh"
+          echo "$HOME/.upm/bin" >> "$GITHUB_PATH"
+
+      - name: Sign package
+        id: sign
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          UPM_SERVICE_ACCOUNT_KEY_ID: ${{ secrets.UPM_SERVICE_ACCOUNT_KEY_ID }}
+          UPM_SERVICE_ACCOUNT_KEY_SECRET: ${{ secrets.UPM_SERVICE_ACCOUNT_KEY_SECRET }}
+          UPM_ORG_ID: ${{ secrets.UPM_ORG_ID }}
+        run: |
+          upm --version
+          mkdir -p "$DIST_DIR"
+          upm pack "$PACKAGE_DIR" --organization-id "$UPM_ORG_ID" --destination "$DIST_DIR"
+
+          shopt -s nullglob
+          archives=("$DIST_DIR"/*.tgz "$DIST_DIR"/*.tar.gz)
+          if [[ "${#archives[@]}" -ne 1 ]]; then
+            echo "::error::Expected one signed archive in $DIST_DIR, found ${#archives[@]}."
+            exit 1
+          fi
+          archive="${archives[0]}"
+
+          entries=$(tar -tzf "$archive")
+          grep -qx 'package/package.json' <<< "$entries" || { echo "::error::Archive has no package/package.json."; exit 1; }
+          grep -qx 'package/.attestation.p7m' <<< "$entries" || { echo "::error::Archive has no signature (package/.attestation.p7m)."; exit 1; }
+
+          packed=$(tar -xOzf "$archive" package/package.json | jq -r '.name + "@" + .version')
+          expected="$(jq -r .name "$PACKAGE_DIR/package.json")@${{ steps.pkg.outputs.version }}"
+          if [[ "$packed" != "$expected" ]]; then
+            echo "::error::Signed archive is $packed, expected $expected."
+            exit 1
+          fi
+
+          echo "Signed $(basename "$archive") ($packed)"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+
+      - name: Upload signed archive (sign-only run)
+        if: inputs.sign_only
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-package
+          path: ${{ steps.sign.outputs.archive }}
+          if-no-files-found: error
 
       - name: Create GitHub Release
         if: steps.check.outputs.exists == 'false'
@@ -50,7 +129,8 @@ jobs:
         run: |
           tag="${{ steps.pkg.outputs.tag }}"
           version="${{ steps.pkg.outputs.version }}"
-          changelog=Packages/com.veerdonk.projectile-system/CHANGELOG.md
+          archive="${{ steps.sign.outputs.archive }}"
+          changelog="$PACKAGE_DIR/CHANGELOG.md"
           notes=$(mktemp)
           if [[ -f "$changelog" ]]; then
             awk -v ver="$version" '
@@ -60,7 +140,11 @@ jobs:
             ' "$changelog" > "$notes"
           fi
           previous=$(git tag -l 'v*' --sort=-v:refname | awk -v t="$tag" '$0 != t { print; exit }')
-          args=(release create "$tag" --title "$tag" --target "${{ github.sha }}" --generate-notes)
+          args=(release create "$tag")
+          if [[ -n "$archive" ]]; then
+            args+=("$archive")
+          fi
+          args+=(--title "$tag" --target "${{ github.sha }}" --generate-notes)
           if [[ -n "$previous" ]]; then
             args+=(--notes-start-tag "$previous")
           fi
