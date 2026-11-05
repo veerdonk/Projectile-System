@@ -5,7 +5,7 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.12] - Unreleased
+## [0.2.12] - 2026-11-05
 
 ### Added
 
@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - After a Target hit, Homing no longer forgets that target once it is behind travel: it stays a fallback, skipped while any other candidate is in the acquire cone and locked only when it is the only one. At the default 90° a target behind travel is outside the cone, so this only matters when the shot curves round to face it again with another candidate in the cone.
 - Multiply children spawned by a Target hit start with that target as their Homing fallback.
+- Package is now signed
 
 ## [0.2.11] - 2026-11-02
 
