@@ -266,7 +266,7 @@ namespace Veerdonk.ProjectileSystem
                 case Gravity gravity:
                     return new Gravity(gravity.Scale);
                 case Homing homing:
-                    return new Homing(homing.TurnRateDegreesPerSecond);
+                    return new Homing(homing.TurnRateDegreesPerSecond, homing.AcquireHalfAngleDegrees);
                 case ApplyStatus applyStatus:
                     return new ApplyStatus(CloneStatus(applyStatus.Effect) ?? new DummyStatusEffect());
                 case AreaEffect area:
@@ -290,7 +290,9 @@ namespace Veerdonk.ProjectileSystem
                         multiply.Count,
                         ResolveChild(multiply.ChildAsset, multiply.ChildRecipe, visited),
                         multiply.Spread,
-                        ClonePattern(multiply.Pattern));
+                        ClonePattern(multiply.Pattern),
+                        multiply.Direction,
+                        multiply.LockRange);
                 case Multicast multicast:
                     return new Multicast(
                         multicast.Count,

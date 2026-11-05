@@ -764,8 +764,9 @@ namespace Veerdonk.ProjectileSystem
                 MultiplyGenerationsLeft = multiplyLeft,
                 HomingHasTarget = request.HomingTarget.IsAssigned,
                 HomingTargetId = request.HomingTarget.Id,
-                HomingHasIgnoredTarget = false,
-                HomingIgnoredTargetId = default,
+                HomingHasIgnoredTarget = request.HomingFallbackSet,
+                HomingIgnoredTargetId = request.HomingFallbackSet ? request.HomingFallback : default,
+                HomingIgnoredPassed = request.HomingFallbackSet,
                 HomingAcquirePointSet = request.HomingAcquirePointSet,
                 HomingAcquirePoint = request.HomingAcquirePointSet
                     ? new float3(request.HomingAcquirePoint.x, request.HomingAcquirePoint.y, request.HomingAcquirePoint.z)

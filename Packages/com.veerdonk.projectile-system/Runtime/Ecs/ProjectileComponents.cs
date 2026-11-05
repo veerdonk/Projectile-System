@@ -25,6 +25,7 @@ namespace Veerdonk.ProjectileSystem
         public TargetId HomingTargetId;
         public bool HomingHasIgnoredTarget;
         public TargetId HomingIgnoredTargetId;
+        public bool HomingIgnoredPassed;
         public bool HomingAcquirePointSet;
         public float3 HomingAcquirePoint;
         public bool HomingAimPointUsed;

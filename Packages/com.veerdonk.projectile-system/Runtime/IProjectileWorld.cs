@@ -210,6 +210,8 @@ namespace Veerdonk.ProjectileSystem
         internal SpawnCause Cause;
         internal ChainBudget MulticastChain;
         internal ChainBudget MultiplyChain;
+        internal bool HomingFallbackSet;
+        internal TargetId HomingFallback;
     }
 
     /// <summary>Opaque handle for a live instance.</summary>
