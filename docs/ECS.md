@@ -80,7 +80,7 @@ Do not iterate `SystemAPI.Query` while despawning (`Disabled` is a structural ch
 | `Runtime/IMulticastPattern.cs` | Where multicast directions come from. `RandomConePattern` (v1 default) owns the cone math; its half-angle is serialized |
 | `Runtime/MultiplyDirection.cs` | `Surface` (hit normal / travel, default) or `Up` (world up) for `Multiply` children (ADR-053) |
 | `Runtime/GridMulticastPattern.cs` | Multicast pattern from a designer grid: copy of a `GridMultiplyPattern` + Spread degrees. Slot `i` aims at cell `i + 1`; slots past the cells go straight |
-| `Runtime/IMultiplyPattern.cs` | Where Multiply child offsets (and grid aim) come from. Plane is perpendicular to travel or the hit normal; local +X right, +Y up. `GetOffset` / `GetDirection` / `ResolveCount` (ADR-038) |
+| `Runtime/IMultiplyPattern.cs` | Where Multiply child offsets (and grid aim) come from. Plane is perpendicular to travel or the hit normal (horizontal under `MultiplyDirection.Up`, ADR-053); local +X right, +Y up. `GetOffset` / `GetDirection` / `ResolveCount` (ADR-038) |
 | `Runtime/SquarePattern.cs` | Dice pips through 9, then odd-sized grids. Default Multiply pattern. Place-only; Spread is meters |
 | `Runtime/CirclePattern.cs` | Triangle, then center + ring, then inner hexagon and outer rings |
 | `Runtime/RandomCirclePattern.cs` | Uniform disk of radius Spread; uses the world seed; rejects samples closer than the child diameter |

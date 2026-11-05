@@ -14,7 +14,8 @@ namespace Veerdonk.ProjectileSystem
     /// <see cref="Spread"/> as degrees. The Spread modifier scales that instance copy, not Spacing.
     /// On OnInterval the period comes from <see cref="Interval"/> on the Recipe's OnSpawn list.
     /// <see cref="Direction"/> <see cref="MultiplyDirection.Up"/> sends every child along world up instead.
-    /// <see cref="LockRange"/> above 0 gives each child a spawn homing lock on a different nearby candidate.
+    /// <see cref="LockRange"/> above 0 spreads spawn homing locks over the nearby candidates: child <c>i</c> locks the
+    /// <c>i mod m</c>-th nearest of the <c>m</c> in range.
     /// Children spawned by a Target hit start with that target as their Homing fallback.
     /// </summary>
     [Serializable]
@@ -54,6 +55,7 @@ namespace Veerdonk.ProjectileSystem
             childRecipe = null;
         }
 
+        /// <summary>Like the four-argument constructor, plus <see cref="Direction"/> and <see cref="LockRange"/>.</summary>
         public Multiply(
             int count,
             Recipe childRecipe,
@@ -67,6 +69,7 @@ namespace Veerdonk.ProjectileSystem
             this.lockRange = lockRange;
         }
 
+        /// <summary>Like the four-argument asset constructor, plus <see cref="Direction"/> and <see cref="LockRange"/>.</summary>
         public Multiply(
             int count,
             RecipeAsset childAsset,
@@ -122,9 +125,9 @@ namespace Veerdonk.ProjectileSystem
         }
 
         /// <summary>
-        /// Meters around the split origin (hit point, pierce exit, or position) in which each child gets a spawn homing lock.
-        /// Candidates are taken nearest first, child <c>i</c> gets candidate <c>i mod m</c>, and the parent's hit target only
-        /// when it is the only one. 0 (default) assigns nothing.
+        /// Meters around the split origin (hit point, pierce exit, or position) whose candidates the children's spawn homing
+        /// locks are spread over: child <c>i</c> locks the <c>i mod m</c>-th nearest of the <c>m</c> in range, and the parent's
+        /// hit target only when it is the only one. 0 (default) assigns nothing.
         /// </summary>
         public float LockRange
         {
@@ -157,6 +160,7 @@ namespace Veerdonk.ProjectileSystem
 
             Vector3 origin;
             Vector3 forward;
+            bool onSurface = false;
             if (context.HasHit && ContinuesPastTarget(context))
             {
                 forward = ContactTravel(context);
@@ -166,6 +170,7 @@ namespace Veerdonk.ProjectileSystem
             {
                 origin = context.Hit.Point;
                 forward = context.Hit.Normal;
+                onSurface = true;
             }
             else
             {
@@ -175,11 +180,15 @@ namespace Veerdonk.ProjectileSystem
 
             Vector3 layoutForward = forward;
             Quaternion turn = Quaternion.identity;
+            bool flattenIntoSurface = false;
             if (Direction == MultiplyDirection.Up)
             {
                 layoutForward = Vector3.up;
                 turn = TurnTowardTravel(context.HasHit ? context.ContactVelocity : context.Velocity, context.Velocity);
+                flattenIntoSurface = onSurface && forward.sqrMagnitude > 1e-12f;
             }
+
+            Vector3 normal = flattenIntoSurface ? forward.normalized : Vector3.zero;
 
             HomingTarget hitTarget = context.HasHit && context.Hit.Kind == HitKind.Target
                 ? HomingTarget.Assigned(context.Hit.TargetId)
@@ -188,7 +197,15 @@ namespace Veerdonk.ProjectileSystem
 
             for (int i = 0; i < n; i++)
             {
-                Vector3 spawnPosition = origin + turn * layout.GetOffset(context, layoutForward, context.Spread, i, n);
+                Vector3 offset = turn * layout.GetOffset(context, layoutForward, context.Spread, i, n);
+                if (flattenIntoSurface)
+                {
+                    float into = Vector3.Dot(offset, normal);
+                    if (into < 0f)
+                        offset -= normal * into;
+                }
+
+                Vector3 spawnPosition = origin + offset;
                 if (context.HasHit)
                     spawnPosition = OffsetOffSurface(spawnPosition, forward, ChildRecipe.Radius);
                 Vector3 childDirection = turn * layout.GetDirection(context, layoutForward, context.Spread, i, n);

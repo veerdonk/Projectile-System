@@ -302,6 +302,95 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
+        [Test]
+        public void Up_IntoAWall_EveryChildSpawnsOnTheNormalSideOfTheHitPlane()
+        {
+            Recipe child = MakeChild("up-wall-child");
+            var grid = new GridMultiplyPattern();
+            grid.AssignLayout(3, 2f, new[] { 0, 1, 0, 0, 0, 2, 0, 0, 0 });
+            var multiply = new Multiply(2, child, 0f, grid, MultiplyDirection.Up);
+
+            List<Child> children = SplitOnHitAndDispose(child, new IModifier[] { multiply }, Vector3.back);
+
+            Assert.AreEqual(2, children.Count);
+            foreach (Child c in children)
+            {
+                Assert.Greater(Vector3.Dot(c.Position - HitPoint, Vector3.back), 0f, $"child at {c.Position} is behind the wall");
+                AssertDirection(Vector3.up, c.Velocity);
+            }
+
+            Vector3 flattened = SimulationTestHelper.OffSurface(HitPoint, Vector3.back, child.Radius);
+            AssertVector(flattened, Nearest(children, flattened).Position);
+            Vector3 beside = SimulationTestHelper.OffSurface(HitPoint + new Vector3(2f, 0f, 0f), Vector3.back, child.Radius);
+            AssertVector(beside, Nearest(children, beside).Position);
+        }
+
+        [Test]
+        public void LockRange_ThreeChildrenOverTwoCandidates_LockNearFarNearInSpawnOrder()
+        {
+            var near = new TargetId(1);
+            var far = new TargetId(2);
+            AssertLockOrder(
+                3,
+                w =>
+                {
+                    w.SetHomingCandidate(far, HitPoint + new Vector3(0f, 0f, -5f));
+                    w.SetHomingCandidate(near, HitPoint + new Vector3(2f, 0f, 0f));
+                },
+                near,
+                far,
+                near);
+        }
+
+        [Test]
+        public void LockRange_EqualDistancesAcrossCatalogs_KeepCatalogOrder()
+        {
+            var published = new TargetId(1);
+            var pose = new TargetId(2);
+            AssertLockOrder(
+                2,
+                w =>
+                {
+                    w.SetHomingCandidate(pose, HitPoint + new Vector3(-3f, 0f, 0f));
+                    w.SetHitTarget(published, HitPoint + new Vector3(0f, 3f, 0f), 0.5f);
+                },
+                published,
+                pose);
+        }
+
+        static void AssertLockOrder(int count, System.Action<ProjectileWorld> setup, params TargetId[] expected)
+        {
+            Recipe child = MakeChild("lock-order-child");
+            var locks = new List<TargetId>();
+            var spawned = new List<ProjectileId>();
+            List<Child> children = SplitOnHit(
+                child,
+                new IModifier[] { new Multiply(count, child, 0f, null, MultiplyDirection.Surface, 10f) },
+                Vector3.back,
+                out ProjectileWorld world,
+                w =>
+                {
+                    setup(w);
+                    w.Spawned += info =>
+                    {
+                        if (info.Cause == SpawnCause.Multiply)
+                            spawned.Add(info.InstanceId);
+                    };
+                    w.HomingLocked += info => locks.Add(info.TargetId);
+                });
+            using (world)
+            {
+                Assert.AreEqual(count, children.Count);
+                CollectionAssert.AreEqual(expected, locks);
+                Assert.AreEqual(count, spawned.Count);
+                for (int i = 0; i < spawned.Count; i++)
+                {
+                    Assert.IsTrue(world.TryGetHomingTarget(spawned[i], out HomingTarget locked));
+                    Assert.AreEqual(expected[i], locked.Id);
+                }
+            }
+        }
+
         static void AssertEveryChildLocks(TargetId expected, System.Action<ProjectileWorld> setup)
         {
             Recipe child = MakeChild("lock-each-child");

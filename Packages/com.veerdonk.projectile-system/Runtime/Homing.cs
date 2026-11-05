@@ -45,10 +45,14 @@ namespace Veerdonk.ProjectileSystem
             this.acquisition = acquisition ?? new ClosestInTravelDirectionAcquisition();
         }
 
+        /// <summary>
+        /// Homing with an acquire cone. <paramref name="acquireHalfAngleDegrees"/> is clamped to 0..180
+        /// (<see cref="AcquireHalfAngleDegrees"/>). Null <paramref name="acquisition"/> is closest-in-travel-direction.
+        /// </summary>
         public Homing(float turnRateDegreesPerSecond, float acquireHalfAngleDegrees, IHomingAcquisition acquisition = null)
             : this(turnRateDegreesPerSecond, acquisition)
         {
-            this.acquireHalfAngleDegrees = acquireHalfAngleDegrees;
+            AcquireHalfAngleDegrees = acquireHalfAngleDegrees;
         }
 
         /// <summary>
@@ -63,13 +67,14 @@ namespace Veerdonk.ProjectileSystem
 
         /// <summary>
         /// Degrees between travel and the offset to a candidate below which the default acquisition takes it.
-        /// Read clamped to 0..180: 90 (default) takes every candidate in front of travel, 180 every candidate, 0 none.
+        /// Clamped to 0..180 when set: 90 (default) takes every candidate in front of travel, 180 every candidate, 0 none.
+        /// A serialized value outside that range is clamped when the acquisition reads it.
         /// Applies to every lock through <see cref="Acquisition"/>, not to the aim-point first lock or a kept lock.
         /// </summary>
         public float AcquireHalfAngleDegrees
         {
             get => acquireHalfAngleDegrees;
-            set => acquireHalfAngleDegrees = value;
+            set => acquireHalfAngleDegrees = Mathf.Clamp(value, 0f, 180f);
         }
 
         /// <summary>

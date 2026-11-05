@@ -114,7 +114,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         [Test]
-        public void Homing_DefaultHalfAngleIs90_AndTheOverloadSetsIt()
+        public void Homing_DefaultHalfAngleIs90_AndTheOverloadSetsItClamped()
         {
             Assert.AreEqual(90f, new Homing().AcquireHalfAngleDegrees);
             Assert.AreEqual(90f, new Homing(100f).AcquireHalfAngleDegrees);
@@ -122,6 +122,9 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             Assert.AreEqual(100f, homing.TurnRateDegreesPerSecond);
             Assert.AreEqual(180f, homing.AcquireHalfAngleDegrees);
             Assert.IsInstanceOf<ClosestInTravelDirectionAcquisition>(homing.Acquisition);
+            Assert.AreEqual(180f, new Homing(100f, 250f).AcquireHalfAngleDegrees);
+            homing.AcquireHalfAngleDegrees = -5f;
+            Assert.AreEqual(0f, homing.AcquireHalfAngleDegrees);
         }
 
         [Test]
