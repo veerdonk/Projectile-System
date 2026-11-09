@@ -23,6 +23,12 @@ namespace Veerdonk.ProjectileSystem
     /// The move to the offset is not swept, so nothing between the muzzle and a lane is hit, and an instance can start
     /// inside a wall or a target beside the muzzle. Its first cast starts there, and the hit query decides what a body
     /// it starts inside does.
+    /// An <see cref="Delivery.Arc"/> shot with an aim point (<see cref="SpawnRequest.HomingAcquirePointSet"/>) keeps its
+    /// loft and moves, so it lands at the aim point plus its offset. Each Arc extra solves its own loft, with its own
+    /// Recipe's speed and gravity, from its lane to the aim point plus its offset, then turns it by the pattern's deviation
+    /// from the shot's direction; a lane that cannot reach takes the pattern direction around the shot's loft. Homing's
+    /// first lock still reads the original aim point. Patterns without this interface keep solving every Arc extra to the
+    /// aim point itself.
     /// Every <see cref="IMulticastPattern.GetDirection"/> and <see cref="GetOffset"/> call sees the shot's position and
     /// velocity from before Multicast; the original is re-aimed and moved after the last call.
     /// </summary>

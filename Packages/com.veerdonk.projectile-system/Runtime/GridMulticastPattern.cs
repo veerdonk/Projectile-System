@@ -10,7 +10,8 @@ namespace Veerdonk.ProjectileSystem
     /// <see cref="GridMultiplyPattern.Spacing"/> is meters between lanes), and flies toward that cell. Instances past the
     /// numbered cells start at the shot's position and fly along the spawn direction. <see cref="Spread"/> is the cone
     /// half-angle in degrees of the farthest cell in use, as <see cref="GridMultiplyPattern.GetDirection"/> reads it; 0
-    /// gives parallel lanes.
+    /// gives parallel lanes. A column drawn on the right of the grid lands on the right of a shooter looking along the
+    /// shot's direction, and the top row lands above.
     /// </summary>
     [Serializable]
     public sealed class GridMulticastPattern : IMulticastOffsetPattern
@@ -63,7 +64,7 @@ namespace Veerdonk.ProjectileSystem
             int used = layout.ResolveCount(count);
             if (index < 0 || index >= used)
                 return forward;
-            return layout.GetDirection(context, forward, spread, index, used);
+            return MultiplyPatternPlane.MirrorX(forward, layout.GetDirection(context, forward, spread, index, used));
         }
 
         /// <inheritdoc />
@@ -73,7 +74,7 @@ namespace Veerdonk.ProjectileSystem
             int used = layout.ResolveCount(count);
             if (index < 0 || index >= used)
                 return Vector3.zero;
-            return layout.GetOffset(context, forward, spread, index, used);
+            return MultiplyPatternPlane.MirrorX(forward, layout.GetOffset(context, forward, spread, index, used));
         }
 
         /// <summary>Field copy. Not the same instance, and its grid is not shared.</summary>

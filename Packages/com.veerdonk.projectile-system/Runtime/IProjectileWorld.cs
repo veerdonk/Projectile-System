@@ -222,6 +222,9 @@ namespace Veerdonk.ProjectileSystem
         internal ChainBudget MultiplyChain;
         internal bool HomingFallbackSet;
         internal TargetId HomingFallback;
+        internal bool LoftTargetSet;
+        internal Vector3 LoftTarget;
+        internal Quaternion LoftTurn;
     }
 
     /// <summary>Opaque handle for a live instance.</summary>

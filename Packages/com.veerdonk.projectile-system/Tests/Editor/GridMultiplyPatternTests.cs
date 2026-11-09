@@ -92,7 +92,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
 
             List<(Vector3 position, Vector3 velocity)> aimed = FireInterval(3, 20f, Example());
-            (Vector3 position, Vector3 velocity) rightChild = Find(aimed, item => item.position.x < -1f);
+            (Vector3 position, Vector3 velocity) rightChild = Find(aimed, item => item.position.x > 1f);
             (Vector3 position, Vector3 velocity) aboveChild = Find(aimed, item => item.position.y > 1f);
             (Vector3 position, Vector3 velocity) centerChild = Find(
                 aimed,

@@ -11,7 +11,12 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>
         /// World-space offset from the parent or hit point for child <paramref name="index"/> of
         /// <paramref name="count"/>. The plane is perpendicular to <paramref name="forward"/>.
-        /// Local +X is right, +Y is up. Procedural patterns treat <paramref name="spread"/> as meters
+        /// Local +X is right, +Y is up, as seen by the shooter: on the plane's own basis, +X is
+        /// <c>Cross(forward, Vector3.up)</c>, which is the shooter's right when <paramref name="forward"/> is a hit normal facing
+        /// back at them. When <paramref name="forward"/> is the travel direction (OnExpire, OnInterval, past a pierced target),
+        /// <see cref="Multiply"/> mirrors local X of this offset and of <see cref="GetDirection"/> so +X still lands on the
+        /// shooter's right. <see cref="MultiplyDirection.Up"/> turns the plane to travel and is not mirrored.
+        /// Procedural patterns treat <paramref name="spread"/> as meters
         /// (0 is a zero offset). <see cref="GridMultiplyPattern"/> uses its own Spacing and ignores
         /// <paramref name="spread"/> here.
         /// </summary>
@@ -37,19 +42,32 @@ namespace Veerdonk.ProjectileSystem
     {
         internal static Vector3 ToWorld(Vector3 forward, float localX, float localY)
         {
-            if (forward.sqrMagnitude < 1e-12f)
-                forward = Vector3.forward;
-            else
-                forward.Normalize();
-
-            Vector3 right = Vector3.Cross(forward, Vector3.up);
-            if (right.sqrMagnitude < 1e-8f)
-                right = Vector3.right;
-            else
-                right.Normalize();
-
+            forward = Forward(forward);
+            Vector3 right = Right(forward);
             Vector3 up = Vector3.Cross(right, forward);
             return right * localX + up * localY;
+        }
+
+        /// <summary>
+        /// Flips local X of a vector built on the <paramref name="forward"/> plane. Use when <paramref name="forward"/> is the
+        /// way the shooter looks, so local +X lands on the shooter's right; the plane's own +X is the shooter's right only
+        /// when <paramref name="forward"/> faces back at the shooter (a hit normal).
+        /// </summary>
+        internal static Vector3 MirrorX(Vector3 forward, Vector3 value)
+        {
+            Vector3 right = Right(Forward(forward));
+            return value - right * (2f * Vector3.Dot(value, right));
+        }
+
+        static Vector3 Forward(Vector3 forward)
+        {
+            return forward.sqrMagnitude < 1e-12f ? Vector3.forward : forward.normalized;
+        }
+
+        static Vector3 Right(Vector3 forward)
+        {
+            Vector3 right = Vector3.Cross(forward, Vector3.up);
+            return right.sqrMagnitude < 1e-8f ? Vector3.right : right.normalized;
         }
 
         internal static Vector3 FromLocal(Vector3 forward, Vector2 local)

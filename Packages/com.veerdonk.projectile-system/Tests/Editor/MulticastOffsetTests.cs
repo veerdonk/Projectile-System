@@ -224,16 +224,43 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         [Test]
-        public void GridLanes_ForwardZ_LiteralWorldPositions_LeftColumnLandsOnPlusX()
+        public void GridLanes_ForwardZ_LiteralWorldPositions_LeftColumnLandsOnMinusX()
         {
             List<Shot> shots = Fire(3, new GridMulticastPattern(Row(), 0f), Muzzle, Vector3.forward);
 
             Assert.AreEqual(3, shots.Count);
-            AssertPosition(new Vector3(3f, 2f, 3f), Original(shots).Position);
+            AssertPosition(new Vector3(-1f, 2f, 3f), Original(shots).Position);
             List<Vector3> extras = ExtraPositions(shots);
             Assert.AreEqual(2, extras.Count);
             AssertContains(extras, new Vector3(1f, 2f, 3f));
-            AssertContains(extras, new Vector3(-1f, 2f, 3f));
+            AssertContains(extras, new Vector3(3f, 2f, 3f));
+        }
+
+        [Test]
+        public void GridLanes_ForwardZ_TopRowLandsAbove_RightColumnAimsRight()
+        {
+            var grid = new GridMultiplyPattern();
+            grid.AssignLayout(3, Spacing, new[] { 0, 2, 0, 0, 1, 3, 0, 0, 0 });
+            List<Shot> shots = Fire(3, new GridMulticastPattern(grid, 20f), Muzzle, Vector3.forward);
+
+            Assert.AreEqual(3, shots.Count);
+            AssertPosition(Muzzle, Original(shots).Position);
+            Shot top = default;
+            Shot right = default;
+            for (int i = 0; i < shots.Count; i++)
+            {
+                if (shots[i].Position.y > Muzzle.y + 1f)
+                    top = shots[i];
+                if (shots[i].Position.x > Muzzle.x + 1f)
+                    right = shots[i];
+            }
+
+            AssertPosition(new Vector3(1f, 4f, 3f), top.Position);
+            AssertPosition(new Vector3(3f, 2f, 3f), right.Position);
+            Assert.Greater(top.Velocity.y, 0f);
+            Assert.AreEqual(0f, top.Velocity.x, 1e-3f);
+            Assert.Greater(right.Velocity.x, 0f);
+            Assert.AreEqual(0f, right.Velocity.y, 1e-3f);
         }
 
         [Test]
@@ -423,6 +450,189 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
+        [Test]
+        public void Arc_SpreadZero_EveryLaneKeepsTheLoft_AndTheLanesStayOneSpacingApart()
+        {
+            Vector3 loft = Loft(Vector3.zero, ArcAim, 15f);
+            List<Shot> shots = FireArc(new GridMulticastPattern(Row(), 0f), 15f, 15f, out ProjectileWorld world);
+            using (world)
+            {
+                Assert.AreEqual(3, shots.Count);
+                Vector3[] lanes = { Across(loft, -Spacing), Vector3.zero, Across(loft, Spacing) };
+                for (int i = 0; i < lanes.Length; i++)
+                {
+                    Assert.AreEqual(0f, lanes[i].y, 1e-4f);
+                    Shot shot = At(shots, lanes[i]);
+                    Assert.Less(Vector3.Angle(loft, shot.Velocity), 0.05f, $"Lane {i}");
+                }
+
+                world.Tick(0.3f);
+                List<Vector3> after = new List<Vector3>();
+                foreach (var active in SimulationTestHelper.CollectActive(world))
+                    after.Add(active.position);
+                after.Sort((a, b) => a.x.CompareTo(b.x));
+                Assert.AreEqual(3, after.Count);
+                for (int i = 1; i < after.Count; i++)
+                {
+                    Assert.AreEqual(Spacing, after[i].x - after[i - 1].x, 1e-3f);
+                    Assert.AreEqual(after[0].y, after[i].y, 1e-3f);
+                    Assert.AreEqual(after[0].z, after[i].z, 1e-3f);
+                }
+            }
+        }
+
+        [Test]
+        public void Arc_PositiveSpread_TheLanesFanAroundTheLoft()
+        {
+            Vector3 loft = Loft(Vector3.zero, ArcAim, 15f);
+            var pattern = new GridMulticastPattern(Row(), 20f);
+            List<Shot> shots = FireArc(pattern, 15f, 15f, out ProjectileWorld world);
+            using (world)
+            {
+                Assert.AreEqual(3, shots.Count);
+                Vector3[] lanes = { Across(loft, -Spacing), Vector3.zero, Across(loft, Spacing) };
+                for (int i = 0; i < lanes.Length; i++)
+                {
+                    Vector3 expected = pattern.GetDirection(Context(), loft, i, 3);
+                    Assert.Less(Vector3.Angle(expected, At(shots, lanes[i]).Velocity), 0.05f, $"Lane {i}");
+                }
+
+                Assert.Less(At(shots, lanes[0]).Velocity.x, -0.1f);
+                Assert.Greater(At(shots, lanes[2]).Velocity.x, 0.1f);
+                Assert.Less(Vector3.Angle(loft, At(shots, lanes[1]).Velocity), 0.05f);
+            }
+        }
+
+        [Test]
+        public void Arc_UnreachableLane_StillSpawns_AlongTheShotsLoft()
+        {
+            const float slow = 9.9f;
+            Vector3 loft = Loft(Vector3.zero, ArcAim, 15f);
+            Assert.IsFalse(BallisticAim.TrySolve(Vector3.zero, ArcAim, slow, ArcGravity, out _));
+
+            List<Shot> shots = FireArc(new GridMulticastPattern(Row(), 0f), 15f, slow, out ProjectileWorld world);
+            using (world)
+            {
+                Assert.AreEqual(3, shots.Count);
+                for (int i = 0; i < shots.Count; i++)
+                    Assert.Less(Vector3.Angle(loft, shots[i].Velocity), 0.05f);
+                List<Vector3> extras = ExtraPositions(shots);
+                AssertContains(extras, Vector3.zero);
+                AssertContains(extras, Across(loft, Spacing));
+            }
+        }
+
+        [Test]
+        public void Arc_ExtraWithItsOwnSpeed_SolvesToTheAimPointPlusItsOffset()
+        {
+            Vector3 loft = Loft(Vector3.zero, ArcAim, 15f);
+            Vector3 extraLoft = Loft(Vector3.zero, ArcAim, 20f);
+            Assert.Greater(Vector3.Angle(loft, extraLoft), 1f);
+
+            List<Shot> shots = FireArc(new GridMulticastPattern(Row(), 0f), 15f, 20f, out ProjectileWorld world);
+            using (world)
+            {
+                Assert.AreEqual(3, shots.Count);
+                Shot original = Original(shots);
+                AssertPosition(Across(loft, -Spacing), original.Position);
+                Assert.Less(Vector3.Angle(loft, original.Velocity), 0.05f);
+
+                Vector3[] lanes = { Vector3.zero, Across(loft, Spacing) };
+                for (int i = 0; i < lanes.Length; i++)
+                {
+                    Shot extra = At(shots, lanes[i]);
+                    Assert.IsFalse(extra.Original);
+                    Vector3 expected = Loft(lanes[i], ArcAim + lanes[i], 20f);
+                    Assert.Less(Vector3.Angle(expected, extra.Velocity), 0.05f, $"Lane {i + 1}");
+                    Assert.Less(Vector3.Angle(extraLoft, extra.Velocity), 0.05f, $"Lane {i + 1}");
+                    Assert.AreEqual(20f, extra.Velocity.magnitude, 1e-3f);
+                }
+            }
+        }
+
+        [Test]
+        public void Arc_ExtraHomingFirstLock_StillReadsTheOriginalAimPoint()
+        {
+            var atAim = new TargetId(31);
+            var atLane = new TargetId(32);
+            Vector3 loft = Loft(Vector3.zero, ArcAim, 15f);
+            List<Shot> shots = FireArc(
+                new GridMulticastPattern(Row(), 0f),
+                15f,
+                15f,
+                out ProjectileWorld world,
+                ArcAim,
+                new IModifier[] { new Homing(90f) },
+                w =>
+                {
+                    w.SetHomingCandidate(atAim, ArcAim);
+                    w.SetHomingCandidate(atLane, ArcAim + Across(loft, Spacing));
+                });
+            using (world)
+            {
+                Assert.AreEqual(3, shots.Count);
+                world.Tick(0.02f);
+                int checkedCount = 0;
+                foreach (var active in SimulationTestHelper.CollectActive(world))
+                {
+                    Assert.IsTrue(world.TryGetHomingTarget(active.id, out HomingTarget locked));
+                    Assert.AreEqual(atAim, locked.Id, $"Instance at {active.position}");
+                    checkedCount++;
+                }
+
+                Assert.AreEqual(3, checkedCount);
+            }
+        }
+
+        static readonly Vector3 ArcAim = new Vector3(0f, 0f, 10f);
+        const float ArcGravity = 9.81f;
+
+        static Vector3 Loft(Vector3 from, Vector3 to, float speed)
+        {
+            Assert.IsTrue(BallisticAim.TrySolve(from, to, speed, ArcGravity, out Vector3 direction));
+            return direction.normalized;
+        }
+
+        static List<Shot> FireArc(
+            IMulticastPattern pattern,
+            float speed,
+            float extraSpeed,
+            out ProjectileWorld world,
+            Vector3? aim = null,
+            IModifier[] onTick = null,
+            System.Action<ProjectileWorld> setup = null)
+        {
+            Recipe extra = SimulationTestHelper.CreateRecipe("arc-offset-extra", speed: extraSpeed, lifetime: 5f, gravity: ArcGravity, onTick: onTick);
+            extra.Delivery = Delivery.Arc;
+            Recipe shot = SimulationTestHelper.CreateRecipe("arc-offset-parent", speed: speed, lifetime: 5f, gravity: ArcGravity, onTick: onTick);
+            shot.Delivery = Delivery.Arc;
+            shot.OnSpawn = new IModifier[] { new Multicast(3, extra, pattern) };
+
+            world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false, seed: Seed);
+            setup?.Invoke(world);
+            world.Spawn(new SpawnRequest
+            {
+                Recipe = shot,
+                Position = Vector3.zero,
+                Direction = Vector3.forward,
+                HomingAcquirePointSet = true,
+                HomingAcquirePoint = aim ?? ArcAim
+            });
+            return Collect(world, shot);
+        }
+
+        static Shot At(List<Shot> shots, Vector3 position)
+        {
+            for (int i = 0; i < shots.Count; i++)
+            {
+                if ((shots[i].Position - position).sqrMagnitude < 1e-6f)
+                    return shots[i];
+            }
+
+            Assert.Fail($"No instance at {position}");
+            return default;
+        }
+
         struct Shot
         {
             public Vector3 Position;
@@ -570,7 +780,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
 
         static Vector3 Across(Vector3 forward, float localX)
         {
-            return MultiplyPatternPlane.FromLocal(forward, new Vector2(localX, 0f));
+            return MultiplyPatternPlane.MirrorX(forward, MultiplyPatternPlane.FromLocal(forward, new Vector2(localX, 0f)));
         }
 
         static GridMultiplyPattern Row()
