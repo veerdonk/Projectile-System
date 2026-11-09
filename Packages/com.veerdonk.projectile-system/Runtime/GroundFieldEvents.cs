@@ -81,7 +81,10 @@ namespace Veerdonk.ProjectileSystem
         public ProjectileId InstanceId;
         /// <summary>Overlap center: contact point on OnHit, instance position otherwise.</summary>
         public Vector3 Center;
-        /// <summary>Overlap radius (<c>EffectRadius</c>).</summary>
+        /// <summary>
+        /// Overlap radius: the AreaEffect's own <see cref="AreaEffect.Radius"/> times the instance's EffectRadius scales,
+        /// or the instance <c>EffectRadius</c> when that Radius is 0.
+        /// </summary>
         public float Radius;
         /// <summary>Stage that requested the overlap: OnHit, OnTravel, OnInterval, OnTick, or OnExpire.</summary>
         public RecipeStage Stage;

@@ -185,8 +185,11 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             using (world)
             {
                 var seen = new List<HitInfo>();
+                var bursts = new List<AreaBurstInfo>();
                 world.Hit += seen.Add;
+                world.AreaBurst += bursts.Add;
                 hits.AddOverlapTarget(target, new Vector3(0.5f, 0f, 0f));
+                hits.AddOverlapTarget(new TargetId(2), new Vector3(3.5f, 0f, 0f));
 
                 world.Spawn(new SpawnRequest
                 {
@@ -205,6 +208,224 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 Assert.AreEqual(target, seen[1].TargetId);
                 Assert.AreEqual(2f, seen[0].EffectRadius, 1e-4f);
                 Assert.AreEqual(2f, seen[1].EffectRadius, 1e-4f);
+                Assert.AreEqual(1, bursts.Count);
+                Assert.IsTrue(bursts[0].Occupancy);
+                Assert.AreEqual(2f, bursts[0].Radius, 1e-4f);
+            }
+        }
+
+        [Test]
+        public void OnTravel_UsesTheOwnRadius()
+        {
+            var inside = new TargetId(1);
+            var outside = new TargetId(2);
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "own-radius-travel",
+                speed: 20f,
+                lifetime: 5f,
+                effectRadius: 5f,
+                onTravel: new IModifier[] { new AreaEffect(3f, 2f) });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var bursts = new List<AreaBurstInfo>();
+                var areaHits = new List<HitInfo>();
+                world.AreaBurst += bursts.Add;
+                world.Hit += areaHits.Add;
+                hits.AddOverlapTarget(inside, new Vector3(1.5f, 0f, 0f));
+                hits.AddOverlapTarget(outside, new Vector3(3f, 0f, 0f));
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+
+                Assert.AreEqual(1, bursts.Count);
+                Assert.AreEqual(RecipeStage.OnTravel, bursts[0].Stage);
+                Assert.AreEqual(2f, bursts[0].Radius, 1e-4f);
+                Assert.AreEqual(1, areaHits.Count);
+                Assert.AreEqual(HitSource.Area, areaHits[0].Source);
+                Assert.AreEqual(inside, areaHits[0].TargetId);
+                Assert.AreEqual(2f, areaHits[0].EffectRadius, 1e-4f);
+            }
+        }
+
+        [Test]
+        public void OnInterval_UsesTheOwnRadius()
+        {
+            var inside = new TargetId(1);
+            var outside = new TargetId(2);
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "own-radius-interval",
+                speed: 1f,
+                lifetime: 5f,
+                effectRadius: 5f,
+                onSpawn: new IModifier[] { new Interval(0.5f) },
+                onInterval: new IModifier[] { new AreaEffect(3f, 2f) });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var bursts = new List<AreaBurstInfo>();
+                var areaHits = new List<HitInfo>();
+                world.AreaBurst += bursts.Add;
+                world.Hit += areaHits.Add;
+                hits.AddOverlapTarget(inside, new Vector3(1.5f, 0f, 0.4f));
+                hits.AddOverlapTarget(outside, new Vector3(3f, 0f, 0.4f));
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                world.Tick(0.25f);
+                Assert.AreEqual(0, bursts.Count);
+
+                world.Tick(0.25f);
+
+                Assert.AreEqual(1, bursts.Count);
+                Assert.AreEqual(RecipeStage.OnInterval, bursts[0].Stage);
+                Assert.AreEqual(2f, bursts[0].Radius, 1e-4f);
+                Assert.AreEqual(1, areaHits.Count);
+                Assert.AreEqual(inside, areaHits[0].TargetId);
+                Assert.AreEqual(2f, areaHits[0].EffectRadius, 1e-4f);
+            }
+        }
+
+        [Test]
+        public void EffectRadiusHalf_HalvesTheOwnRadius()
+        {
+            var contact = new TargetId(1);
+            var inside = new TargetId(2);
+            var outside = new TargetId(3);
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "own-radius-halved",
+                speed: 20f,
+                lifetime: 5f,
+                effectRadius: 5f,
+                onHit: new IModifier[] { new EffectRadius(0.5f), new AreaEffect(3f, 4f) });
+
+            HitOnce(
+                recipe,
+                hits =>
+                {
+                    hits.AddOverlapTarget(contact, Contact);
+                    hits.AddOverlapTarget(inside, Contact + new Vector3(1.5f, 0f, 0f));
+                    hits.AddOverlapTarget(outside, Contact + new Vector3(3f, 0f, 0f));
+                },
+                contact,
+                out List<AreaBurstInfo> bursts,
+                out List<HitInfo> areaHits);
+
+            Assert.AreEqual(1, bursts.Count);
+            Assert.AreEqual(2f, bursts[0].Radius, 1e-4f);
+            CollectionAssert.AreEquivalent(new[] { contact, inside }, TargetsWithDamage(areaHits, 3f));
+        }
+
+        [Test]
+        public void EffectRadiusZeroOrNegative_LeavesTheOwnRadius()
+        {
+            var contact = new TargetId(1);
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "own-radius-nonpositive-scale",
+                speed: 20f,
+                lifetime: 5f,
+                effectRadius: 5f,
+                onHit: new IModifier[] { new EffectRadius(0f), new EffectRadius(-2f), new AreaEffect(3f, 1.5f) });
+
+            HitOnce(
+                recipe,
+                hits => hits.AddOverlapTarget(contact, Contact),
+                contact,
+                out List<AreaBurstInfo> bursts,
+                out List<HitInfo> areaHits);
+
+            Assert.AreEqual(1, bursts.Count);
+            Assert.AreEqual(1.5f, bursts[0].Radius, 1e-4f);
+            Assert.AreEqual(1.5f, areaHits[0].EffectRadius, 1e-4f);
+        }
+
+        [Test]
+        public void MultiplyChild_BurstsItsOwnRadius_NotTheParentScale()
+        {
+            Recipe child = SimulationTestHelper.CreateRecipe(
+                "own-radius-child",
+                speed: 8f,
+                lifetime: 2f,
+                onTravel: new IModifier[] { new AreaEffect(1f, 1.5f) });
+            Recipe parent = SimulationTestHelper.CreateRecipe(
+                "own-radius-parent",
+                speed: 10f,
+                lifetime: 1f,
+                onTravel: new IModifier[] { new EffectRadius(2f) },
+                onExpire: new IModifier[] { new Multiply(1, child) });
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(parent);
+            using (world)
+            {
+                var bursts = new List<AreaBurstInfo>();
+                world.AreaBurst += bursts.Add;
+
+                ProjectileId parentId = world.Spawn(new SpawnRequest
+                {
+                    Recipe = parent,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                world.Tick(0.5f);
+                world.Tick(0.5f);
+                world.Tick(0.1f);
+
+                Assert.AreEqual(1, bursts.Count);
+                Assert.AreNotEqual(parentId, bursts[0].InstanceId);
+                Assert.AreEqual(RecipeStage.OnTravel, bursts[0].Stage);
+                Assert.AreEqual(1.5f, bursts[0].Radius, 1e-4f);
+            }
+        }
+
+        [Test]
+        public void PooledEntity_StartsTheNextShotAtScaleOne()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "own-radius-pool",
+                speed: 10f,
+                lifetime: 5f,
+                onSpawn: new IModifier[] { new Interval(0.5f) },
+                onInterval: new IModifier[] { new EffectRadius(2f) },
+                onExpire: new IModifier[] { new AreaEffect(1f, 1.5f) });
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe, prewarm: 1);
+            using (world)
+            {
+                var bursts = new List<AreaBurstInfo>();
+                world.AreaBurst += bursts.Add;
+                Assert.AreEqual(1, world.AvailableCount);
+
+                ProjectileId first = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                world.Tick(0.25f);
+                world.Tick(0.25f);
+                world.Despawn(first);
+                Assert.AreEqual(1, world.AvailableCount);
+
+                ProjectileId second = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                Assert.AreEqual(0, world.AvailableCount);
+                world.Despawn(second);
+
+                Assert.AreEqual(2, bursts.Count);
+                Assert.AreEqual(first, bursts[0].InstanceId);
+                Assert.AreEqual(3f, bursts[0].Radius, 1e-4f);
+                Assert.AreEqual(second, bursts[1].InstanceId);
+                Assert.AreEqual(1.5f, bursts[1].Radius, 1e-4f);
             }
         }
 
@@ -253,6 +474,31 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 Assert.AreEqual(inside, areaHits[0].TargetId);
                 Assert.AreEqual(3.5f, areaHits[0].EffectRadius, 1e-4f);
             }
+        }
+
+        [Test]
+        public void NegativeRadius_ReadsZero_AndUsesTheRecipeRadius()
+        {
+            var contact = new TargetId(1);
+            var area = new AreaEffect(3f, -2f);
+            Assert.AreEqual(0f, area.Radius);
+            Assert.AreEqual(0f, new AreaEffect(3f) { Radius = -1f }.Radius);
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "own-radius-negative",
+                speed: 20f,
+                lifetime: 5f,
+                effectRadius: 3f,
+                onHit: new IModifier[] { area });
+
+            HitOnce(
+                recipe,
+                hits => hits.AddOverlapTarget(contact, Contact),
+                contact,
+                out List<AreaBurstInfo> bursts,
+                out List<HitInfo> _);
+
+            Assert.AreEqual(1, bursts.Count);
+            Assert.AreEqual(3f, bursts[0].Radius, 1e-4f);
         }
 
         [Test]
