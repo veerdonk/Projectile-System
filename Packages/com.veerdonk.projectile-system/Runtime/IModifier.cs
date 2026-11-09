@@ -222,8 +222,10 @@ namespace Veerdonk.ProjectileSystem
         }
 
         /// <summary>
-        /// Queues a lingering horizontal disk at <paramref name="center"/>. Flushed after the
-        /// stage as a field owned by <see cref="IProjectileWorld"/> (ADR-022).
+        /// Queues a lingering disk at <paramref name="center"/>. Flushed after the stage as a field owned by
+        /// <see cref="IProjectileWorld"/> (ADR-022), on the ground <see cref="IProjectileWorld.GroundFieldSurface"/>
+        /// returns for <paramref name="center"/>, or at Y = 0 without one. <paramref name="heightMargin"/> is
+        /// <see cref="GroundField.HeightMargin"/>.
         /// </summary>
         public void RequestGroundField(
             Vector3 center,
@@ -233,7 +235,8 @@ namespace Veerdonk.ProjectileSystem
             IStatusEffect status,
             float intervalSeconds,
             string presentationId = null,
-            bool occupancy = false)
+            bool occupancy = false,
+            float heightMargin = 0f)
         {
             requestedGroundFields.Add(
                 new GroundFieldPlantRequest(
@@ -244,7 +247,8 @@ namespace Veerdonk.ProjectileSystem
                     status,
                     intervalSeconds,
                     presentationId,
-                    occupancy));
+                    occupancy,
+                    heightMargin));
         }
 
         /// <summary>Skip the Direct contact <see cref="IProjectileWorld.Hit"/> after this OnHit list.</summary>
@@ -517,7 +521,8 @@ namespace Veerdonk.ProjectileSystem
             IStatusEffect status,
             float intervalSeconds,
             string presentationId,
-            bool occupancy = false)
+            bool occupancy = false,
+            float heightMargin = 0f)
         {
             Center = center;
             Radius = radius;
@@ -527,6 +532,7 @@ namespace Veerdonk.ProjectileSystem
             IntervalSeconds = intervalSeconds;
             PresentationId = presentationId;
             Occupancy = occupancy;
+            HeightMargin = heightMargin;
         }
 
         public Vector3 Center { get; }
@@ -544,6 +550,8 @@ namespace Veerdonk.ProjectileSystem
         public string PresentationId { get; }
 
         public bool Occupancy { get; }
+
+        public float HeightMargin { get; }
     }
 
     internal struct ModifierBindState

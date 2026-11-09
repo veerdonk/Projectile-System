@@ -4,7 +4,20 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-## [0.2.14] - Unreleased
+## [0.2.15] - 2026-11-09
+
+### Added
+
+- `IGroundFieldSurface` with `TryGetGround(point, out groundPoint, out groundNormal)`, set on `IProjectileWorld.GroundFieldSurface`. The world asks it once per `GroundField` plant, with the contact point on OnHit and the instance position on OnTravel and OnExpire (including OnExpire run by `Despawn`). When it returns true, the field is centered on the returned point and lies across the returned normal; its view is tilted to the normal. A normal facing down is flipped, and a zero normal or one more than about 84° from up is replaced by up. Null (the default) or false plants as before: Y = 0, normal up (#93).
+- `GroundField.HeightMargin` (serialized, metres, default 0) and a trailing `heightMargin` parameter on the `GroundField` constructor and `ModifierContext.RequestGroundField`. Above 0, a pulse or occupancy check counts a Target only when its foot lies within that distance of the field's plane, above or below, measured along the normal. The foot is the bottom of a published capsule's axis (a published sphere's center); for a collider, the bottom of its bounds, raised by its half-width for a `CapsuleCollider`. 0 does not test height. A negative value is stored as 0. `RecipeAsset.ToRecipe`, `Recipe.Clone` and kits copy it; the Recipe inspector draws it.
+- `GroundFieldInfo.Normal` and `GroundFieldInfo.HeightMargin`, and `GroundFieldPulseInfo.Normal`, on Planted, Pulsed, and Ended.
+
+### Changed
+
+- The ground field disk follows its plane. A Target stands where the vertical line through it (a published volume's axis, a collider's `IDamageable` transform) meets the plane, and that point must lie within the radius of the center, measured in the plane (plus the volume's radius for a published volume, as before). With normal up and margin 0 this is the XZ test of 0.2.14, so fields planted without a surface hit the same Targets.
+- `PhysicsHitQuery`'s ground field query capsule grows with the slope and the height margin so standing colliders on a slope or within the margin are found. It is the same ±1 m capsule for a flat field without a margin.
+
+## [0.2.14] - 2026-11-08
 
 ### Added
 

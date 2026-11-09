@@ -430,7 +430,7 @@ namespace Veerdonk.ProjectileSystem
                 case AreaEffect:
                     return 5;
                 case GroundField:
-                    return 6;
+                    return 7;
                 default:
                     return 0;
             }
@@ -508,6 +508,7 @@ namespace Veerdonk.ProjectileSystem
                 DrawStatus(ref line, element.FindPropertyRelative("status"));
                 DrawProperty(ref line, element, "intervalSeconds");
                 DrawProperty(ref line, element, "presentationId");
+                DrawProperty(ref line, element, "heightMargin", "Height Margin (m, 0 = any)");
             }
         }
 

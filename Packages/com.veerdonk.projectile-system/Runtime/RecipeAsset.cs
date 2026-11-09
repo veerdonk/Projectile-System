@@ -285,7 +285,8 @@ namespace Veerdonk.ProjectileSystem
                         CloneStatus(field.Status),
                         field.IntervalSeconds,
                         field.PresentationId,
-                        field.Occupancy);
+                        field.Occupancy,
+                        field.HeightMargin);
                 case Multiply multiply:
                     return new Multiply(
                         multiply.Count,

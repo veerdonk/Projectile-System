@@ -248,27 +248,24 @@ namespace Veerdonk.ProjectileSystem
             }
         }
 
-        public void AppendDisk(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
+        public void AppendDisk(ProjectileId instanceId, in GroundDisk disk, List<HitInfo> results)
         {
-            if (radius <= 0f || results == null)
+            if (disk.Radius <= 0f || results == null)
                 return;
 
             Compact();
+            Vector3 center = disk.Center;
             for (int i = 0; i < volumes.Count; i++)
             {
                 Volume volume = volumes[i];
                 if (volume.Protection == ProtectionLevel.Strong)
                     continue;
 
-                Vector3 axis = ClosestOnAxis(volume, center);
-                float dx = axis.x - center.x;
-                float dz = axis.z - center.z;
-                float limit = radius + volume.Radius;
-                if (dx * dx + dz * dz > limit * limit)
+                if (!disk.Contains(volume.Low, volume.Low, volume.Radius, out Vector3 delta))
                     continue;
 
-                Vector3 delta = new Vector3(dx, 0f, dz);
-                results.Add(BuildOverlap(instanceId, center, volume, axis, delta));
+                Vector3 axis = ClosestOnAxis(volume, center);
+                results.Add(BuildOverlap(instanceId, center, volume, axis, delta, disk.Normal));
             }
         }
 
@@ -312,7 +309,12 @@ namespace Veerdonk.ProjectileSystem
 
         static HitInfo BuildOverlap(ProjectileId instanceId, Vector3 center, Volume volume, Vector3 axis, Vector3 delta)
         {
-            Vector3 normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up;
+            return BuildOverlap(instanceId, center, volume, axis, delta, Vector3.up);
+        }
+
+        static HitInfo BuildOverlap(ProjectileId instanceId, Vector3 center, Volume volume, Vector3 axis, Vector3 delta, Vector3 fallbackNormal)
+        {
+            Vector3 normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : fallbackNormal;
             Vector3 point = axis - normal * volume.Radius;
             if ((point - center).sqrMagnitude > (axis - center).sqrMagnitude)
                 point = axis;

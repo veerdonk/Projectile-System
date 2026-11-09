@@ -203,22 +203,25 @@ namespace Veerdonk.ProjectileSystem
             HitTargets?.AppendSphere(instanceId, center, radius, results);
         }
 
-        public void OverlapDisk(ProjectileId instanceId, ProjectileId ignoreSetOwner, Vector3 center, float radius, List<HitInfo> results)
+        public void OverlapDisk(ProjectileId instanceId, ProjectileId ignoreSetOwner, in GroundDisk disk, List<HitInfo> results)
         {
             if (results == null)
                 throw new ArgumentNullException(nameof(results));
 
             results.Clear();
+            float radius = disk.Radius;
             if (radius <= 0f)
                 return;
 
-            const float halfHeight = 1f;
+            Vector3 center = disk.Center;
+            float cos = disk.Normal.y;
+            float sin = Mathf.Sqrt(Mathf.Max(0f, 1f - cos * cos));
+            float halfHeight = 1f + radius * sin + disk.HeightMargin / cos;
             Vector3 point0 = center + Vector3.up * halfHeight;
             Vector3 point1 = center - Vector3.up * halfHeight;
             int count = OverlapCapsule(point0, point1, radius);
 
             ignoreSetByInstance.TryGetValue(ignoreSetOwner, out List<Collider> ignoreSet);
-            float radiusSq = radius * radius;
             for (int i = 0; i < count; i++)
             {
                 Collider collider = overlapBuffer[i];
@@ -234,14 +237,12 @@ namespace Veerdonk.ProjectileSystem
                     continue;
 
                 Vector3 sample = ((Component)damageable).transform.position;
-                float dx = sample.x - center.x;
-                float dz = sample.z - center.z;
-                if (dx * dx + dz * dz > radiusSq)
+                if (!disk.Contains(sample, Foot(collider), 0f, out _))
                     continue;
 
                 Vector3 point = AreaPoint(collider, center);
                 Vector3 delta = point - center;
-                Vector3 normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : Vector3.up;
+                Vector3 normal = delta.sqrMagnitude > 1e-10f ? delta.normalized : disk.Normal;
                 results.Add(new HitInfo
                 {
                     InstanceId = instanceId,
@@ -253,7 +254,16 @@ namespace Veerdonk.ProjectileSystem
                 });
             }
 
-            HitTargets?.AppendDisk(instanceId, center, radius, results);
+            HitTargets?.AppendDisk(instanceId, disk, results);
+        }
+
+        static Vector3 Foot(Collider collider)
+        {
+            Bounds bounds = collider.bounds;
+            Vector3 foot = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+            if (collider is CapsuleCollider)
+                foot.y += Mathf.Min(Mathf.Min(bounds.extents.x, bounds.extents.z), bounds.extents.y);
+            return foot;
         }
 
         bool TakePublishedOrMiss(

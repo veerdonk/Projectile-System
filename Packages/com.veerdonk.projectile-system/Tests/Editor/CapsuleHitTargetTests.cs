@@ -411,7 +411,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             catalog.SetCapsule(new TargetId(1), new Vector3(1.8f, 8f, 0f), 0.5f, 3f, 1.5f);
             var results = new List<HitInfo>();
 
-            catalog.AppendDisk(default, Vector3.zero, 1.4f, results);
+            catalog.AppendDisk(default, new GroundDisk(Vector3.zero, Vector3.up, 1.4f, 0f), results);
 
             Assert.AreEqual(1, results.Count);
             Assert.AreEqual(1.3f, results[0].Point.x, 1e-3f);
