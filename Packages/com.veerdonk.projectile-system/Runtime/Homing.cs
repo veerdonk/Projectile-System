@@ -13,6 +13,11 @@ namespace Veerdonk.ProjectileSystem
     /// If spawn did not assign a target,
     /// the first lock is <see cref="ClosestToPointAcquisition"/> when <see cref="SpawnRequest.HomingAcquirePointSet"/>
     /// is true, and <see cref="Acquisition"/> otherwise. After that first lock, empty locks use <see cref="Acquisition"/>.
+    /// A lock whose <see cref="TargetId"/> is in neither catalog is dropped the next time Homing runs and re-acquired
+    /// through <see cref="Acquisition"/>, never the aim point; with nothing in the cone the instance flies on unlocked.
+    /// On Hitscan that covers a spawn-assigned target that is not published when the query resolves.
+    /// A lock whose target is still published is kept, even when another candidate is nearer.
+    /// A Beam lock set by the four-argument <c>AimBeam</c> is kept when its target is gone.
     /// Candidates are <see cref="IProjectileWorld.SetHomingCandidate"/> poses and published hit-target positions.
     /// The same <see cref="TargetId"/> in both catalogs is one candidate, and the hit-target position wins.
     /// The default acquisition only takes candidates inside <see cref="AcquireHalfAngleDegrees"/> of travel.
@@ -78,7 +83,8 @@ namespace Veerdonk.ProjectileSystem
         }
 
         /// <summary>
-        /// Picks a lock when spawn did not assign one, and every empty lock after the first.
+        /// Picks a lock when spawn did not assign one, every empty lock after the first, and a new lock when the
+        /// locked target is no longer published.
         /// When <see cref="SpawnRequest.HomingAcquirePointSet"/> is true, the first lock uses
         /// <see cref="ClosestToPointAcquisition"/> instead. Default is closest-in-travel-direction.
         /// </summary>
@@ -117,6 +123,17 @@ namespace Veerdonk.ProjectileSystem
                 context.HomingTarget = default;
             }
 
+            if (target.IsAssigned)
+            {
+                if (context.HomingAcquirePointSet)
+                    context.HomingAimPointUsed = true;
+                if (!context.HomingLockHeld && !context.IsPublished(target))
+                {
+                    target = default;
+                    context.HomingTarget = default;
+                }
+            }
+
             if (!target.IsAssigned)
             {
                 if (!TryAcquireLock(context, out target))
@@ -124,8 +141,6 @@ namespace Veerdonk.ProjectileSystem
                 context.HomingTarget = target;
                 context.NoteHomingAcquired(target);
             }
-            else if (context.HomingAcquirePointSet)
-                context.HomingAimPointUsed = true;
 
             if (!context.TryGetSteeringPosition(target, out Vector3 targetPosition))
                 return;
