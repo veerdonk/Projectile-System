@@ -72,7 +72,8 @@ namespace Veerdonk.ProjectileSystem
 
         /// <summary>
         /// Drops a previously published homing pose. Locked instances that used it, and whose id is not a published
-        /// hit target, re-acquire through their Homing acquisition on the next tick (a Beam lock set by <c>AimBeam</c> is kept).
+        /// hit target, re-acquire through their Homing acquisition on their next tick; a Beam does so on its next pulse,
+        /// and keeps a lock set by <c>AimBeam</c>. A Hitscan has already resolved inside <see cref="Spawn"/>.
         /// </summary>
         void RemoveHomingCandidate(TargetId id);
 
@@ -104,7 +105,8 @@ namespace Veerdonk.ProjectileSystem
 
         /// <summary>
         /// Drops a previously published hit volume, sphere or capsule. Locked instances whose id is not also a
-        /// homing pose re-acquire through their Homing acquisition on the next tick (a Beam lock set by <c>AimBeam</c> is kept).
+        /// homing pose re-acquire through their Homing acquisition on their next tick; a Beam does so on its next pulse,
+        /// and keeps a lock set by <c>AimBeam</c>. A Hitscan has already resolved inside <see cref="Spawn"/>.
         /// </summary>
         void RemoveHitTarget(TargetId id);
 

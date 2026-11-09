@@ -51,15 +51,6 @@ namespace Veerdonk.ProjectileSystem
             return HomingCatalog.TryGetPosition(target, out position);
         }
 
-        internal bool IsPublished(in HomingTarget target)
-        {
-            if (!target.IsAssigned)
-                return false;
-
-            return (HitTargets != null && HitTargets.Contains(target.Id))
-                || HomingCatalog.TryGetPosition(target, out _);
-        }
-
         /// <summary>Live instance this stage is running for.</summary>
         public ProjectileId InstanceId { get; internal set; }
 
@@ -181,8 +172,16 @@ namespace Veerdonk.ProjectileSystem
 
         internal bool HomingAimPointUsed { get; set; }
 
-        /// <summary>True for a Beam lock set by the four-argument <c>AimBeam</c>. Homing keeps it even when its target is gone.</summary>
-        internal bool HomingLockHeld { get; set; }
+        /// <summary>A Beam's lock set by the four-argument <c>AimBeam</c>. Homing keeps this lock even when its target is gone.</summary>
+        internal HomingTarget HomingHeldLock { get; set; }
+
+        /// <summary>True after Homing dropped a lock whose target is not published. A Beam then self-acquires like an unassigned one.</summary>
+        internal bool HomingLockDropped { get; set; }
+
+        internal bool IsHeldLock(in HomingTarget target)
+        {
+            return target.IsAssigned && HomingHeldLock.IsAssigned && target.Id.Equals(HomingHeldLock.Id);
+        }
 
         /// <summary>True while the OnExpire list runs.</summary>
         internal bool Expiring { get; set; }
@@ -421,7 +420,8 @@ namespace Veerdonk.ProjectileSystem
             HomingAcquirePointSet = state.HomingAcquirePointSet;
             HomingAcquirePoint = state.HomingAcquirePoint;
             HomingAimPointUsed = state.HomingAimPointUsed;
-            HomingLockHeld = state.HomingLockHeld;
+            HomingHeldLock = state.HomingHeldLock;
+            HomingLockDropped = false;
         }
 
         internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
@@ -459,6 +459,8 @@ namespace Veerdonk.ProjectileSystem
                 HomingAcquirePoint.y,
                 HomingAcquirePoint.z);
             projectile.HomingAimPointUsed = HomingAimPointUsed;
+            if (HomingLockDropped)
+                projectile.HomingAssignedAtSpawn = false;
             velocity.Value = new Unity.Mathematics.float3(Velocity.x, Velocity.y, Velocity.z);
         }
     }
@@ -549,6 +551,6 @@ namespace Veerdonk.ProjectileSystem
         public bool HomingAcquirePointSet;
         public Vector3 HomingAcquirePoint;
         public bool HomingAimPointUsed;
-        public bool HomingLockHeld;
+        public HomingTarget HomingHeldLock;
     }
 }

@@ -17,7 +17,8 @@ namespace Veerdonk.ProjectileSystem
     /// through <see cref="Acquisition"/>, never the aim point; with nothing in the cone the instance flies on unlocked.
     /// On Hitscan that covers a spawn-assigned target that is not published when the query resolves.
     /// A lock whose target is still published is kept, even when another candidate is nearer.
-    /// A Beam lock set by the four-argument <c>AimBeam</c> is kept when its target is gone.
+    /// A Beam lock set by the four-argument <c>AimBeam</c> is kept when its target is gone. A Beam that drops its
+    /// spawn-assigned lock this way self-acquires from then on, like a Beam that was never assigned one.
     /// Candidates are <see cref="IProjectileWorld.SetHomingCandidate"/> poses and published hit-target positions.
     /// The same <see cref="TargetId"/> in both catalogs is one candidate, and the hit-target position wins.
     /// The default acquisition only takes candidates inside <see cref="AcquireHalfAngleDegrees"/> of travel.
@@ -123,26 +124,30 @@ namespace Veerdonk.ProjectileSystem
                 context.HomingTarget = default;
             }
 
+            Vector3 targetPosition = default;
+            bool steer = false;
             if (target.IsAssigned)
             {
                 if (context.HomingAcquirePointSet)
                     context.HomingAimPointUsed = true;
-                if (!context.HomingLockHeld && !context.IsPublished(target))
+                steer = context.TryGetSteeringPosition(target, out targetPosition);
+                if (!steer && !context.IsHeldLock(target))
                 {
                     target = default;
                     context.HomingTarget = default;
+                    context.HomingLockDropped = true;
                 }
             }
 
             if (!target.IsAssigned)
             {
-                if (!TryAcquireLock(context, out target))
+                if (!TryAcquireLock(context, out target, out steer, out targetPosition))
                     return;
                 context.HomingTarget = target;
                 context.NoteHomingAcquired(target);
             }
 
-            if (!context.TryGetSteeringPosition(target, out Vector3 targetPosition))
+            if (!steer)
                 return;
 
             Vector3 toTarget = targetPosition - context.Position;
@@ -168,11 +173,15 @@ namespace Veerdonk.ProjectileSystem
             context.Velocity = newDir * speed;
         }
 
-        bool TryAcquireLock(ModifierContext context, out HomingTarget target)
+        bool TryAcquireLock(ModifierContext context, out HomingTarget target, out bool steer, out Vector3 position)
         {
+            steer = false;
+            position = default;
             if (!TryPick(context, out target))
                 return false;
-            if (context.HomingLockHeld || context.IsPublished(target))
+
+            steer = context.TryGetSteeringPosition(target, out position);
+            if (steer || context.IsHeldLock(target))
                 return true;
 
             target = default;
