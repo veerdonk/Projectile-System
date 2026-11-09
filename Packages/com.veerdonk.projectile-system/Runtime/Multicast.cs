@@ -96,19 +96,24 @@ namespace Veerdonk.ProjectileSystem
             IMulticastPattern aim = Pattern;
             var place = aim as IMulticastOffsetPattern;
             Vector3 origin = context.Position;
+            Vector3 originalDirection = forward;
+            Vector3 originalPosition = origin;
             for (int i = 0; i < total; i++)
             {
                 Vector3 direction = Aim(aim.GetDirection(context, forward, i, total), forward);
                 Vector3 position = place != null ? origin + place.GetOffset(context, forward, i, total) : origin;
                 if (i == 0)
                 {
-                    context.Velocity = direction * speed;
-                    if (place != null)
-                        context.MoveTo(position);
+                    originalDirection = direction;
+                    originalPosition = position;
                 }
                 else
                     context.RequestMulticastExtra(ExtraRecipe, position, direction);
             }
+
+            context.Velocity = originalDirection * speed;
+            if (place != null)
+                context.MoveTo(originalPosition);
         }
 
         static Vector3 Aim(Vector3 direction, Vector3 fallback)

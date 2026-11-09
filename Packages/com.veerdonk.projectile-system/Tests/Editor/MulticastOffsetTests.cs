@@ -92,38 +92,22 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             for (int i = 0; i < count; i++)
                 expected[i] = RandomConePattern.Sample(reference, Vector3.forward, RandomConePattern.DefaultHalfAngleDegrees);
 
-            List<Shot> shots = Fire(count, new RandomConePattern(), Muzzle, Vector3.forward);
+            var spawned = new List<SpawnInfo>();
+            List<Shot> shots = Fire(count, new RandomConePattern(), Muzzle, Vector3.forward, spawned);
 
             Assert.AreEqual(count, shots.Count);
-            var unmatched = new List<Vector3>();
-            for (int i = 1; i < count; i++)
-                unmatched.Add(expected[i]);
-
             for (int i = 0; i < shots.Count; i++)
-            {
                 Assert.AreEqual(Muzzle, shots[i].Position);
-                Vector3 direction = shots[i].Velocity.normalized;
-                if (shots[i].Original)
-                {
-                    Assert.Less(Vector3.Angle(expected[0], direction), 0.01f);
-                    continue;
-                }
+            Assert.Less(Vector3.Angle(expected[0], Original(shots).Velocity), 0.01f);
 
-                int match = -1;
-                for (int j = 0; j < unmatched.Count; j++)
-                {
-                    if (Vector3.Angle(unmatched[j], direction) < 0.01f)
-                    {
-                        match = j;
-                        break;
-                    }
-                }
-
-                Assert.GreaterOrEqual(match, 0, "Extra direction not in the 0.2.13 cone sequence");
-                unmatched.RemoveAt(match);
+            Assert.AreEqual(count, spawned.Count);
+            Assert.AreEqual(SpawnCause.Game, spawned[0].Cause);
+            for (int i = 1; i < count; i++)
+            {
+                Assert.AreEqual(SpawnCause.Multicast, spawned[i].Cause);
+                Assert.AreEqual(Muzzle, spawned[i].Position);
+                Assert.Less(Vector3.Angle(expected[i], spawned[i].Direction), 0.01f, $"Extra {i} out of the 0.2.13 order");
             }
-
-            Assert.AreEqual(0, unmatched.Count);
         }
 
         [Test]
@@ -209,7 +193,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             using (world)
             {
                 var hits = new List<HitInfo>();
-                    world.Hit += info => hits.Add(info);
+                world.Hit += info => hits.Add(info);
                 for (int i = 0; i < lanes.Length; i++)
                     world.SetHitTarget(new TargetId(10 + i), lanes[i] + Vector3.forward * 5f, 0.3f);
 
@@ -239,6 +223,206 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
+        [Test]
+        public void GridLanes_ForwardZ_LiteralWorldPositions_LeftColumnLandsOnPlusX()
+        {
+            List<Shot> shots = Fire(3, new GridMulticastPattern(Row(), 0f), Muzzle, Vector3.forward);
+
+            Assert.AreEqual(3, shots.Count);
+            AssertPosition(new Vector3(3f, 2f, 3f), Original(shots).Position);
+            List<Vector3> extras = ExtraPositions(shots);
+            Assert.AreEqual(2, extras.Count);
+            AssertContains(extras, new Vector3(1f, 2f, 3f));
+            AssertContains(extras, new Vector3(-1f, 2f, 3f));
+        }
+
+        [Test]
+        public void EveryPatternCall_SeesThePositionAndVelocityFromBeforeMulticast()
+        {
+            var pattern = new RecordingPattern();
+            List<Shot> shots = Fire(3, pattern, Muzzle, Vector3.forward);
+
+            Assert.AreEqual(6, pattern.Positions.Count);
+            for (int i = 0; i < pattern.Positions.Count; i++)
+            {
+                Assert.AreEqual(Muzzle, pattern.Positions[i], $"Call {i}");
+                Assert.AreEqual(Vector3.forward * 20f, pattern.Velocities[i], $"Call {i}");
+            }
+
+            Shot original = Original(shots);
+            AssertPosition(Muzzle + new Vector3(1f, 0f, 0f), original.Position);
+            Assert.AreEqual(10f, Vector3.Angle(Vector3.forward, original.Velocity), 0.05f);
+            List<Vector3> extras = ExtraPositions(shots);
+            AssertContains(extras, Muzzle + new Vector3(2f, 0f, 0f));
+            AssertContains(extras, Muzzle + new Vector3(3f, 0f, 0f));
+        }
+
+        [Test]
+        public void Spawned_OriginalReportsTheRequestPosition_ExtrasReportTheirLanes()
+        {
+            var spawned = new List<SpawnInfo>();
+            Fire(3, new GridMulticastPattern(Row(), 0f), Muzzle, Vector3.forward, spawned);
+
+            Assert.AreEqual(3, spawned.Count);
+            Assert.AreEqual(SpawnCause.Game, spawned[0].Cause);
+            Assert.AreEqual(Muzzle, spawned[0].Position);
+            Assert.AreEqual(SpawnCause.Multicast, spawned[1].Cause);
+            AssertPosition(Muzzle, spawned[1].Position);
+            Assert.AreEqual(SpawnCause.Multicast, spawned[2].Cause);
+            AssertPosition(Muzzle + Across(Vector3.forward, Spacing), spawned[2].Position);
+        }
+
+        [Test]
+        public void CountBelowTheNumberedCells_UsesOnlyTheFirstCells()
+        {
+            List<Shot> shots = Fire(2, new GridMulticastPattern(Row(), 0f), Muzzle, Vector3.forward);
+
+            Assert.AreEqual(2, shots.Count);
+            AssertPosition(Muzzle + Across(Vector3.forward, -Spacing), Original(shots).Position);
+            List<Vector3> extras = ExtraPositions(shots);
+            Assert.AreEqual(1, extras.Count);
+            AssertPosition(Muzzle, extras[0]);
+        }
+
+        [Test]
+        public void VerticalForward_LaysTheLanesInAHorizontalPlane()
+        {
+            List<Shot> shots = null;
+            Assert.DoesNotThrow(() => shots = Fire(3, new GridMulticastPattern(Row(), 0f), Muzzle, Vector3.up));
+
+            Assert.AreEqual(3, shots.Count);
+            int offsetLanes = 0;
+            for (int i = 0; i < shots.Count; i++)
+            {
+                Vector3 offset = shots[i].Position - Muzzle;
+                Assert.AreEqual(0f, offset.y, 1e-4f);
+                if (offset.sqrMagnitude > 1e-8f)
+                {
+                    offsetLanes++;
+                    Assert.AreEqual(Spacing, offset.magnitude, 1e-4f);
+                }
+
+                Assert.Less(Vector3.Angle(Vector3.up, shots[i].Velocity), 0.05f);
+            }
+
+            Assert.AreEqual(2, offsetLanes);
+            AssertPosition(Muzzle + Across(Vector3.up, -Spacing), Original(shots).Position);
+        }
+
+        [Test]
+        public void Beam_FirstAndLaterPulsesStartInTheOriginalsLane()
+        {
+            Recipe extra = BeamRecipe("offset-beam-extra");
+            Recipe shot = BeamRecipe("offset-beam");
+            shot.OnSpawn = new IModifier[] { new Multicast(3, extra, new GridMulticastPattern(Row(), 0f)) };
+            Vector3 lane = Muzzle + Across(Vector3.forward, -Spacing);
+
+            var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false, seed: Seed);
+            using (world)
+            {
+                var hits = new List<HitInfo>();
+                world.Hit += info => hits.Add(info);
+                world.SetHitTarget(new TargetId(20), lane + Vector3.forward * 5f, 0.3f);
+
+                ProjectileId original = world.Spawn(new SpawnRequest
+                {
+                    Recipe = shot,
+                    Position = Muzzle,
+                    Direction = Vector3.forward
+                });
+
+                List<HitInfo> first = HitsBy(hits, original);
+                Assert.AreEqual(1, first.Count, "First pulse");
+                Assert.AreEqual(new TargetId(20), first[0].TargetId);
+                Assert.AreEqual(lane.x, first[0].Point.x, 1e-3f);
+
+                world.Tick(0.1f);
+                world.Tick(0.1f);
+
+                List<HitInfo> later = HitsBy(hits, original);
+                Assert.GreaterOrEqual(later.Count, 2, "Later pulse");
+                for (int i = 0; i < later.Count; i++)
+                {
+                    Assert.AreEqual(new TargetId(20), later[i].TargetId);
+                    Assert.AreEqual(lane.x, later[i].Point.x, 1e-3f);
+                }
+
+                Assert.IsTrue(world.TryGetState(original, out Vector3 position, out _, out _));
+                AssertPosition(lane, position);
+            }
+        }
+
+        [Test]
+        public void OnTravelAreaBurst_IsCentredOnTheOriginalsLane()
+        {
+            Recipe extra = SimulationTestHelper.CreateRecipe("offset-area-extra", speed: 12f, lifetime: 2f);
+            Recipe shot = SimulationTestHelper.CreateRecipe(
+                "offset-area",
+                speed: 20f,
+                lifetime: 5f,
+                onTravel: new IModifier[] { new AreaEffect(1f, 1.5f) });
+            shot.OnSpawn = new IModifier[] { new Multicast(3, extra, new GridMulticastPattern(Row(), 0f)) };
+
+            var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false, seed: Seed);
+            using (world)
+            {
+                var bursts = new List<AreaBurstInfo>();
+                world.AreaBurst += info => bursts.Add(info);
+                ProjectileId original = world.Spawn(new SpawnRequest
+                {
+                    Recipe = shot,
+                    Position = Muzzle,
+                    Direction = Vector3.forward
+                });
+
+                Assert.AreEqual(1, bursts.Count);
+                Assert.AreEqual(original, bursts[0].InstanceId);
+                Assert.AreEqual(RecipeStage.OnTravel, bursts[0].Stage);
+                AssertPosition(Muzzle + Across(Vector3.forward, -Spacing), bursts[0].Center);
+            }
+        }
+
+        [Test]
+        public void View_BindsAtTheMovedPosition()
+        {
+            var parent = new GameObject("multicast-offset-views");
+            try
+            {
+                Recipe extra = SimulationTestHelper.CreateRecipe("offset-view-extra", speed: 12f, lifetime: 2f);
+                Recipe shot = SimulationTestHelper.CreateRecipe("offset-view", speed: 20f, lifetime: 5f);
+                shot.OnSpawn = new IModifier[] { new Multicast(3, extra, new GridMulticastPattern(Row(), 0f)) };
+                Vector3 muzzle = new Vector3(0f, 500f, 0f);
+
+                var world = new ProjectileWorld(parent.transform);
+                using (world)
+                {
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = shot,
+                        Position = muzzle,
+                        Direction = Vector3.forward
+                    });
+
+                    var positions = new List<Vector3>();
+                    ProjectileView[] views = parent.GetComponentsInChildren<ProjectileView>(true);
+                    for (int i = 0; i < views.Length; i++)
+                    {
+                        if (views[i] != null && views[i].gameObject.activeSelf)
+                            positions.Add(views[i].transform.position);
+                    }
+
+                    Assert.AreEqual(3, positions.Count);
+                    AssertContains(positions, muzzle + Across(Vector3.forward, -Spacing));
+                    AssertContains(positions, muzzle);
+                    AssertContains(positions, muzzle + Across(Vector3.forward, Spacing));
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(parent);
+            }
+        }
+
         struct Shot
         {
             public Vector3 Position;
@@ -254,7 +438,32 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
-        static List<Shot> Fire(int count, IMulticastPattern pattern, Vector3 position, Vector3 direction)
+        sealed class RecordingPattern : IMulticastOffsetPattern
+        {
+            public readonly List<Vector3> Positions = new List<Vector3>();
+            public readonly List<Vector3> Velocities = new List<Vector3>();
+
+            public Vector3 GetDirection(ModifierContext context, Vector3 forward, int index, int count)
+            {
+                Positions.Add(context.Position);
+                Velocities.Add(context.Velocity);
+                return Quaternion.AngleAxis(10f * (index + 1), Vector3.up) * forward;
+            }
+
+            public Vector3 GetOffset(ModifierContext context, Vector3 forward, int index, int count)
+            {
+                Positions.Add(context.Position);
+                Velocities.Add(context.Velocity);
+                return new Vector3(index + 1f, 0f, 0f);
+            }
+        }
+
+        static List<Shot> Fire(
+            int count,
+            IMulticastPattern pattern,
+            Vector3 position,
+            Vector3 direction,
+            List<SpawnInfo> spawned = null)
         {
             Recipe extra = SimulationTestHelper.CreateRecipe("offset-extra", speed: 12f, lifetime: 2f);
             Recipe shot = SimulationTestHelper.CreateRecipe("offset-parent", speed: 20f, lifetime: 5f);
@@ -263,6 +472,8 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false, seed: Seed);
             using (world)
             {
+                if (spawned != null)
+                    world.Spawned += info => spawned.Add(info);
                 world.Spawn(new SpawnRequest
                 {
                     Recipe = shot,
@@ -271,6 +482,27 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 });
                 return Collect(world, shot);
             }
+        }
+
+        static Recipe BeamRecipe(string id)
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(id, speed: 10f, lifetime: 5f, radius: 0.1f);
+            recipe.Delivery = Delivery.Beam;
+            recipe.BeamPulseSeconds = 0.1f;
+            recipe.MaxRange = 20f;
+            return recipe;
+        }
+
+        static List<HitInfo> HitsBy(List<HitInfo> hits, ProjectileId instance)
+        {
+            var result = new List<HitInfo>();
+            for (int i = 0; i < hits.Count; i++)
+            {
+                if (hits[i].InstanceId == instance)
+                    result.Add(hits[i]);
+            }
+
+            return result;
         }
 
         static List<Shot> Collect(ProjectileWorld world, Recipe shot)

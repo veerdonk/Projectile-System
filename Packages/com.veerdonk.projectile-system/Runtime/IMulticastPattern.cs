@@ -20,6 +20,11 @@ namespace Veerdonk.ProjectileSystem
     /// just as it reports the direction from before the re-aim; each extra's reports its offset position.
     /// A Hitscan or Beam starts its polyline at the offset. Either <see cref="IProjectileWorld.AimBeam(ProjectileId, Vector3, Vector3)"/>
     /// overload sets the Beam's pose and so replaces the offset (the game owns that pose).
+    /// The move to the offset is not swept, so nothing between the muzzle and a lane is hit, and an instance can start
+    /// inside a wall or a target beside the muzzle. Its first cast starts there, and the hit query decides what a body
+    /// it starts inside does.
+    /// Every <see cref="IMulticastPattern.GetDirection"/> and <see cref="GetOffset"/> call sees the shot's position and
+    /// velocity from before Multicast; the original is re-aimed and moved after the last call.
     /// </summary>
     public interface IMulticastOffsetPattern : IMulticastPattern
     {
