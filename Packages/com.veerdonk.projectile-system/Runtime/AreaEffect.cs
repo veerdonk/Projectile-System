@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Veerdonk.ProjectileSystem
 {
     /// <summary>
-    /// Overlaps Targets in instance <see cref="ModifierContext.EffectRadius"/> and raises Area
+    /// Overlaps Targets in its own <see cref="Radius"/> (instance <see cref="ModifierContext.EffectRadius"/> when that is 0) and raises Area
     /// <see cref="IProjectileWorld.Hit"/> / <see cref="IProjectileWorld.StatusApplied"/>.
     /// Area damage and optional status live on this modifier, not on <see cref="Recipe.Damage"/>.
     /// OnHit uses the contact point; OnTravel / OnInterval / OnTick / OnExpire use the instance position.
@@ -13,13 +13,14 @@ namespace Veerdonk.ProjectileSystem
     /// (lifetime, Hitscan end, or <see cref="IProjectileWorld.Despawn"/>); a Hitscan or Beam reports its muzzle there.
     /// It never bursts when the instance ends on a hit, World or Target, and ignores <see cref="Occupancy"/>.
     /// <see cref="IncludeDirectHit"/> / <see cref="IncludeDirectStatus"/> apply only on OnHit.
-    /// EffectRadius 0 is a no-op. The modifier does not call Physics.
+    /// An effective radius &lt;= 0 is a no-op. The modifier does not call Physics.
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnInterval | RecipeStage.OnTick | RecipeStage.OnHit | RecipeStage.OnExpire)]
     public sealed class AreaEffect : IModifier
     {
         [SerializeField] float damage;
+        [SerializeField, Min(0f)] float radius;
         [SerializeReference] IStatusEffect status;
         [SerializeField] bool includeDirectHit = true;
         [SerializeField] bool includeDirectStatus = true;
@@ -35,8 +36,21 @@ namespace Veerdonk.ProjectileSystem
             bool includeDirectHit = true,
             bool includeDirectStatus = true,
             bool occupancy = false)
+            : this(damage, 0f, status, includeDirectHit, includeDirectStatus, occupancy)
+        {
+        }
+
+        /// <summary>AreaEffect with its own <paramref name="radius"/> in metres. 0 uses the instance EffectRadius.</summary>
+        public AreaEffect(
+            float damage,
+            float radius,
+            IStatusEffect status = null,
+            bool includeDirectHit = true,
+            bool includeDirectStatus = true,
+            bool occupancy = false)
         {
             this.damage = damage;
+            this.radius = radius;
             this.status = status;
             this.includeDirectHit = includeDirectHit;
             this.includeDirectStatus = includeDirectStatus;
@@ -48,6 +62,17 @@ namespace Veerdonk.ProjectileSystem
         {
             get => damage;
             set => damage = value;
+        }
+
+        /// <summary>
+        /// Own overlap radius in metres. Above 0 it replaces <see cref="ModifierContext.EffectRadius"/> for this
+        /// modifier and is multiplied by every <see cref="ProjectileSystem.EffectRadius"/> scale applied to the instance.
+        /// 0 keeps the instance EffectRadius.
+        /// </summary>
+        public float Radius
+        {
+            get => radius;
+            set => radius = value;
         }
 
         /// <summary>Optional status raised per Target in the sphere.</summary>
@@ -83,18 +108,19 @@ namespace Veerdonk.ProjectileSystem
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
-            if (context.EffectRadius <= 0f)
+            float overlapRadius = Radius > 0f ? Radius * context.EffectRadiusScale : context.EffectRadius;
+            if (overlapRadius <= 0f)
                 return;
 
             if (context.Expiring)
             {
                 if (!context.HasHit)
-                    context.RequestAreaOverlap(context.Position, Damage, Status);
+                    context.RequestAreaOverlap(context.Position, overlapRadius, Damage, Status, false);
                 return;
             }
 
             Vector3 center = context.HasHit ? context.Hit.Point : context.Position;
-            context.RequestAreaOverlap(center, Damage, Status, Occupancy);
+            context.RequestAreaOverlap(center, overlapRadius, Damage, Status, Occupancy);
             if (!context.HasHit)
                 return;
 

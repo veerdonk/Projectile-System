@@ -5,7 +5,8 @@ namespace Veerdonk.ProjectileSystem
 {
     /// <summary>
     /// Scales instance effect radius by <see cref="Scale"/>. EffectRadius(2) doubles,
-    /// EffectRadius(0.5) halves. Scale &lt;= 0 is a no-op. Same stages as <see cref="Speed"/>.
+    /// EffectRadius(0.5) halves. Also scales every own <see cref="AreaEffect.Radius"/> on the instance.
+    /// Scale &lt;= 0 is a no-op. Same stages as <see cref="Speed"/>.
     /// Does not run an overlap query.
     /// </summary>
     [Serializable]
@@ -39,6 +40,7 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             context.EffectRadius *= Scale;
+            context.EffectRadiusScale *= Scale;
         }
     }
 }

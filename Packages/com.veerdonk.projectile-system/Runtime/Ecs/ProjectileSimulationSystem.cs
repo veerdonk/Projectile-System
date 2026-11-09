@@ -1156,6 +1156,7 @@ namespace Veerdonk.ProjectileSystem
                 CriticalChance = projectile.CriticalChance,
                 ManaCost = projectile.ManaCost,
                 EffectRadius = projectile.EffectRadius,
+                EffectRadiusScale = projectile.EffectRadiusScale,
                 Spread = projectile.Spread,
                 IntervalSeconds = projectile.IntervalSeconds,
                 MultiplyGenerationsLeft = projectile.MultiplyGenerationsLeft,
