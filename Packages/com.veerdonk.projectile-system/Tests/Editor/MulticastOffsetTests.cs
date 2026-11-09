@@ -188,6 +188,57 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
+        [Test]
+        public void Hitscan_EachLanePolylineStartsAtItsOffset()
+        {
+            Recipe extra = SimulationTestHelper.CreateRecipe("offset-hitscan-extra", speed: 10f, lifetime: 2f, radius: 0.1f);
+            extra.Delivery = Delivery.Hitscan;
+            extra.MaxRange = 20f;
+            Recipe shot = SimulationTestHelper.CreateRecipe("offset-hitscan", speed: 10f, lifetime: 2f, radius: 0.1f);
+            shot.Delivery = Delivery.Hitscan;
+            shot.MaxRange = 20f;
+            shot.OnSpawn = new IModifier[] { new Multicast(3, extra, new GridMulticastPattern(Row(), 0f)) };
+
+            Vector3[] lanes =
+            {
+                Muzzle + Across(Vector3.forward, -Spacing),
+                Muzzle,
+                Muzzle + Across(Vector3.forward, Spacing)
+            };
+            var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false, seed: Seed);
+            using (world)
+            {
+                var hits = new List<HitInfo>();
+                    world.Hit += info => hits.Add(info);
+                for (int i = 0; i < lanes.Length; i++)
+                    world.SetHitTarget(new TargetId(10 + i), lanes[i] + Vector3.forward * 5f, 0.3f);
+
+                ProjectileId original = world.Spawn(new SpawnRequest
+                {
+                    Recipe = shot,
+                    Position = Muzzle,
+                    Direction = Vector3.forward
+                });
+
+                Assert.AreEqual(3, hits.Count);
+                var seen = new bool[lanes.Length];
+                for (int i = 0; i < hits.Count; i++)
+                {
+                    Assert.AreEqual(HitKind.Target, hits[i].Kind);
+                    int lane = hits[i].TargetId == new TargetId(10) ? 0 : hits[i].TargetId == new TargetId(11) ? 1 : 2;
+                    Assert.AreEqual(new TargetId(10 + lane), hits[i].TargetId);
+                    Assert.IsFalse(seen[lane], "Two shots hit one lane");
+                    seen[lane] = true;
+                    Assert.AreEqual(lanes[lane].x, hits[i].Point.x, 1e-3f);
+                    Assert.AreEqual(lanes[lane].y, hits[i].Point.y, 1e-3f);
+                    if (hits[i].InstanceId == original)
+                        Assert.AreEqual(0, lane, "The original belongs in cell 1's lane");
+                }
+
+                Assert.AreEqual(0, world.ActiveCount);
+            }
+        }
+
         struct Shot
         {
             public Vector3 Position;

@@ -125,6 +125,8 @@ namespace Veerdonk.ProjectileSystem
         /// package-made spawn (Multicast extras, Multiply children, other queued spawns). An unreachable
         /// Arc raises nothing. Hitscan raises it before its <see cref="Hit"/> and <see cref="Expired"/>.
         /// Comes before that instance's first <see cref="HomingLocked"/>, <see cref="Hit"/>, or <see cref="Expired"/>.
+        /// Raised before OnSpawn runs, so a shot that an <see cref="IMulticastOffsetPattern"/> moves or re-aims reports
+        /// the request position and direction.
         /// </summary>
         event Action<SpawnInfo> Spawned;
 

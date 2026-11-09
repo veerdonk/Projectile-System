@@ -16,6 +16,10 @@ namespace Veerdonk.ProjectileSystem
     /// <summary>
     /// A <see cref="IMulticastPattern"/> that also moves where each instance starts. Patterns without it spawn every
     /// instance at the shot's position.
+    /// The original's <see cref="IProjectileWorld.Spawned"/> reports the request position, from before OnSpawn moves it,
+    /// just as it reports the direction from before the re-aim; each extra's reports its offset position.
+    /// A Hitscan or Beam starts its polyline at the offset. Either <see cref="IProjectileWorld.AimBeam(ProjectileId, Vector3, Vector3)"/>
+    /// overload sets the Beam's pose and so replaces the offset (the game owns that pose).
     /// </summary>
     public interface IMulticastOffsetPattern : IMulticastPattern
     {
