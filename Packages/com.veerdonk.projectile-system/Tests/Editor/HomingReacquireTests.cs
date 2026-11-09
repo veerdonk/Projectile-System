@@ -239,6 +239,42 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
+        [Test]
+        public void CustomAcquisition_PickingAnUnpublishedId_RaisesNoLock_AndFliesStraight()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "reacquire-custom-unpublished",
+                speed: 10f,
+                lifetime: 10f,
+                radius: 0.25f,
+                onTick: new IModifier[] { new Homing(270f, 180f, new PickUnpublished()) });
+            (ProjectileWorld world, _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var locks = new List<HomingLockInfo>();
+                world.HomingLocked += info => locks.Add(info);
+                world.SetHitTarget(A, BesideA, 0.5f);
+                ProjectileId id = Fire(world, recipe, default);
+                for (int i = 0; i < 5; i++)
+                    world.Tick(0.05f);
+
+                Assert.AreEqual(0, locks.Count);
+                Assert.IsTrue(world.TryGetHomingTarget(id, out HomingTarget locked));
+                Assert.IsFalse(locked.IsAssigned);
+                Assert.IsTrue(world.TryGetState(id, out _, out Vector3 velocity, out _));
+                Assert.AreEqual(0f, Vector3.Angle(Vector3.up, velocity), 0.0001f);
+            }
+        }
+
+        sealed class PickUnpublished : IHomingAcquisition
+        {
+            public bool TryAcquire(ModifierContext context, out HomingTarget target)
+            {
+                target = HomingTarget.Assigned(new TargetId(99));
+                return true;
+            }
+        }
+
         static ProjectileId Fire(ProjectileWorld world, Recipe recipe, HomingTarget homing)
         {
             return world.Spawn(new SpawnRequest
