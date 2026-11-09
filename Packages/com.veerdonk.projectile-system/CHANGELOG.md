@@ -4,6 +4,20 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [0.2.14] - Unreleased
+
+### Added
+
+- `AreaEffect.Radius` (serialized, metres, default 0) and the constructor `AreaEffect(damage, radius, status, includeDirectHit, includeDirectStatus, occupancy)`. Above 0 the overlap uses it at every stage, multiplied by the `EffectRadius` scales applied to that instance, so two AreaEffects on one shot can burst at two radii. 0, which existing assets read, keeps `Recipe.EffectRadius`. `RecipeAsset.ToRecipe`, `Recipe.Clone` and kits copy it; the Recipe inspector draws it (#82).
+- `IMulticastOffsetPattern : IMulticastPattern` with `GetOffset(context, forward, index, count)`, a world offset from the shot's position for each instance. The original moves to its own offset at OnSpawn, and its first sweep, Hitscan polyline or Beam pulse starts there. `GridMulticastPattern` implements it: each instance starts at its grid cell, measured from the grid's center in the plane across the shot's direction, `Spacing` metres apart; `Spread` 0 gives parallel lanes and above 0 they also diverge. Instances past the numbered cells start at the shot's position. The original's `Spawned` still reports the request position (#91).
+
+### Changed
+
+- Homing re-acquires when its locked target is gone. On a tick where the lock's `TargetId` is neither a published hit target nor a `SetHomingCandidate` pose (after `RemoveHitTarget` / `RemoveHomingCandidate`, or never published), Homing drops the lock and picks again through its `Acquisition`: the acquire half-angle and fallback rule are unchanged, and the aim-point first lock is not used again. The new lock raises one `HomingLocked` (`Kind = Acquired`); with nothing in the cone the shot flies on unlocked. A lock whose target is still published is kept, even when another target is nearer. A Beam lock set by the four-argument `AimBeam` is kept as before. A pick from a custom `IHomingAcquisition` that is in neither catalog is ignored (#90).
+- `EffectRadius(n)` also scales every own `AreaEffect.Radius` on the instance. An AreaEffect with its own radius bursts even when the recipe's `EffectRadius` is 0.
+- Area and occupancy `Hit`s report the radius that was overlapped in `HitInfo.EffectRadius` (the same value as before for an AreaEffect without its own radius).
+- `RandomConePattern` and other patterns without `IMulticastOffsetPattern` spawn exactly as in 0.2.13.
+
 ## [0.2.13] - 2026-11-05
 
 ### Added
