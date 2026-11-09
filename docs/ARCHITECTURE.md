@@ -95,7 +95,7 @@ Magnitude meaning is per modifier (count vs strength vs scale) as in [REQUIREMEN
 
 **Area effect:** `AreaEffect` on `OnHit` / `OnTravel` / `OnInterval` / `OnTick` / `OnExpire` overlaps Targets in instance `EffectRadius` ([DECISIONS.md](DECISIONS.md) ADR-016, ADR-031). Area damage is on the modifier. Interval and OnTick are auras on the live instance (OnTick overlaps every Tick). OnExpire bursts once at the expire position on Lifetime, HitscanEnd, and `Despawn`, never after a hit, and ignores occupancy (ADR-051). Direct contact can be suppressed. Overlap includes `IDamageable` colliders **and** published hit volumes (ADR-030). `occupancy` (default false) replaces pulses with `HitSource.OccupancyEnter` / `OccupancyExit` (ADR-031).
 
-**Ground field:** `GroundField` on `OnHit` / `OnExpire` / `OnTravel` plants a lingering horizontal disk ([DECISIONS.md](DECISIONS.md) ADR-022). Size, lifetime, damage, optional status, and pulse period are on the modifier. The disk is not a Recipe and has no stage lists. `IHitQuery.OverlapDisk` tests XZ distance (colliders and published volumes, ADR-030); pulses reuse Area `Hit` / `StatusApplied`. `occupancy` (default false) replaces those pulses with enter/exit (ADR-031). Views come from `IGroundFieldViewFactory` (ADR-026).
+**Ground field:** `GroundField` on `OnHit` / `OnExpire` / `OnTravel` plants a lingering disk ([DECISIONS.md](DECISIONS.md) ADR-022), horizontal at Y = 0 or across the game's ground plane (ADR-058). Size, lifetime, damage, optional status, and pulse period are on the modifier. The disk is not a Recipe and has no stage lists. `IHitQuery.OverlapDisk` tests the distance in the field's plane and, with `HeightMargin`, the Target's foot height above or below it (colliders and published volumes, ADR-030). The plane comes from `IProjectileWorld.GroundFieldSurface` at plant time, or Y = 0 with normal up (ADR-058); pulses reuse Area `Hit` / `StatusApplied`. `occupancy` (default false) replaces those pulses with enter/exit (ADR-031). Views come from `IGroundFieldViewFactory` (ADR-026).
 
 ## Hit pipeline
 
@@ -124,8 +124,8 @@ struct HitInfo
 }
 ```
 
-- `Target` — `IDamageable` collider **or** a published hit volume (ADR-030). Default: raise Direct `Hit` after `OnHit` unless suppressed, despawn unless `Pierce` or `Bounce` cancels despawn. Bounce still raises Direct `Hit` so dummy HP drops. `ApplyStatus` may also request a status; that is raised as `StatusApplied` **after** the `OnHit` list, not on `Hit`. `AreaEffect` may add Area Hits after that. `GroundField` may plant a disk at `Hit.Point` (Y snapped to the ground plane)
-- `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`. `ApplyStatus` ignores World. `AreaEffect` on a World hit still overlaps nearby Targets. `GroundField` on a World hit still plants at `Hit.Point` (Y snapped to the ground plane)
+- `Target` — `IDamageable` collider **or** a published hit volume (ADR-030). Default: raise Direct `Hit` after `OnHit` unless suppressed, despawn unless `Pierce` or `Bounce` cancels despawn. Bounce still raises Direct `Hit` so dummy HP drops. `ApplyStatus` may also request a status; that is raised as `StatusApplied` **after** the `OnHit` list, not on `Hit`. `AreaEffect` may add Area Hits after that. `GroundField` may plant a disk at `Hit.Point` (on the `GroundFieldSurface` ground, else Y snapped to the ground plane)
+- `World` — environment. Default: despawn unless `Bounce` cancels despawn and reflects velocity around `Normal`. `ApplyStatus` ignores World. `AreaEffect` on a World hit still overlaps nearby Targets. `GroundField` on a World hit still plants at `Hit.Point` (on the `GroundFieldSurface` ground, else Y snapped to the ground plane)
 - `Protection = Basic` — `OnHit` still runs (pierce and bounce consume; pierce also applies when Kind is World). `AreaEffect` still runs. `GroundField` still plants. No `ApplyStatus` for this contact. Direct `Hit` is raised with `Protection = Basic` (game/sandbox skip HP)
 - `Protection = Strong` — despawn with no Direct `Hit`, no `OnHit`, no `OnExpire`. `Expired` still fires. No field is planted
 - Projectile-vs-projectile: ignore until an ADR.
@@ -176,6 +176,7 @@ interface IProjectileWorld
     void SetHitTarget(TargetId id, Vector3 bottom, float radius, float height, float homingHeight, ProtectionLevel protection = None);
     // ADR-045, phase 41. Upright capsule, height includes caps. Hits test the capsule; Homing reads bottom + homingHeight.
     void RemoveHitTarget(TargetId id);
+    IGroundFieldSurface GroundFieldSurface { get; set; } // ADR-058. Ground point and normal for GroundField plants; null is Y = 0, up
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
     event Action<StatusInfo> StatusApplied; // after OnHit / area / ground-field flush (ADR-011, ADR-016, ADR-022)
@@ -259,6 +260,11 @@ interface IProjectileViewFactory
     ProjectileView Create(Recipe recipe, Transform poolParent);
 }
 
+interface IGroundFieldSurface
+{
+    bool TryGetGround(Vector3 point, out Vector3 groundPoint, out Vector3 groundNormal); // ADR-058. false = Y = 0, up
+}
+
 interface IGroundFieldViewFactory
 {
     ProjectileView Create(float radius, string presentationId, Transform poolParent);
@@ -331,7 +337,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038). Phase 37 (0.2.3) adds `SpawnRequest.IgnoreColliders` (ADR-041). Phase 40 (0.2.6) adds `Recipe.MaxRange` (ADR-043) and the four-argument `AimBeam` that sets a live Beam's homing lock (ADR-044). Phase 41 (0.2.7) adds the upright capsule `SetHitTarget` overload with a homing point (ADR-045). Phase 42 (0.2.8) adds `SpawnRequest.IgnoreTargetSet` / `IgnoreTarget` and `ModifierContext.ShooterTarget` (ADR-046), and authorable-only inspector popups (ADR-047). Phase 43 (0.2.9) adds `IProjectileWorld.PredictPath` with `PathPrediction` and `PathHit` (ADR-048). Phase 44 (0.2.10) removes the upper clamp on critical chance (ADR-049). Phase 45 (0.2.11) serializes `Multicast.Pattern` and `RandomConePattern`'s half-angle and adds `GridMulticastPattern` (ADR-050). Phase 47 (0.2.12) adds `Homing.AcquireHalfAngleDegrees` and the last-hit fallback (ADR-052). Phase 48 (0.2.12) adds `MultiplyDirection`, `Multiply.Direction`, and `Multiply.LockRange` (ADR-053).
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038). Phase 37 (0.2.3) adds `SpawnRequest.IgnoreColliders` (ADR-041). Phase 40 (0.2.6) adds `Recipe.MaxRange` (ADR-043) and the four-argument `AimBeam` that sets a live Beam's homing lock (ADR-044). Phase 41 (0.2.7) adds the upright capsule `SetHitTarget` overload with a homing point (ADR-045). Phase 42 (0.2.8) adds `SpawnRequest.IgnoreTargetSet` / `IgnoreTarget` and `ModifierContext.ShooterTarget` (ADR-046), and authorable-only inspector popups (ADR-047). Phase 43 (0.2.9) adds `IProjectileWorld.PredictPath` with `PathPrediction` and `PathHit` (ADR-048). Phase 44 (0.2.10) removes the upper clamp on critical chance (ADR-049). Phase 45 (0.2.11) serializes `Multicast.Pattern` and `RandomConePattern`'s half-angle and adds `GridMulticastPattern` (ADR-050). Phase 47 (0.2.12) adds `Homing.AcquireHalfAngleDegrees` and the last-hit fallback (ADR-052). Phase 48 (0.2.12) adds `MultiplyDirection`, `Multiply.Direction`, and `Multiply.LockRange` (ADR-053). Phase 52 (0.2.15) adds `IGroundFieldSurface`, `IProjectileWorld.GroundFieldSurface`, `GroundField.HeightMargin`, and the ground normal on the field events (ADR-058).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 

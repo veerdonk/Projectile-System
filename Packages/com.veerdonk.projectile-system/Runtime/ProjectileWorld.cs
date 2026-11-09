@@ -138,6 +138,13 @@ namespace Veerdonk.ProjectileSystem
         /// <inheritdoc />
         public event Action<AreaBurstInfo> AreaBurst;
 
+        /// <inheritdoc />
+        public IGroundFieldSurface GroundFieldSurface
+        {
+            get => groundFields.Surface;
+            set => groundFields.Surface = value;
+        }
+
         /// <summary>Live instances (not Disabled pool entities).</summary>
         public int ActiveCount
         {

@@ -43,10 +43,17 @@ namespace Veerdonk.ProjectileSystem
         public GroundFieldId FieldId;
         /// <summary>Instance that planted the field.</summary>
         public ProjectileId SourceId;
-        /// <summary>Disk center, already on the ground plane.</summary>
+        /// <summary>
+        /// Disk center on the ground: the point <see cref="IProjectileWorld.GroundFieldSurface"/> returned,
+        /// or the plant point at Y = 0 without one.
+        /// </summary>
         public Vector3 Center;
-        /// <summary>Disk radius in meters.</summary>
+        /// <summary>Unit ground normal the disk lies across. <see cref="Vector3.up"/> without a ground surface.</summary>
+        public Vector3 Normal;
+        /// <summary>Disk radius in meters, measured in the ground plane.</summary>
         public float Radius;
+        /// <summary>Height margin requested at plant (<see cref="GroundField.HeightMargin"/>). 0 means height does not count.</summary>
+        public float HeightMargin;
         /// <summary>Lifetime requested at plant.</summary>
         public float LifetimeSeconds;
         /// <summary>Pulse interval requested at plant. 0 means no pulses.</summary>
@@ -66,8 +73,10 @@ namespace Veerdonk.ProjectileSystem
         public GroundFieldId FieldId;
         /// <summary>Instance that planted the field.</summary>
         public ProjectileId SourceId;
-        /// <summary>Disk center.</summary>
+        /// <summary>Disk center on the ground, the same as <see cref="GroundFieldInfo.Center"/>.</summary>
         public Vector3 Center;
+        /// <summary>Unit ground normal, the same as <see cref="GroundFieldInfo.Normal"/>.</summary>
+        public Vector3 Normal;
         /// <summary>Disk radius in meters.</summary>
         public float Radius;
         /// <summary>Distinct Targets that raised an Area <see cref="HitInfo"/> this pulse. 0 for an empty disk.</summary>

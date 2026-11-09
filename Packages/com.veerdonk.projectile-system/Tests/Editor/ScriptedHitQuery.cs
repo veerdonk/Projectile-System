@@ -168,22 +168,20 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             hitTargets?.AppendSphere(instanceId, center, radius, results);
         }
 
-        public void OverlapDisk(ProjectileId instanceId, ProjectileId ignoreSetOwner, Vector3 center, float radius, List<HitInfo> results)
+        public void OverlapDisk(ProjectileId instanceId, ProjectileId ignoreSetOwner, in GroundDisk disk, List<HitInfo> results)
         {
             results.Clear();
-            if (radius <= 0f)
+            if (disk.Radius <= 0f)
                 return;
 
-            float radiusSq = radius * radius;
+            Vector3 center = disk.Center;
             for (int i = 0; i < overlapBodies.Count; i++)
             {
                 OverlapBody body = overlapBodies[i];
                 if (body.Kind != HitKind.Target || body.Protection == ProtectionLevel.Strong)
                     continue;
 
-                float dx = body.Position.x - center.x;
-                float dz = body.Position.z - center.z;
-                if (dx * dx + dz * dz > radiusSq)
+                if (!disk.Contains(body.Position, body.Position, 0f, out _))
                     continue;
 
                 Vector3 delta = body.Position - center;
@@ -198,7 +196,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 });
             }
 
-            hitTargets?.AppendDisk(instanceId, center, radius, results);
+            hitTargets?.AppendDisk(instanceId, disk, results);
         }
 
         public void CopyIgnore(ProjectileId from, ProjectileId to)

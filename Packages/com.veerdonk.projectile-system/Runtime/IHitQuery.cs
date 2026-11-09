@@ -23,9 +23,10 @@ namespace Veerdonk.ProjectileSystem
         void Overlap(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results);
 
         /// <summary>
-        /// Flat XZ disk of Targets for GroundField. Y does not count. Skips the set owned by <paramref name="ignoreSetOwner"/>. Ignores World and other projectiles. Skips Strong.
+        /// Disk of Targets for GroundField, in the plane of <paramref name="disk"/> (see <see cref="GroundDisk.Contains"/>).
+        /// Skips the set owned by <paramref name="ignoreSetOwner"/>. Ignores World and other projectiles. Skips Strong.
         /// </summary>
-        void OverlapDisk(ProjectileId instanceId, ProjectileId ignoreSetOwner, Vector3 center, float radius, List<HitInfo> results);
+        void OverlapDisk(ProjectileId instanceId, ProjectileId ignoreSetOwner, in GroundDisk disk, List<HitInfo> results);
 
         /// <summary>
         /// Child instances ignore the same collider the parent already overlapped, copy its ignore set

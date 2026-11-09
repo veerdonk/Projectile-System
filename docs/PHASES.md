@@ -1148,11 +1148,28 @@ Change request veerdonk/Projectile-System#91 from the game board (veerdonk/Untit
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 52 — Ground fields on raised and sloped ground
+
+Change request veerdonk/Projectile-System#93 from the game board (veerdonk/UntitledTowerGame#579). Runs before phase 34. ADR-058. Version **0.2.15**.
+
+**In scope**
+
+- `IGroundFieldSurface.TryGetGround(point, out groundPoint, out groundNormal)` on `IProjectileWorld.GroundFieldSurface`, asked once per plant (OnHit contact point, OnTravel / OnExpire instance position, `Despawn` included). False or null: Y = 0, normal up. Normals: flipped when facing down; zero or more than about 84° from up becomes up
+- `GroundField.HeightMargin` (serialized, default 0 = no height test) and a trailing `heightMargin` on the constructor and `ModifierContext.RequestGroundField`; `RecipeAsset.CloneModifier` and the inspector
+- Internal `GroundDisk` (center, normal, radius, margin) passed to `IHitQuery.OverlapDisk` and `HitTargetCatalog.AppendDisk`: the vertical line through a Target meets the plane within the radius of the center, and with a margin its foot lies within the margin of the plane along the normal. Normal up and margin 0 is the 0.2.14 XZ test
+- `GroundFieldInfo.Normal` / `HeightMargin`, `GroundFieldPulseInfo.Normal`. The package view is rotated to the normal
+- Edit Mode tests (`GroundFieldSurfaceTests`): y = 3 and 30° tilt hits capsules on the plane at the uphill and downhill edges and misses one past the edge; misses a capsule inside the XZ radius 2 m below; margin 0 does not test height; margin without a surface tests Y = 0; events report point and normal; false and null plant at Y = 0, up; normal sanitising; `Despawn` OnExpire asks the surface; margin clamp and clone. Play Mode: the same slope with capsule colliders. Existing ground field tests stay green
+
+**Out of scope:** raycasting the ground in the package; keeping airborne targets out (the game does); re-planting a live field when the ground changes; height for `AreaEffect`
+
+**Proof:** Edit Mode and Play Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
 - Multiply patterns: line, arc, cross, triangle (procedural `IMultiplyPattern`s; the grid editor is phase 33)
-- GroundField plant pose: v1 snaps Y to the world ground plane (`0`). Revisit spawn process and positioning (terrain / ground raycast, sloped floors, a chosen ground height) without changing the disk overlap or pulse contract
 - More modifiers, optional Rigidbody solver, projectile-vs-projectile hits
 - Save Play Mode tweaks to `RecipeAsset`
 - `Range(n)` / an OnExpire-at-distance fuse (ballistic reach stays Speed + Gravity, ADR-028). Beam / Hitscan length is `Recipe.MaxRange` (phase 40, ADR-043)

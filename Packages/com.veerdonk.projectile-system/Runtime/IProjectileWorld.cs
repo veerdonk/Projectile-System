@@ -110,6 +110,14 @@ namespace Veerdonk.ProjectileSystem
         /// </summary>
         void RemoveHitTarget(TargetId id);
 
+        /// <summary>
+        /// Ground for <c>GroundField</c> plants. When set and it returns true, a field is centered on the returned
+        /// point, lies across the returned normal, and its pulses and occupancy test that plane
+        /// (<see cref="GroundField.HeightMargin"/>). Null, the default, or a false return plants at Y = 0 with normal up.
+        /// Read at plant time; changing it does not move live fields.
+        /// </summary>
+        IGroundFieldSurface GroundFieldSurface { get; set; }
+
         /// <summary>Raised for each hit produced by the query pipeline.</summary>
         event Action<HitInfo> Hit;
 

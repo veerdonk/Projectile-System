@@ -5,9 +5,10 @@ using UnityEngine;
 namespace Veerdonk.ProjectileSystem
 {
     /// <summary>
-    /// Plants a lingering horizontal disk. Size, lifetime, damage, optional status, and pulse
+    /// Plants a lingering disk. Size, lifetime, damage, optional status, and pulse
     /// period live on this modifier. OnHit uses the contact point; OnExpire / OnTravel use the
-    /// instance position. The disk sits on the world ground plane (Y = 0).
+    /// instance position. The disk lies on the ground that <see cref="IProjectileWorld.GroundFieldSurface"/>
+    /// returns for that point, or on the world ground plane (Y = 0, normal up) without one.
     /// <see cref="Occupancy"/> replaces pulses with enter/exit while the disk lives.
     /// The modifier queues a plant; it does not call Physics or spawn a Recipe.
     /// Radius or lifetime &lt;= 0 is a no-op. Interval &lt;= 0 never pulses when occupancy is false.
@@ -23,6 +24,7 @@ namespace Veerdonk.ProjectileSystem
         [SerializeField] float intervalSeconds;
         [SerializeField] string presentationId;
         [SerializeField] bool occupancy;
+        [SerializeField, Min(0f)] float heightMargin;
 
         public GroundField()
         {
@@ -35,7 +37,8 @@ namespace Veerdonk.ProjectileSystem
             IStatusEffect status = null,
             float intervalSeconds = 0f,
             string presentationId = null,
-            bool occupancy = false)
+            bool occupancy = false,
+            float heightMargin = 0f)
         {
             this.radius = radius;
             this.lifetimeSeconds = lifetimeSeconds;
@@ -44,9 +47,10 @@ namespace Veerdonk.ProjectileSystem
             this.intervalSeconds = intervalSeconds;
             this.presentationId = presentationId;
             this.occupancy = occupancy;
+            HeightMargin = heightMargin;
         }
 
-        /// <summary>XZ disk radius in meters. &lt;= 0 plants nothing.</summary>
+        /// <summary>Disk radius in meters, measured in the ground plane. &lt;= 0 plants nothing.</summary>
         public float Radius
         {
             get => radius;
@@ -97,6 +101,17 @@ namespace Veerdonk.ProjectileSystem
             set => occupancy = value;
         }
 
+        /// <summary>
+        /// Meters a Target's foot (the bottom of its capsule axis) may lie above or below the disk's plane, measured
+        /// along the ground normal. 0, which existing assets read, does not test height (a collider still has to be found by
+        /// the query capsule, about 1 m above and below the plane plus the slope's rise). A negative or non-finite value is stored as 0.
+        /// </summary>
+        public float HeightMargin
+        {
+            get => heightMargin;
+            set => heightMargin = GroundDisk.ClampMargin(value);
+        }
+
         /// <inheritdoc />
         public void Apply(ModifierContext context)
         {
@@ -114,7 +129,8 @@ namespace Veerdonk.ProjectileSystem
                 Status,
                 IntervalSeconds,
                 PresentationId,
-                Occupancy);
+                Occupancy,
+                HeightMargin);
         }
     }
 
@@ -136,6 +152,8 @@ namespace Veerdonk.ProjectileSystem
         readonly List<TargetId> seenTargets = new List<TargetId>();
         int nextFieldId = 1;
         bool disposed;
+
+        public IGroundFieldSurface Surface { get; set; }
 
         public GroundFieldSet(
             IHitQuery hitQuery,
@@ -164,7 +182,8 @@ namespace Veerdonk.ProjectileSystem
             if (request.Radius <= 0f || request.LifetimeSeconds <= 0f)
                 return;
 
-            Vector3 center = ToGround(request.Center);
+            ResolveGround(request.Center, out Vector3 center, out Vector3 normal);
+            var disk = new GroundDisk(center, normal, request.Radius, request.HeightMargin);
             int fieldNumber = nextFieldId++;
             var skipKey = new ProjectileId(-fieldNumber);
             hitQuery.CopyIgnoreSet(sourceId, skipKey);
@@ -173,8 +192,7 @@ namespace Veerdonk.ProjectileSystem
                 FieldId = new GroundFieldId(fieldNumber),
                 SkipKey = skipKey,
                 SourceId = sourceId,
-                Center = center,
-                Radius = request.Radius,
+                Disk = disk,
                 LifetimeSeconds = request.LifetimeSeconds,
                 RemainingLifetime = request.LifetimeSeconds,
                 IntervalSeconds = request.IntervalSeconds,
@@ -186,7 +204,7 @@ namespace Veerdonk.ProjectileSystem
                 Occupants = request.Occupancy ? new List<TargetId>() : null
             };
             if (createViews)
-                field.View = RentView(center, request.Radius, request.PresentationId);
+                field.View = RentView(disk, request.PresentationId);
 
             fields.Add(field);
             planted?.Invoke(ToInfo(field, GroundFieldEndReason.Expired));
@@ -230,7 +248,7 @@ namespace Veerdonk.ProjectileSystem
                             field.SourceId,
                             field.Damage,
                             0f,
-                            field.Radius,
+                            field.Disk.Radius,
                             status: null,
                             hit,
                             statusApplied);
@@ -299,7 +317,7 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             overlapResults.Clear();
-            hitQuery.OverlapDisk(field.SourceId, field.SkipKey, field.Center, field.Radius, overlapResults);
+            hitQuery.OverlapDisk(field.SourceId, field.SkipKey, field.Disk, overlapResults);
             OccupancyExchange.Exchange(
                 field.Occupants,
                 overlapResults,
@@ -307,7 +325,7 @@ namespace Veerdonk.ProjectileSystem
                 field.SourceId,
                 field.Damage,
                 0f,
-                field.Radius,
+                field.Disk.Radius,
                 field.Status,
                 hit,
                 statusApplied);
@@ -317,7 +335,7 @@ namespace Veerdonk.ProjectileSystem
         {
             overlapResults.Clear();
             seenTargets.Clear();
-            hitQuery.OverlapDisk(field.SourceId, field.SkipKey, field.Center, field.Radius, overlapResults);
+            hitQuery.OverlapDisk(field.SourceId, field.SkipKey, field.Disk, overlapResults);
 
             for (int i = 0; i < overlapResults.Count; i++)
             {
@@ -332,7 +350,7 @@ namespace Veerdonk.ProjectileSystem
                 areaHit.Source = HitSource.Area;
                 areaHit.Damage = field.Damage;
                 areaHit.CriticalChance = 0f;
-                areaHit.EffectRadius = field.Radius;
+                areaHit.EffectRadius = field.Disk.Radius;
                 hit?.Invoke(areaHit);
 
                 if (field.Status == null)
@@ -350,8 +368,9 @@ namespace Veerdonk.ProjectileSystem
             {
                 FieldId = field.FieldId,
                 SourceId = field.SourceId,
-                Center = field.Center,
-                Radius = field.Radius,
+                Center = field.Disk.Center,
+                Normal = field.Disk.Normal,
+                Radius = field.Disk.Radius,
                 TargetsHit = seenTargets.Count
             });
         }
@@ -362,8 +381,10 @@ namespace Veerdonk.ProjectileSystem
             {
                 FieldId = field.FieldId,
                 SourceId = field.SourceId,
-                Center = field.Center,
-                Radius = field.Radius,
+                Center = field.Disk.Center,
+                Normal = field.Disk.Normal,
+                Radius = field.Disk.Radius,
+                HeightMargin = field.Disk.HeightMargin,
                 LifetimeSeconds = field.LifetimeSeconds,
                 IntervalSeconds = field.IntervalSeconds,
                 Occupancy = field.Occupancy,
@@ -372,18 +393,18 @@ namespace Veerdonk.ProjectileSystem
             };
         }
 
-        ProjectileView RentView(Vector3 center, float radius, string presentationId)
+        ProjectileView RentView(in GroundDisk disk, string presentationId)
         {
             Stack<ProjectileView> stack = ViewStack(presentationId);
-            ProjectileView view = stack.Count > 0 ? stack.Pop() : CreateView(radius, presentationId);
+            ProjectileView view = stack.Count > 0 ? stack.Pop() : CreateView(disk.Radius, presentationId);
             Transform transform = view.transform;
-            transform.position = center;
-            transform.rotation = Quaternion.identity;
+            transform.position = disk.Center;
+            transform.rotation = Quaternion.FromToRotation(Vector3.up, disk.Normal);
             if (view.ScaleToRadius)
                 transform.localScale = new Vector3(
-                    radius * 2f,
+                    disk.Radius * 2f,
                     PrimitiveGroundFieldViewFactory.DiskHalfHeight,
-                    radius * 2f);
+                    disk.Radius * 2f);
             view.gameObject.SetActive(true);
             return view;
         }
@@ -438,9 +459,26 @@ namespace Veerdonk.ProjectileSystem
             }
         }
 
-        static Vector3 ToGround(Vector3 point)
+        void ResolveGround(Vector3 point, out Vector3 center, out Vector3 normal)
         {
-            return new Vector3(point.x, 0f, point.z);
+            if (Surface != null
+                && Surface.TryGetGround(point, out Vector3 groundPoint, out Vector3 groundNormal)
+                && IsFinite(groundPoint))
+            {
+                center = groundPoint;
+                normal = GroundDisk.SanitizeNormal(groundNormal);
+                return;
+            }
+
+            center = new Vector3(point.x, 0f, point.z);
+            normal = Vector3.up;
+        }
+
+        static bool IsFinite(Vector3 v)
+        {
+            return !float.IsNaN(v.x) && !float.IsInfinity(v.x)
+                && !float.IsNaN(v.y) && !float.IsInfinity(v.y)
+                && !float.IsNaN(v.z) && !float.IsInfinity(v.z);
         }
 
         static int IntervalCrossings(float previousElapsed, float elapsed, float interval)
@@ -470,8 +508,7 @@ namespace Veerdonk.ProjectileSystem
             public GroundFieldId FieldId;
             public ProjectileId SourceId;
             public ProjectileId SkipKey;
-            public Vector3 Center;
-            public float Radius;
+            public GroundDisk Disk;
             public float LifetimeSeconds;
             public float RemainingLifetime;
             public float ElapsedSeconds;
@@ -483,6 +520,72 @@ namespace Veerdonk.ProjectileSystem
             public bool PlantedThisTick;
             public bool Occupancy;
             public List<TargetId> Occupants;
+        }
+    }
+
+    /// <summary>
+    /// The disk a field tests: a center on the ground, the ground normal, a radius in that plane, and an optional
+    /// height margin. A Target stands where the vertical line through it meets the plane.
+    /// With normal up and margin 0 this is the flat XZ disk.
+    /// </summary>
+    readonly struct GroundDisk
+    {
+        const float MinNormalY = 0.1f;
+
+        public GroundDisk(Vector3 center, Vector3 normal, float radius, float heightMargin)
+        {
+            Center = center;
+            Normal = normal;
+            Radius = radius;
+            HeightMargin = ClampMargin(heightMargin);
+        }
+
+        public static float ClampMargin(float margin)
+        {
+            return margin > 0f && !float.IsInfinity(margin) ? margin : 0f;
+        }
+
+        public Vector3 Center { get; }
+
+        public Vector3 Normal { get; }
+
+        public float Radius { get; }
+
+        public float HeightMargin { get; }
+
+        /// <summary>Unit normal facing up. Zero, non-finite, or more than about 84 degrees from up becomes up.</summary>
+        public static Vector3 SanitizeNormal(Vector3 normal)
+        {
+            float length = normal.magnitude;
+            if (!(length > 1e-6f) || float.IsInfinity(length))
+                return Vector3.up;
+
+            normal /= length;
+            if (normal.y < 0f)
+                normal = -normal;
+            return normal.y >= MinNormalY ? normal : Vector3.up;
+        }
+
+        /// <summary>Where the vertical line through <paramref name="point"/> meets the disk's plane.</summary>
+        public Vector3 OnPlane(Vector3 point)
+        {
+            float rise = Vector3.Dot(Center - point, Normal) / Normal.y;
+            return new Vector3(point.x, point.y + rise, point.z);
+        }
+
+        /// <summary>
+        /// True when the vertical line through <paramref name="stand"/> meets the plane within
+        /// <see cref="Radius"/> plus <paramref name="extraRadius"/> of the center and, with a margin,
+        /// <paramref name="foot"/> lies within <see cref="HeightMargin"/> of the plane.
+        /// </summary>
+        public bool Contains(Vector3 stand, Vector3 foot, float extraRadius, out Vector3 inPlaneDelta)
+        {
+            inPlaneDelta = OnPlane(stand) - Center;
+            if (HeightMargin > 0f && Mathf.Abs(Vector3.Dot(foot - Center, Normal)) > HeightMargin)
+                return false;
+
+            float limit = Radius + extraRadius;
+            return inPlaneDelta.sqrMagnitude <= limit * limit;
         }
     }
 }

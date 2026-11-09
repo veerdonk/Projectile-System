@@ -662,6 +662,83 @@ namespace Veerdonk.ProjectileSystem.Tests
             }
         }
 
+        sealed class TiltedGround : IGroundFieldSurface
+        {
+            public Vector3 Point;
+            public Vector3 Normal;
+
+            public bool TryGetGround(Vector3 point, out Vector3 groundPoint, out Vector3 groundNormal)
+            {
+                groundPoint = Point;
+                groundNormal = Normal;
+                return true;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator OnTravel_GroundFieldOnSlope_HitsCapsulesOnPlane_MissesOneBelow()
+        {
+            var created = new List<GameObject>();
+            GameObject poolRoot = null;
+            try
+            {
+                Vector3 ground = new Vector3(0f, 3f, 0f);
+                Quaternion tilt = Quaternion.AngleAxis(30f, Vector3.right);
+                Vector3 downhill = tilt * Vector3.forward;
+                created.Add(CreateCapsuleDummy(ground - downhill * 1.9f, new TargetId(1)));
+                created.Add(CreateCapsuleDummy(ground + downhill * 1.9f, new TargetId(2)));
+                created.Add(CreateCapsuleDummy(new Vector3(0.5f, ground.y - 2f, 0f), new TargetId(3)));
+                created.Add(CreateCapsuleDummy(ground - downhill * 2.15f, new TargetId(4)));
+                poolRoot = new GameObject("TestPool");
+                var world = new ProjectileWorld(poolRoot.transform);
+                try
+                {
+                    world.GroundFieldSurface = new TiltedGround { Point = ground, Normal = tilt * Vector3.up };
+                    Recipe recipe = CreateRecipe("ground-slope", speed: 20f, lifetime: 5f);
+                    recipe.OnTravel = new IModifier[] { new GroundField(2f, 2f, 3f, intervalSeconds: 0.5f, heightMargin: 1f) };
+                    world.Prewarm(recipe, 4);
+
+                    var seen = new List<TargetId>();
+                    world.Hit += info => seen.Add(info.TargetId);
+
+                    Physics.SyncTransforms();
+                    yield return null;
+                    Physics.SyncTransforms();
+
+                    world.Spawn(new SpawnRequest
+                    {
+                        Recipe = recipe,
+                        Position = new Vector3(0f, 10f, 0f),
+                        Direction = Vector3.up
+                    });
+
+                    CollectionAssert.AreEquivalent(new[] { new TargetId(1), new TargetId(2) }, seen);
+                }
+                finally
+                {
+                    world.Dispose();
+                }
+            }
+            finally
+            {
+                for (int i = 0; i < created.Count; i++)
+                    Object.Destroy(created[i]);
+                if (poolRoot != null)
+                    Object.Destroy(poolRoot);
+            }
+        }
+
+        static GameObject CreateCapsuleDummy(Vector3 feet, TargetId targetId)
+        {
+            GameObject dummy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            dummy.name = "TestCapsuleDummy";
+            dummy.transform.position = feet + Vector3.up;
+            dummy.transform.localScale = new Vector3(0.6f, 1f, 0.6f);
+            var marker = dummy.AddComponent<TestDamageable>();
+            marker.TargetId = targetId;
+            return dummy;
+        }
+
         [UnityTest]
         public IEnumerator IgnoreCollider_OverlappingWorld_FirstTickStaysLive()
         {
