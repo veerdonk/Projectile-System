@@ -755,6 +755,7 @@ namespace Veerdonk.ProjectileSystem
                 CriticalChance = recipe.CriticalChance,
                 ManaCost = recipe.ManaCost,
                 EffectRadius = recipe.EffectRadius,
+                EffectRadiusScale = 1f,
                 Spread = ReadMultiplySpread(recipe),
                 RemainingLifetime = recipe.LifetimeSeconds,
                 ElapsedSeconds = 0f,

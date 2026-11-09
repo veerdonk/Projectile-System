@@ -428,7 +428,7 @@ namespace Veerdonk.ProjectileSystem
                 case Multiply:
                     return 6;
                 case AreaEffect:
-                    return 4;
+                    return 5;
                 case GroundField:
                     return 6;
                 default:
@@ -495,6 +495,7 @@ namespace Veerdonk.ProjectileSystem
             else if (value is AreaEffect)
             {
                 DrawProperty(ref line, element, "damage");
+                DrawProperty(ref line, element, "radius", "Radius (m, 0 = EffectRadius)");
                 DrawStatus(ref line, element.FindPropertyRelative("status"));
                 DrawProperty(ref line, element, "includeDirectHit");
                 DrawProperty(ref line, element, "includeDirectStatus");

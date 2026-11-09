@@ -14,6 +14,7 @@ namespace Veerdonk.ProjectileSystem
         public float CriticalChance;
         public float ManaCost;
         public float EffectRadius;
+        public float EffectRadiusScale;
         public float Spread;
         public float RemainingLifetime;
         public float ElapsedSeconds;

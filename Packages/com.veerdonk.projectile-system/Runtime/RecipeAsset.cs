@@ -272,6 +272,7 @@ namespace Veerdonk.ProjectileSystem
                 case AreaEffect area:
                     return new AreaEffect(
                         area.Damage,
+                        area.Radius,
                         CloneStatus(area.Status),
                         area.IncludeDirectHit,
                         area.IncludeDirectStatus,

@@ -69,7 +69,8 @@ namespace Veerdonk.ProjectileSystem
         public float ManaCost { get; set; }
 
         /// <summary>
-        /// Radius of the <see cref="AreaEffect"/> overlap sphere. Distinct from <see cref="Radius"/>.
+        /// Radius of the <see cref="AreaEffect"/> overlap sphere when the AreaEffect has no <see cref="AreaEffect.Radius"/> of its own.
+        /// Distinct from <see cref="Radius"/>.
         /// Copied onto the instance at spawn so the EffectRadius modifier can scale that copy.
         /// </summary>
         public float EffectRadius { get; set; }

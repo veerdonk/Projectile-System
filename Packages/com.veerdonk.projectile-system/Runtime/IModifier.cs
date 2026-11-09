@@ -120,6 +120,8 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Instance area-effect radius, copied from the Recipe at spawn. Scaled by the EffectRadius modifier.</summary>
         public float EffectRadius { get; set; }
 
+        internal float EffectRadiusScale { get; set; } = 1f;
+
         /// <summary>
         /// Instance copy of <see cref="Multiply.Spread"/>, taken from the Recipe's Multiply modifiers at spawn.
         /// The Spread modifier scales this; patterns read it rather than only the modifier field.
@@ -200,7 +202,12 @@ namespace Veerdonk.ProjectileSystem
         /// </summary>
         public void RequestAreaOverlap(Vector3 center, float damage, IStatusEffect status, bool occupancy = false)
         {
-            requestedAreas.Add(new AreaOverlapRequest(center, EffectRadius, damage, status, occupancy));
+            RequestAreaOverlap(center, EffectRadius, damage, status, occupancy);
+        }
+
+        internal void RequestAreaOverlap(Vector3 center, float radius, float damage, IStatusEffect status, bool occupancy)
+        {
+            requestedAreas.Add(new AreaOverlapRequest(center, radius, damage, status, occupancy));
         }
 
         /// <summary>
@@ -379,6 +386,7 @@ namespace Veerdonk.ProjectileSystem
             CriticalChance = state.CriticalChance;
             ManaCost = state.ManaCost;
             EffectRadius = state.EffectRadius;
+            EffectRadiusScale = state.EffectRadiusScale;
             Spread = state.Spread;
             IntervalSeconds = state.IntervalSeconds;
             HasHit = hasHit;
@@ -415,6 +423,7 @@ namespace Veerdonk.ProjectileSystem
             projectile.CriticalChance = CriticalChance;
             projectile.ManaCost = ManaCost;
             projectile.EffectRadius = EffectRadius;
+            projectile.EffectRadiusScale = EffectRadiusScale;
             projectile.Spread = Spread;
             projectile.IntervalSeconds = IntervalSeconds;
             projectile.HomingHasTarget = HomingTarget.IsAssigned;
@@ -517,6 +526,7 @@ namespace Veerdonk.ProjectileSystem
         public float CriticalChance;
         public float ManaCost;
         public float EffectRadius;
+        public float EffectRadiusScale;
         public float Spread;
         public float IntervalSeconds;
         public int MultiplyGenerationsLeft;

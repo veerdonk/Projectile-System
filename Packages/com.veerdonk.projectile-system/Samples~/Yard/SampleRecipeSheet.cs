@@ -188,6 +188,7 @@ namespace Veerdonk.ProjectileSystem.Samples
         static void DrawArea(string key, AreaEffect area)
         {
             area.Damage = FloatField(key + "d", "AreaEffect dmg", area.Damage);
+            area.Radius = FloatField(key + "r", "  Radius (0 = recipe)", area.Radius);
             area.IncludeDirectHit = Toggle("  Direct hit", area.IncludeDirectHit);
             area.IncludeDirectStatus = Toggle("  Direct status", area.IncludeDirectStatus);
             GUILayout.Label($"    status {EffectName(area.Status)}");
