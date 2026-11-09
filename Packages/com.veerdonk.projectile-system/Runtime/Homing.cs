@@ -170,6 +170,17 @@ namespace Veerdonk.ProjectileSystem
 
         bool TryAcquireLock(ModifierContext context, out HomingTarget target)
         {
+            if (!TryPick(context, out target))
+                return false;
+            if (context.HomingLockHeld || context.IsPublished(target))
+                return true;
+
+            target = default;
+            return false;
+        }
+
+        bool TryPick(ModifierContext context, out HomingTarget target)
+        {
             if (context.HomingAcquirePointSet && !context.HomingAimPointUsed)
             {
                 if (!AimPoint.TryAcquire(context, out target))
