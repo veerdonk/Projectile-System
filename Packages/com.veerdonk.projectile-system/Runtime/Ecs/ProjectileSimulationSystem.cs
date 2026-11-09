@@ -1109,6 +1109,13 @@ namespace Veerdonk.ProjectileSystem
             Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
             em.SetComponentData(entity, projectile);
             em.SetComponentData(entity, velocity);
+            if (Bridge.ModifierContext.PositionMoved)
+            {
+                Vector3 moved = Bridge.ModifierContext.Position;
+                var value = new float3(moved.x, moved.y, moved.z);
+                em.SetComponentData(entity, new ProjectilePosition { Value = value });
+                em.SetComponentData(entity, new ProjectileCandidate { Value = value });
+            }
             FlushHomingLocks();
             SyncViewRadius(entity);
         }

@@ -6,7 +6,8 @@ namespace Veerdonk.ProjectileSystem
 {
     /// <summary>
     /// OnSpawn: total instances is <see cref="Count"/> — the original plus <see cref="Count"/> - 1 extras of an explicit
-    /// sibling Recipe. <see cref="Pattern"/> aims all of them, the original included. Extras never multicast again.
+    /// sibling Recipe. <see cref="Pattern"/> aims all of them, the original included. An <see cref="IMulticastOffsetPattern"/>
+    /// also offsets where each starts, the original included. Extras never multicast again.
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnSpawn)]
@@ -93,13 +94,20 @@ namespace Veerdonk.ProjectileSystem
             }
 
             IMulticastPattern aim = Pattern;
+            var place = aim as IMulticastOffsetPattern;
+            Vector3 origin = context.Position;
             for (int i = 0; i < total; i++)
             {
                 Vector3 direction = Aim(aim.GetDirection(context, forward, i, total), forward);
+                Vector3 position = place != null ? origin + place.GetOffset(context, forward, i, total) : origin;
                 if (i == 0)
+                {
                     context.Velocity = direction * speed;
+                    if (place != null)
+                        context.MoveTo(position);
+                }
                 else
-                    context.RequestMulticastExtra(ExtraRecipe, context.Position, direction);
+                    context.RequestMulticastExtra(ExtraRecipe, position, direction);
             }
         }
 
