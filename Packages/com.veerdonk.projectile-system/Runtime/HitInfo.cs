@@ -85,7 +85,7 @@ namespace Veerdonk.ProjectileSystem
         public float Damage;
         /// <summary>Instance critical chance at sample time, 0 or more; above 1 is allowed and the game decides what it means. The package does not roll it.</summary>
         public float CriticalChance;
-        /// <summary>Instance effect radius at sample time.</summary>
+        /// <summary>Instance effect radius at sample time (Direct), or the overlap radius that produced the hit (Area, occupancy).</summary>
         public float EffectRadius;
         /// <summary>What happened to the shot after this Direct hit. <see cref="HitOutcome.None"/> for Area, occupancy, and ground hits.</summary>
         public HitOutcome Outcome;
