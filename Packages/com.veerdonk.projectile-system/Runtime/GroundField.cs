@@ -103,12 +103,13 @@ namespace Veerdonk.ProjectileSystem
 
         /// <summary>
         /// Meters a Target's foot (the bottom of its capsule axis) may lie above or below the disk's plane, measured
-        /// along the ground normal. 0, which existing assets read, does not test height. A negative value is stored as 0.
+        /// along the ground normal. 0, which existing assets read, does not test height (a collider still has to be found by
+        /// the query capsule, about 1 m above and below the plane plus the slope's rise). A negative or non-finite value is stored as 0.
         /// </summary>
         public float HeightMargin
         {
             get => heightMargin;
-            set => heightMargin = value > 0f ? value : 0f;
+            set => heightMargin = GroundDisk.ClampMargin(value);
         }
 
         /// <inheritdoc />
@@ -460,7 +461,9 @@ namespace Veerdonk.ProjectileSystem
 
         void ResolveGround(Vector3 point, out Vector3 center, out Vector3 normal)
         {
-            if (Surface != null && Surface.TryGetGround(point, out Vector3 groundPoint, out Vector3 groundNormal))
+            if (Surface != null
+                && Surface.TryGetGround(point, out Vector3 groundPoint, out Vector3 groundNormal)
+                && IsFinite(groundPoint))
             {
                 center = groundPoint;
                 normal = GroundDisk.SanitizeNormal(groundNormal);
@@ -469,6 +472,13 @@ namespace Veerdonk.ProjectileSystem
 
             center = new Vector3(point.x, 0f, point.z);
             normal = Vector3.up;
+        }
+
+        static bool IsFinite(Vector3 v)
+        {
+            return !float.IsNaN(v.x) && !float.IsInfinity(v.x)
+                && !float.IsNaN(v.y) && !float.IsInfinity(v.y)
+                && !float.IsNaN(v.z) && !float.IsInfinity(v.z);
         }
 
         static int IntervalCrossings(float previousElapsed, float elapsed, float interval)
@@ -527,7 +537,12 @@ namespace Veerdonk.ProjectileSystem
             Center = center;
             Normal = normal;
             Radius = radius;
-            HeightMargin = heightMargin > 0f ? heightMargin : 0f;
+            HeightMargin = ClampMargin(heightMargin);
+        }
+
+        public static float ClampMargin(float margin)
+        {
+            return margin > 0f && !float.IsInfinity(margin) ? margin : 0f;
         }
 
         public Vector3 Center { get; }

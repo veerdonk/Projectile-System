@@ -299,9 +299,138 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void TiltedField_MissesCapsuleOnALedgeAbove()
+        {
+            Recipe recipe = TravelField(1f);
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                world.GroundFieldSurface = new FixedSurface(true, Ground, Slope);
+                var ledge = new TargetId(1);
+                var onPlane = new TargetId(2);
+                StandOnCapsule(world, ledge, new Vector3(0.5f, Ground.y + 2f, 0f));
+                StandOnCapsule(world, onPlane, new Vector3(-0.5f, Ground.y, 0f));
+                var seen = new List<HitInfo>();
+                world.Hit += seen.Add;
+
+                FireUp(world, recipe);
+
+                CollectionAssert.AreEquivalent(new[] { onPlane }, AreaTargets(seen));
+            }
+        }
+
+        [Test]
+        public void HeightMargin_IsMeasuredAlongTheNormal()
+        {
+            Recipe recipe = TravelField(1f);
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                world.GroundFieldSurface = new FixedSurface(true, Ground, Slope);
+                var verticallyAbove = new TargetId(1);
+                var inside = new TargetId(2);
+                var outside = new TargetId(3);
+                hits.AddOverlapTarget(verticallyAbove, Ground + Vector3.up * 1.1f);
+                hits.AddOverlapTarget(inside, Ground + Vector3.right * 0.5f + Slope * 0.9f);
+                hits.AddOverlapTarget(outside, Ground - Vector3.right * 0.5f + Slope * 1.1f);
+                var seen = new List<HitInfo>();
+                world.Hit += seen.Add;
+
+                FireUp(world, recipe);
+
+                CollectionAssert.AreEquivalent(new[] { verticallyAbove, inside }, AreaTargets(seen));
+            }
+        }
+
+        [Test]
+        public void OnHit_AsksTheSurface_AtTheContactPoint()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "ground-surface-onhit",
+                speed: 20f,
+                lifetime: 5f,
+                onHit: new IModifier[] { new GroundField(2f, 2f, 3f, intervalSeconds: 0.5f, heightMargin: 1f) });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var surface = new FixedSurface(true, Ground, Slope);
+                world.GroundFieldSurface = surface;
+                var planted = new List<GroundFieldInfo>();
+                world.GroundFieldPlanted += planted.Add;
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                Vector3 contact = new Vector3(0f, 4f, 1.5f);
+                hits.Queue(HitKind.World, contact, Vector3.back);
+                world.Tick(0.1f);
+
+                Assert.AreEqual(1, surface.Asked.Count);
+                AssertVector(contact, surface.Asked[0]);
+                AssertVector(Ground, planted[0].Center);
+                AssertVector(Slope, planted[0].Normal);
+            }
+        }
+
+        [Test]
+        public void OccupancyOnTiltedField_EntersOnlyTargetsOnThePlane()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "ground-surface-occupancy",
+                speed: 20f,
+                lifetime: 5f,
+                onTravel: new IModifier[] { new GroundField(2f, 2f, 3f, occupancy: true, heightMargin: 1f) });
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                world.GroundFieldSurface = new FixedSurface(true, Ground, Slope);
+                var onPlane = new TargetId(1);
+                var below = new TargetId(2);
+                StandOnCapsule(world, onPlane, Ground + Downhill * 1.5f);
+                StandOnCapsule(world, below, new Vector3(0.5f, Ground.y - 2f, 0f));
+                var seen = new List<HitInfo>();
+                world.Hit += seen.Add;
+
+                FireUp(world, recipe);
+                world.Tick(0.1f);
+                StandOnCapsule(world, onPlane, new Vector3(0.5f, Ground.y - 2f, 0f));
+                world.Tick(0.1f);
+
+                Assert.AreEqual(2, seen.Count);
+                Assert.AreEqual(HitSource.OccupancyEnter, seen[0].Source);
+                Assert.AreEqual(onPlane, seen[0].TargetId);
+                Assert.AreEqual(HitSource.OccupancyExit, seen[1].Source);
+                Assert.AreEqual(onPlane, seen[1].TargetId);
+            }
+        }
+
+        [Test]
+        public void NonFiniteGroundPoint_PlantsAtYZero_NormalUp()
+        {
+            Recipe recipe = TravelField(0f);
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                world.GroundFieldSurface = new FixedSurface(true, new Vector3(float.NaN, 3f, 0f), Slope);
+                var planted = new List<GroundFieldInfo>();
+                world.GroundFieldPlanted += planted.Add;
+
+                FireUp(world, recipe);
+
+                AssertVector(Vector3.zero, planted[0].Center);
+                AssertVector(Vector3.up, planted[0].Normal);
+            }
+        }
+
+        [Test]
         public void HeightMargin_IsClampedAndCloned()
         {
             var field = new GroundField(2f, 2f, 3f, heightMargin: -1f);
+            Assert.AreEqual(0f, field.HeightMargin);
+            field.HeightMargin = float.PositiveInfinity;
             Assert.AreEqual(0f, field.HeightMargin);
             field.HeightMargin = 1.5f;
 

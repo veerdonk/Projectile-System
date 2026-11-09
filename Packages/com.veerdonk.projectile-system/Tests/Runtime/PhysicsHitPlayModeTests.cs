@@ -688,7 +688,7 @@ namespace Veerdonk.ProjectileSystem.Tests
                 created.Add(CreateCapsuleDummy(ground - downhill * 1.9f, new TargetId(1)));
                 created.Add(CreateCapsuleDummy(ground + downhill * 1.9f, new TargetId(2)));
                 created.Add(CreateCapsuleDummy(new Vector3(0.5f, ground.y - 2f, 0f), new TargetId(3)));
-                created.Add(CreateCapsuleDummy(ground - downhill * 2.4f, new TargetId(4)));
+                created.Add(CreateCapsuleDummy(ground - downhill * 2.15f, new TargetId(4)));
                 poolRoot = new GameObject("TestPool");
                 var world = new ProjectileWorld(poolRoot.transform);
                 try

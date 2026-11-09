@@ -13,7 +13,9 @@ namespace Veerdonk.ProjectileSystem
         /// Returns the ground under <paramref name="point"/>: the contact point on OnHit, the instance position
         /// otherwise. <paramref name="groundNormal"/> does not need to be normalized; one facing down is flipped, and
         /// zero or one more than about 84 degrees from up is replaced by <see cref="Vector3.up"/>.
-        /// False plants the field as without a surface: at <paramref name="point"/> with Y = 0, normal up.
+        /// False, or a non-finite <paramref name="groundPoint"/>, plants the field as without a surface: at
+        /// <paramref name="point"/> with Y = 0, normal up. Runs inside the planting stage: do not spawn, despawn, or
+        /// change the world from it.
         /// </summary>
         bool TryGetGround(Vector3 point, out Vector3 groundPoint, out Vector3 groundNormal);
     }

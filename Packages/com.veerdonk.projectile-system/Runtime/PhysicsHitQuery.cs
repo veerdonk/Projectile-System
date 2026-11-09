@@ -261,7 +261,7 @@ namespace Veerdonk.ProjectileSystem
         {
             Bounds bounds = collider.bounds;
             Vector3 foot = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
-            if (collider is CapsuleCollider)
+            if (collider is CapsuleCollider || collider is CharacterController)
                 foot.y += Mathf.Min(Mathf.Min(bounds.extents.x, bounds.extents.z), bounds.extents.y);
             return foot;
         }
