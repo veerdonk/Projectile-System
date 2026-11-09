@@ -40,7 +40,7 @@ namespace Veerdonk.ProjectileSystem
         {
         }
 
-        /// <summary>AreaEffect with its own <paramref name="radius"/> in metres. 0 uses the instance EffectRadius.</summary>
+        /// <summary>AreaEffect with its own <paramref name="radius"/> in metres (negative is stored as 0). 0 uses the instance EffectRadius.</summary>
         public AreaEffect(
             float damage,
             float radius,
@@ -50,7 +50,7 @@ namespace Veerdonk.ProjectileSystem
             bool occupancy = false)
         {
             this.damage = damage;
-            this.radius = radius;
+            this.radius = Mathf.Max(0f, radius);
             this.status = status;
             this.includeDirectHit = includeDirectHit;
             this.includeDirectStatus = includeDirectStatus;
@@ -67,12 +67,12 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>
         /// Own overlap radius in metres. Above 0 it replaces <see cref="ModifierContext.EffectRadius"/> for this
         /// modifier and is multiplied by every <see cref="ProjectileSystem.EffectRadius"/> scale applied to the instance.
-        /// 0 keeps the instance EffectRadius.
+        /// 0 keeps the instance EffectRadius. Negative values are stored as 0.
         /// </summary>
         public float Radius
         {
             get => radius;
-            set => radius = value;
+            set => radius = Mathf.Max(0f, value);
         }
 
         /// <summary>Optional status raised per Target in the sphere.</summary>
