@@ -51,11 +51,16 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>
         /// Flips local X of a vector built on the <paramref name="forward"/> plane. Use when <paramref name="forward"/> is the
         /// way the shooter looks, so local +X lands on the shooter's right; the plane's own +X is the shooter's right only
-        /// when <paramref name="forward"/> faces back at the shooter (a hit normal).
+        /// when <paramref name="forward"/> faces back at the shooter (a hit normal). A vertical <paramref name="forward"/> uses the
+        /// world-fixed basis (+X right, +Z top when looking up) and is not mirrored, matching <see cref="MultiplyDirection.Up"/>.
         /// </summary>
         internal static Vector3 MirrorX(Vector3 forward, Vector3 value)
         {
-            Vector3 right = Right(Forward(forward));
+            Vector3 cross = Vector3.Cross(Forward(forward), Vector3.up);
+            if (cross.sqrMagnitude < 1e-8f)
+                return value;
+
+            Vector3 right = cross.normalized;
             return value - right * (2f * Vector3.Dot(value, right));
         }
 

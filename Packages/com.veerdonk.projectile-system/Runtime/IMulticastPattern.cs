@@ -9,6 +9,7 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>
         /// Direction for instance <paramref name="index"/> of <paramref name="count"/> total, around
         /// <paramref name="forward"/>. Index 0 is the instance that is already flying; it is re-aimed at this direction.
+        /// Every call sees the shot's position and velocity from before Multicast; the original is re-aimed after the last call.
         /// </summary>
         Vector3 GetDirection(ModifierContext context, Vector3 forward, int index, int count);
     }

@@ -72,6 +72,39 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void Multiply_PastAPiercedTarget_TravelPlusZ_RightColumnLandsOnPlusX()
+        {
+            Recipe child = Child("mirror-pierce-child");
+            Recipe parent = SimulationTestHelper.CreateRecipe(
+                "mirror-pierce-parent",
+                speed: 20f,
+                lifetime: 5f,
+                onHit: new IModifier[] { new Pierce(1), new Multiply(3, child, 0f, Layout()) });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(parent);
+            using (world)
+            {
+                world.Prewarm(child, 4);
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = parent,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                hits.Queue(HitKind.Target, WallPoint, Vector3.back, new TargetId(1));
+                world.Tick(0.1f);
+
+                List<(Vector3 position, Vector3 velocity)> children = Children(world, child.Id);
+                Assert.AreEqual(3, children.Count);
+                float z = WallPoint.z + ChildRadius + 0.01f;
+                AssertHas(children, new Vector3(0f, 0f, z));
+                AssertHas(children, new Vector3(0f, 2f, z));
+                AssertHas(children, new Vector3(2f, 0f, z));
+                for (int i = 0; i < children.Count; i++)
+                    Assert.Less(Vector3.Angle(Vector3.forward, children[i].velocity), 0.05f);
+            }
+        }
+
+        [Test]
         public void Multiply_Up_TravelPlusZ_RightColumnLandsOnPlusX_TopRowAlongTravel()
         {
             List<(Vector3 position, Vector3 velocity)> children = SplitOnExpire(

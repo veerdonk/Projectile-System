@@ -337,6 +337,33 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void ExactlyVertical_RightColumnLandsOnPlusX_TopRowOnPlusZ()
+        {
+            var grid = new GridMultiplyPattern();
+            grid.AssignLayout(3, Spacing, new[] { 0, 2, 0, 1, 0, 3, 0, 0, 0 });
+            List<Shot> shots = Fire(3, new GridMulticastPattern(grid, 0f), Muzzle, Vector3.up);
+
+            Assert.AreEqual(3, shots.Count);
+            AssertPosition(new Vector3(-1f, 2f, 3f), Original(shots).Position);
+            List<Vector3> extras = ExtraPositions(shots);
+            AssertContains(extras, new Vector3(1f, 2f, 5f));
+            AssertContains(extras, new Vector3(3f, 2f, 3f));
+        }
+
+        [Test]
+        public void NearlyVertical_TiltedTowardPlusZ_RightColumnStillLandsOnPlusX()
+        {
+            Vector3 forward = new Vector3(0f, 1f, 0.05f).normalized;
+            List<Shot> shots = Fire(3, new GridMulticastPattern(Row(), 0f), Muzzle, forward);
+
+            Assert.AreEqual(3, shots.Count);
+            AssertPosition(new Vector3(-1f, 2f, 3f), Original(shots).Position);
+            List<Vector3> extras = ExtraPositions(shots);
+            AssertContains(extras, new Vector3(1f, 2f, 3f));
+            AssertContains(extras, new Vector3(3f, 2f, 3f));
+        }
+
+        [Test]
         public void Beam_FirstAndLaterPulsesStartInTheOriginalsLane()
         {
             Recipe extra = BeamRecipe("offset-beam-extra");
