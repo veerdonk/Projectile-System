@@ -1173,7 +1173,9 @@ namespace Veerdonk.ProjectileSystem
                 HomingAcquirePointSet = projectile.HomingAcquirePointSet,
                 HomingAcquirePoint = ToVector3(projectile.HomingAcquirePoint),
                 HomingAimPointUsed = projectile.HomingAimPointUsed,
-                HomingLockHeld = projectile.BeamSetLockSet
+                HomingHeldLock = projectile.BeamSetLockSet
+                    ? HomingTarget.Assigned(projectile.BeamSetLockId)
+                    : default
             };
             Bridge.ModifierContext.Bind(state, hasHit, hit, dt);
         }
