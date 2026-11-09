@@ -107,7 +107,7 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>
         /// Returns true and a target when this instance should lock. Returning false leaves the instance
         /// unassigned so a later tick can try again. Homing calls this whenever the lock is empty, including after
-        /// a Target hit, except the first lock when <see cref="SpawnRequest.HomingAcquirePointSet"/> is true
+        /// a Target hit and after the locked target stops being published, except the first lock when <see cref="SpawnRequest.HomingAcquirePointSet"/> is true
         /// (that pick is <see cref="ClosestToPointAcquisition"/>). Skip <see cref="ModifierContext.HomingIgnoredTarget"/>
         /// while it is set, and always skip <see cref="ModifierContext.ShooterTarget"/> (Homing drops a pick of it).
         /// The cone (<see cref="Homing.AcquireHalfAngleDegrees"/>) and the last hit target's fallback rule are applied by

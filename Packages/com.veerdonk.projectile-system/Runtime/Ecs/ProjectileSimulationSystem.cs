@@ -1164,7 +1164,8 @@ namespace Veerdonk.ProjectileSystem
                 HomingIgnoredPassed = projectile.HomingHasIgnoredTarget && projectile.HomingIgnoredPassed,
                 HomingAcquirePointSet = projectile.HomingAcquirePointSet,
                 HomingAcquirePoint = ToVector3(projectile.HomingAcquirePoint),
-                HomingAimPointUsed = projectile.HomingAimPointUsed
+                HomingAimPointUsed = projectile.HomingAimPointUsed,
+                HomingLockHeld = projectile.BeamSetLockSet
             };
             Bridge.ModifierContext.Bind(state, hasHit, hit, dt);
         }

@@ -70,7 +70,10 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Publishes a live pose Homing can lock onto and steer toward. Call again to move it.</summary>
         void SetHomingCandidate(TargetId id, Vector3 position);
 
-        /// <summary>Drops a previously published homing pose. Locked instances that used it fly straight.</summary>
+        /// <summary>
+        /// Drops a previously published homing pose. Locked instances that used it, and whose id is not a published
+        /// hit target, re-acquire through their Homing acquisition on the next tick (a Beam lock set by <c>AimBeam</c> is kept).
+        /// </summary>
         void RemoveHomingCandidate(TargetId id);
 
         /// <summary>
@@ -99,7 +102,10 @@ namespace Veerdonk.ProjectileSystem
             float homingHeight,
             ProtectionLevel protection = ProtectionLevel.None);
 
-        /// <summary>Drops a previously published hit volume, sphere or capsule.</summary>
+        /// <summary>
+        /// Drops a previously published hit volume, sphere or capsule. Locked instances whose id is not also a
+        /// homing pose re-acquire through their Homing acquisition on the next tick (a Beam lock set by <c>AimBeam</c> is kept).
+        /// </summary>
         void RemoveHitTarget(TargetId id);
 
         /// <summary>Raised for each hit produced by the query pipeline.</summary>

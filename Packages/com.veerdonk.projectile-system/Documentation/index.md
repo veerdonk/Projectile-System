@@ -35,7 +35,7 @@ Author in code (`new Recipe { … }`) or as a `RecipeAsset` (`Create > Projectil
 
 **Aim:** `BallisticAim.TrySolve` — flatter (needed) arc only. Arc `Spawn` calls it when the aim point is set. Games may still call it for a barrel preview. Unreachable returns false.
 
-**Homing acquire:** `IHomingAcquisition`, `ClosestInTravelDirectionAcquisition` (default, and every lock after the first; takes the nearest candidate within `Homing.AcquireHalfAngleDegrees` of travel, 90 by default, 180 for every direction), `ClosestToPointAcquisition` (first lock when `SpawnRequest.HomingAcquirePointSet` / `HomingAcquirePoint`). Publish poses with `SetHomingCandidate`. After a Target hit that target is ignored while it is ahead, then kept as a fallback: locked again only when no other candidate is in the cone. Multiply children of a hit start with it as their fallback. The package does not read the mouse.
+**Homing acquire:** `IHomingAcquisition`, `ClosestInTravelDirectionAcquisition` (default, and every lock after the first; takes the nearest candidate within `Homing.AcquireHalfAngleDegrees` of travel, 90 by default, 180 for every direction), `ClosestToPointAcquisition` (first lock when `SpawnRequest.HomingAcquirePointSet` / `HomingAcquirePoint`). Publish poses with `SetHomingCandidate`. After a Target hit that target is ignored while it is ahead, then kept as a fallback: locked again only when no other candidate is in the cone. Multiply children of a hit start with it as their fallback. A lock whose target is in neither catalog (after `RemoveHitTarget` / `RemoveHomingCandidate`, or never published) is dropped and re-acquired through the Homing's acquisition, never the aim point; with nothing in the cone the shot flies on unlocked. A lock whose target is still published is kept. A Beam lock set by `AimBeam` is kept. The package does not read the mouse.
 
 **Views:** `IProjectileViewFactory`, `PrimitiveViewFactory`, `PrefabViewFactory`, `IGroundFieldViewFactory`, `PrimitiveGroundFieldViewFactory`, `PrefabGroundFieldViewFactory`, `ProjectileView`
 
@@ -80,7 +80,7 @@ Since 0.1.12 the world reports each moment of a shot's life, so a game can play 
 | `Continued` | another modifier cancelled the despawn and the shot continues |
 | `None` | not a Direct hit (Area, occupancy, ground field) |
 
-**`HomingLocked`** is raised when a shot gets a new lock: assigned at spawn through `SpawnRequest.HomingTarget` (`Kind = Assigned`, right after that instance's `Spawned`), and on every acquire or re-acquire (`Kind = Acquired`). It is not raised on ticks where the shot keeps the same lock. A shot that is assigned a lock at fire time never acquires, so it raises exactly one `Assigned` event.
+**`HomingLocked`** is raised when a shot gets a new lock: assigned at spawn through `SpawnRequest.HomingTarget` (`Kind = Assigned`, right after that instance's `Spawned`), and on every acquire or re-acquire (`Kind = Acquired`). It is not raised on ticks where the shot keeps the same lock. A shot that is assigned a lock at fire time raises one `Assigned` event and acquires only after a Target hit or when that target is no longer published.
 
 **Ordering you can rely on**
 

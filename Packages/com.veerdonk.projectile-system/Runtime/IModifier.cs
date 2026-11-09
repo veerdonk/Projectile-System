@@ -51,6 +51,15 @@ namespace Veerdonk.ProjectileSystem
             return HomingCatalog.TryGetPosition(target, out position);
         }
 
+        internal bool IsPublished(in HomingTarget target)
+        {
+            if (!target.IsAssigned)
+                return false;
+
+            return (HitTargets != null && HitTargets.Contains(target.Id))
+                || HomingCatalog.TryGetPosition(target, out _);
+        }
+
         /// <summary>Live instance this stage is running for.</summary>
         public ProjectileId InstanceId { get; internal set; }
 
@@ -169,6 +178,9 @@ namespace Veerdonk.ProjectileSystem
         public Vector3 HomingAcquirePoint { get; internal set; }
 
         internal bool HomingAimPointUsed { get; set; }
+
+        /// <summary>True for a Beam lock set by the four-argument <c>AimBeam</c>. Homing keeps it even when its target is gone.</summary>
+        internal bool HomingLockHeld { get; set; }
 
         /// <summary>True while the OnExpire list runs.</summary>
         internal bool Expiring { get; set; }
@@ -391,6 +403,7 @@ namespace Veerdonk.ProjectileSystem
             HomingAcquirePointSet = state.HomingAcquirePointSet;
             HomingAcquirePoint = state.HomingAcquirePoint;
             HomingAimPointUsed = state.HomingAimPointUsed;
+            HomingLockHeld = state.HomingLockHeld;
         }
 
         internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
@@ -516,5 +529,6 @@ namespace Veerdonk.ProjectileSystem
         public bool HomingAcquirePointSet;
         public Vector3 HomingAcquirePoint;
         public bool HomingAimPointUsed;
+        public bool HomingLockHeld;
     }
 }
