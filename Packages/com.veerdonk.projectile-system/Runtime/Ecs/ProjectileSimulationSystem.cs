@@ -981,7 +981,7 @@ namespace Veerdonk.ProjectileSystem
                 instanceId,
                 request.Damage,
                 projectile.CriticalChance,
-                projectile.EffectRadius,
+                request.Radius,
                 request.Status,
                 Bridge.Hit,
                 Bridge.StatusApplied);
@@ -1040,7 +1040,7 @@ namespace Veerdonk.ProjectileSystem
             areaHit.Source = HitSource.Area;
             areaHit.Damage = request.Damage;
             areaHit.CriticalChance = projectile.CriticalChance;
-            areaHit.EffectRadius = projectile.EffectRadius;
+            areaHit.EffectRadius = request.Radius;
             Bridge.Hit?.Invoke(areaHit);
             if (request.Status == null)
                 return;

@@ -52,6 +52,8 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             Assert.AreEqual(4f, bursts[1].Radius, 1e-4f);
             CollectionAssert.AreEquivalent(new[] { contact, near }, TargetsWithDamage(areaHits, 5f));
             CollectionAssert.AreEquivalent(new[] { contact, near, far }, TargetsWithDamage(areaHits, 7f));
+            foreach (HitInfo hit in areaHits)
+                Assert.AreEqual(Mathf.Approximately(hit.Damage, 5f) ? 1.5f : 4f, hit.EffectRadius, 1e-4f);
         }
 
         [Test]
@@ -83,6 +85,8 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             Assert.AreEqual(1, bursts.Count);
             Assert.AreEqual(3f, bursts[0].Radius, 1e-4f);
             CollectionAssert.AreEquivalent(new[] { contact, inside }, TargetsWithDamage(areaHits, 3f));
+            foreach (HitInfo hit in areaHits)
+                Assert.AreEqual(3f, hit.EffectRadius, 1e-4f);
         }
 
         [Test]
@@ -138,6 +142,8 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
 
             Assert.AreEqual(3f, bursts[0].Radius, 1e-4f);
             CollectionAssert.AreEquivalent(new[] { contact, doubled }, TargetsWithDamage(areaHits, 3f));
+            foreach (HitInfo hit in areaHits)
+                Assert.AreEqual(3f, hit.EffectRadius, 1e-4f);
             Assert.AreEqual(1.5f, ((AreaEffect)recipe.OnHit[1]).Radius);
         }
 
@@ -163,6 +169,43 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             Assert.AreEqual(2, bursts.Count);
             Assert.AreEqual(3f, bursts[0].Radius, 1e-4f);
             Assert.AreEqual(2f, bursts[1].Radius, 1e-4f);
+        }
+
+        [Test]
+        public void Occupancy_EnterAndExit_ReportTheOwnRadius()
+        {
+            var target = new TargetId(1);
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "own-radius-occupancy",
+                speed: 1f,
+                lifetime: 5f,
+                effectRadius: 5f,
+                onTick: new IModifier[] { new AreaEffect(3f, 2f, occupancy: true) });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var seen = new List<HitInfo>();
+                world.Hit += seen.Add;
+                hits.AddOverlapTarget(target, new Vector3(0.5f, 0f, 0f));
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                world.Tick(0.1f);
+                hits.ClearOverlaps();
+                world.Tick(0.1f);
+
+                Assert.AreEqual(2, seen.Count);
+                Assert.AreEqual(HitSource.OccupancyEnter, seen[0].Source);
+                Assert.AreEqual(HitSource.OccupancyExit, seen[1].Source);
+                Assert.AreEqual(target, seen[0].TargetId);
+                Assert.AreEqual(target, seen[1].TargetId);
+                Assert.AreEqual(2f, seen[0].EffectRadius, 1e-4f);
+                Assert.AreEqual(2f, seen[1].EffectRadius, 1e-4f);
+            }
         }
 
         [Test]
@@ -208,6 +251,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 Assert.AreEqual(3.5f, bursts[0].Radius, 1e-4f);
                 Assert.AreEqual(1, areaHits.Count);
                 Assert.AreEqual(inside, areaHits[0].TargetId);
+                Assert.AreEqual(3.5f, areaHits[0].EffectRadius, 1e-4f);
             }
         }
 
