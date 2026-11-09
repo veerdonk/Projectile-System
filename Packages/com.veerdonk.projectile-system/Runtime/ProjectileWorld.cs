@@ -671,6 +671,14 @@ namespace Veerdonk.ProjectileSystem
             if (recipe.Delivery != Delivery.Arc || !request.HomingAcquirePointSet)
                 return true;
 
+            if (request.LoftTargetSet)
+            {
+                if (BallisticAim.TrySolve(request.Position, request.LoftTarget, recipe.Speed, recipe.Gravity, out Vector3 loft)
+                    && loft.sqrMagnitude > 1e-12f)
+                    direction = (request.LoftTurn * loft).normalized;
+                return true;
+            }
+
             if (!BallisticAim.TrySolve(
                     request.Position,
                     request.HomingAcquirePoint,

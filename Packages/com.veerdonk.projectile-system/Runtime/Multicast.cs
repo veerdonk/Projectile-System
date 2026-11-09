@@ -101,11 +101,21 @@ namespace Veerdonk.ProjectileSystem
             for (int i = 0; i < total; i++)
             {
                 Vector3 direction = Aim(aim.GetDirection(context, forward, i, total), forward);
-                Vector3 position = place != null ? origin + place.GetOffset(context, forward, i, total) : origin;
+                Vector3 offset = place != null ? place.GetOffset(context, forward, i, total) : Vector3.zero;
+                Vector3 position = origin + offset;
                 if (i == 0)
                 {
                     originalDirection = direction;
                     originalPosition = position;
+                }
+                else if (place != null && context.HomingAcquirePointSet)
+                {
+                    context.RequestMulticastExtra(
+                        ExtraRecipe,
+                        position,
+                        direction,
+                        context.HomingAcquirePoint + offset,
+                        Quaternion.FromToRotation(forward, direction));
                 }
                 else
                     context.RequestMulticastExtra(ExtraRecipe, position, direction);

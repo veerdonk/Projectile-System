@@ -326,6 +326,26 @@ namespace Veerdonk.ProjectileSystem
             Enqueue(recipe, position, direction, ChainBudget.Inherit(MulticastGenerationsForExtras), default, SpawnCause.Multicast, copyAimPoint: true);
         }
 
+        /// <summary>
+        /// Like <see cref="RequestMulticastExtra(Recipe, Vector3, Vector3)"/>. An Arc extra solves its loft to
+        /// <paramref name="loftTarget"/> and turns it by <paramref name="loftTurn"/>; unreachable keeps
+        /// <paramref name="direction"/>. The aim point copied for Homing is unchanged.
+        /// </summary>
+        internal void RequestMulticastExtra(
+            Recipe recipe,
+            Vector3 position,
+            Vector3 direction,
+            Vector3 loftTarget,
+            Quaternion loftTurn)
+        {
+            RequestMulticastExtra(recipe, position, direction);
+            SpawnRequest request = pendingSpawns[pendingSpawns.Count - 1];
+            request.LoftTargetSet = true;
+            request.LoftTarget = loftTarget;
+            request.LoftTurn = loftTurn;
+            pendingSpawns[pendingSpawns.Count - 1] = request;
+        }
+
         internal void RequestMultiplyChild(
             Recipe recipe,
             Vector3 position,

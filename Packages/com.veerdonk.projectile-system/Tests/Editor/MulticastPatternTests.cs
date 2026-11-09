@@ -395,7 +395,7 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
 
         static Vector3 Expected(Vector2 local)
         {
-            return MultiplyPatternPlane.FromLocal(Vector3.forward, local).normalized;
+            return MultiplyPatternPlane.MirrorX(Vector3.forward, MultiplyPatternPlane.FromLocal(Vector3.forward, local)).normalized;
         }
 
         static ModifierContext Context()

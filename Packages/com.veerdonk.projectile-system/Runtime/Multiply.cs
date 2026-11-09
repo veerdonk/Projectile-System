@@ -189,6 +189,7 @@ namespace Veerdonk.ProjectileSystem
             }
 
             Vector3 normal = flattenIntoSurface ? forward.normalized : Vector3.zero;
+            bool mirror = !onSurface && Direction != MultiplyDirection.Up;
 
             HomingTarget hitTarget = context.HasHit && context.Hit.Kind == HitKind.Target
                 ? HomingTarget.Assigned(context.Hit.TargetId)
@@ -198,6 +199,8 @@ namespace Veerdonk.ProjectileSystem
             for (int i = 0; i < n; i++)
             {
                 Vector3 offset = turn * layout.GetOffset(context, layoutForward, context.Spread, i, n);
+                if (mirror)
+                    offset = MultiplyPatternPlane.MirrorX(layoutForward, offset);
                 if (flattenIntoSurface)
                 {
                     float into = Vector3.Dot(offset, normal);
@@ -209,6 +212,8 @@ namespace Veerdonk.ProjectileSystem
                 if (context.HasHit)
                     spawnPosition = OffsetOffSurface(spawnPosition, forward, ChildRecipe.Radius);
                 Vector3 childDirection = turn * layout.GetDirection(context, layoutForward, context.Spread, i, n);
+                if (mirror)
+                    childDirection = MultiplyPatternPlane.MirrorX(layoutForward, childDirection);
                 HomingTarget childLock = locks > 0 ? HomingTarget.Assigned(LockCandidates[i % locks].Id) : default;
                 context.RequestMultiplyChild(ChildRecipe, spawnPosition, childDirection, childLock, hitTarget);
             }
