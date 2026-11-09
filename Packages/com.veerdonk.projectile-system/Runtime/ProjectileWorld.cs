@@ -671,6 +671,14 @@ namespace Veerdonk.ProjectileSystem
             if (recipe.Delivery != Delivery.Arc || !request.HomingAcquirePointSet)
                 return true;
 
+            if (request.LoftTargetSet)
+            {
+                if (BallisticAim.TrySolve(request.Position, request.LoftTarget, recipe.Speed, recipe.Gravity, out Vector3 loft)
+                    && loft.sqrMagnitude > 1e-12f)
+                    direction = (request.LoftTurn * loft).normalized;
+                return true;
+            }
+
             if (!BallisticAim.TrySolve(
                     request.Position,
                     request.HomingAcquirePoint,
@@ -755,6 +763,7 @@ namespace Veerdonk.ProjectileSystem
                 CriticalChance = recipe.CriticalChance,
                 ManaCost = recipe.ManaCost,
                 EffectRadius = recipe.EffectRadius,
+                EffectRadiusScale = 1f,
                 Spread = ReadMultiplySpread(recipe),
                 RemainingLifetime = recipe.LifetimeSeconds,
                 ElapsedSeconds = 0f,
@@ -819,7 +828,7 @@ namespace Veerdonk.ProjectileSystem
             if (view != null)
             {
                 Projectile spawned = em.GetComponentData<Projectile>(entity);
-                view.Bind(request.Position, spawned.Radius);
+                view.Bind(ToVector3(em.GetComponentData<ProjectilePosition>(entity).Value), spawned.Radius);
             }
 
             if (recipe.Delivery == Delivery.Beam)

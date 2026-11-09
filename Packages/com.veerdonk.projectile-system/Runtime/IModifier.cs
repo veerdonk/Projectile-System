@@ -120,6 +120,8 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Instance area-effect radius, copied from the Recipe at spawn. Scaled by the EffectRadius modifier.</summary>
         public float EffectRadius { get; set; }
 
+        internal float EffectRadiusScale { get; set; } = 1f;
+
         /// <summary>
         /// Instance copy of <see cref="Multiply.Spread"/>, taken from the Recipe's Multiply modifiers at spawn.
         /// The Spread modifier scales this; patterns read it rather than only the modifier field.
@@ -170,6 +172,17 @@ namespace Veerdonk.ProjectileSystem
 
         internal bool HomingAimPointUsed { get; set; }
 
+        /// <summary>A Beam's lock set by the four-argument <c>AimBeam</c>. Homing keeps this lock even when its target is gone.</summary>
+        internal HomingTarget HomingHeldLock { get; set; }
+
+        /// <summary>True after Homing dropped a lock whose target is not published. A Beam then self-acquires like an unassigned one.</summary>
+        internal bool HomingLockDropped { get; set; }
+
+        internal bool IsHeldLock(in HomingTarget target)
+        {
+            return target.IsAssigned && HomingHeldLock.IsAssigned && target.Id.Equals(HomingHeldLock.Id);
+        }
+
         /// <summary>True while the OnExpire list runs.</summary>
         internal bool Expiring { get; set; }
 
@@ -200,7 +213,12 @@ namespace Veerdonk.ProjectileSystem
         /// </summary>
         public void RequestAreaOverlap(Vector3 center, float damage, IStatusEffect status, bool occupancy = false)
         {
-            requestedAreas.Add(new AreaOverlapRequest(center, EffectRadius, damage, status, occupancy));
+            RequestAreaOverlap(center, EffectRadius, damage, status, occupancy);
+        }
+
+        internal void RequestAreaOverlap(Vector3 center, float radius, float damage, IStatusEffect status, bool occupancy)
+        {
+            requestedAreas.Add(new AreaOverlapRequest(center, radius, damage, status, occupancy));
         }
 
         /// <summary>
@@ -294,9 +312,38 @@ namespace Veerdonk.ProjectileSystem
 
         internal bool AllowsMultiply => MultiplyGenerationsLeft > 0;
 
+        /// <summary>True after <see cref="MoveTo"/> in this stage. The system then writes <see cref="Position"/> back.</summary>
+        internal bool PositionMoved { get; private set; }
+
+        internal void MoveTo(Vector3 position)
+        {
+            Position = position;
+            PositionMoved = true;
+        }
+
         internal void RequestMulticastExtra(Recipe recipe, Vector3 position, Vector3 direction)
         {
             Enqueue(recipe, position, direction, ChainBudget.Inherit(MulticastGenerationsForExtras), default, SpawnCause.Multicast, copyAimPoint: true);
+        }
+
+        /// <summary>
+        /// Like <see cref="RequestMulticastExtra(Recipe, Vector3, Vector3)"/>. An Arc extra solves its loft to
+        /// <paramref name="loftTarget"/> and turns it by <paramref name="loftTurn"/>; unreachable keeps
+        /// <paramref name="direction"/>. The aim point copied for Homing is unchanged.
+        /// </summary>
+        internal void RequestMulticastExtra(
+            Recipe recipe,
+            Vector3 position,
+            Vector3 direction,
+            Vector3 loftTarget,
+            Quaternion loftTurn)
+        {
+            RequestMulticastExtra(recipe, position, direction);
+            SpawnRequest request = pendingSpawns[pendingSpawns.Count - 1];
+            request.LoftTargetSet = true;
+            request.LoftTarget = loftTarget;
+            request.LoftTurn = loftTurn;
+            pendingSpawns[pendingSpawns.Count - 1] = request;
         }
 
         internal void RequestMultiplyChild(
@@ -355,6 +402,7 @@ namespace Veerdonk.ProjectileSystem
             MultiplyGenerationsLeft = state.MultiplyGenerationsLeft;
             InstanceId = state.InstanceId;
             Position = state.Position;
+            PositionMoved = false;
             Velocity = state.Velocity;
             Speed = state.Speed;
             Gravity = state.Gravity;
@@ -369,6 +417,7 @@ namespace Veerdonk.ProjectileSystem
             CriticalChance = state.CriticalChance;
             ManaCost = state.ManaCost;
             EffectRadius = state.EffectRadius;
+            EffectRadiusScale = state.EffectRadiusScale;
             Spread = state.Spread;
             IntervalSeconds = state.IntervalSeconds;
             HasHit = hasHit;
@@ -391,6 +440,8 @@ namespace Veerdonk.ProjectileSystem
             HomingAcquirePointSet = state.HomingAcquirePointSet;
             HomingAcquirePoint = state.HomingAcquirePoint;
             HomingAimPointUsed = state.HomingAimPointUsed;
+            HomingHeldLock = state.HomingHeldLock;
+            HomingLockDropped = false;
         }
 
         internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
@@ -405,6 +456,7 @@ namespace Veerdonk.ProjectileSystem
             projectile.CriticalChance = CriticalChance;
             projectile.ManaCost = ManaCost;
             projectile.EffectRadius = EffectRadius;
+            projectile.EffectRadiusScale = EffectRadiusScale;
             projectile.Spread = Spread;
             projectile.IntervalSeconds = IntervalSeconds;
             projectile.HomingHasTarget = HomingTarget.IsAssigned;
@@ -427,6 +479,8 @@ namespace Veerdonk.ProjectileSystem
                 HomingAcquirePoint.y,
                 HomingAcquirePoint.z);
             projectile.HomingAimPointUsed = HomingAimPointUsed;
+            if (HomingLockDropped)
+                projectile.HomingAssignedAtSpawn = false;
             velocity.Value = new Unity.Mathematics.float3(Velocity.x, Velocity.y, Velocity.z);
         }
     }
@@ -507,6 +561,7 @@ namespace Veerdonk.ProjectileSystem
         public float CriticalChance;
         public float ManaCost;
         public float EffectRadius;
+        public float EffectRadiusScale;
         public float Spread;
         public float IntervalSeconds;
         public int MultiplyGenerationsLeft;
@@ -516,5 +571,6 @@ namespace Veerdonk.ProjectileSystem
         public bool HomingAcquirePointSet;
         public Vector3 HomingAcquirePoint;
         public bool HomingAimPointUsed;
+        public HomingTarget HomingHeldLock;
     }
 }

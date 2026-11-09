@@ -1089,6 +1089,65 @@ Change request veerdonk/Projectile-System#84 from the game board (veerdonk/Untit
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 49 — AreaEffect radius of its own
+
+Change request veerdonk/Projectile-System#82 from the game board (veerdonk/UntitledTowerGame#509). Runs before phase 34. ADR-055. Ships in **0.2.14** with phases 50 and 51.
+
+**In scope**
+
+- `AreaEffect.radius`: serialized (metres, default 0), property `Radius`, constructor overload `AreaEffect(damage, radius, status, includeDirectHit, includeDirectStatus, occupancy)`. Above 0 the overlap uses `Radius × EffectRadiusScale` at every stage (OnTravel, OnInterval, OnTick, OnHit, OnExpire) through an internal `RequestAreaOverlap` overload; 0 keeps the instance `EffectRadius`. An effective radius `<= 0` is a no-op
+- Internal `EffectRadiusScale` on the `Projectile` row and `ModifierBindState`: 1 at rent, multiplied by every `EffectRadius(n)`, not inherited by children
+- Area and occupancy `Hit`s report the overlap radius in `HitInfo.EffectRadius`
+- `RecipeAsset.CloneModifier` copies it (so `ToRecipe`, `Recipe.Clone` / `Compose`, kits); Recipe inspector and yard recipe sheet draw it
+- Edit Mode tests (`AreaEffectOwnRadiusTests`): two OnHit AreaEffects with different own radii hit different Targets; own radius 0 uses the recipe radius; an own radius bursts with recipe `EffectRadius` 0; `EffectRadius(2)` on the same list and on OnTravel doubles an own radius; OnExpire uses it; copies keep it; an old serialized AreaEffect reads 0; Area and occupancy hits report the overlap radius. Existing tests stay green
+- Docs: ADR-055, [REQUIREMENTS.md](REQUIREMENTS.md) AreaEffect line, [ECS.md](ECS.md) rows. `CHANGELOG` **0.2.14** (Unreleased)
+
+**Out of scope:** a GroundField scale; a radius per stage list; scaling own radii from a game-side `Recipe.EffectRadius` change; the game's effect items
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Homing re-acquire is **phase 50**.
+
+## Phase 50 — Homing re-acquires when its locked target is gone
+
+Change request veerdonk/Projectile-System#90 from the game board (veerdonk/UntitledTowerGame#565). Runs before phase 34. ADR-056. Same version as phase 49.
+
+**In scope**
+
+- `Homing.Apply` drops a lock whose `TargetId` is in neither catalog (internal `ModifierContext.IsPublished`) and picks again through `Acquisition` (cone and fallback unchanged; never the aim point), raising one `HomingLocked` Acquired; nothing in the cone leaves it unlocked
+- A published lock is kept wherever the target is; a steering failure for another reason keeps it
+- A pick in neither catalog (a custom `IHomingAcquisition`) is ignored: no lock, no event
+- The `AimBeam` set lock is held (internal `HomingLockHeld` from `BeamSetLockSet`); a Beam's spawn-assigned lock re-acquires. Hitscan has no special case
+- Edit Mode tests (`HomingReacquireTests`): a spawn-assigned hit target removed → the other Target (half-angle 180) is locked and hit with one Acquired; the same with `SetHomingCandidate` / `RemoveHomingCandidate`; no other candidate flies straight unlocked; a published lock is kept with a nearer candidate and when behind; the re-acquire ignores the aim point; an `AimBeam` set lock is kept; a Hitscan assigned to an unpublished id kinks to the candidate; a custom acquisition returning an unpublished id raises nothing. Existing tests stay green
+- Docs: ADR-056 (amends ADR-009), `IProjectileWorld.RemoveHitTarget` / `RemoveHomingCandidate`, `Homing`, `IHomingAcquisition`, package README and `Documentation/index.md`. `CHANGELOG` **0.2.14**
+
+**Out of scope:** dropping an `AimBeam` set lock; re-acquire on a steering failure other than an unpublished id; new events or serialized data
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Multicast spawn offsets are **phase 51**.
+
+## Phase 51 — Multicast spawn offsets
+
+Change request veerdonk/Projectile-System#91 from the game board (veerdonk/UntitledTowerGame#637). Runs before phase 34. ADR-057. Same version as phase 49.
+
+**In scope**
+
+- `IMulticastOffsetPattern : IMulticastPattern` with `GetOffset(context, forward, index, count)`; `IMulticastPattern` unchanged
+- `Multicast.Apply` spawns extras at `position + offset` and moves the original with internal `ModifierContext.MoveTo`; `RunStage` writes it to `ProjectilePosition` and `ProjectileCandidate`; the view binds at the moved position
+- `GridMulticastPattern` implements it (`GridMultiplyPattern.GetOffset`, grid center at the shot, `Spacing` apart, zero past the numbered cells). `RandomConePattern` and other patterns spawn as in 0.2.13 (no extra RNG draws)
+- The original's `Spawned` keeps the request position (documented)
+- Patterns lie as the shooter sees them: `Multiply` mirrors local X on travel-facing planes (OnExpire, OnInterval, past a pierce) and `GridMulticastPattern` always does; Surface hits and `Up` unchanged (user decision)
+- Arc with an aim point: offset-pattern extras solve from their lane to aim + offset with their own speed and gravity and turn by the pattern deviation; an unreachable lane falls back to the shot's loft (user decision)
+- Edit Mode tests (`MulticastOffsetTests`): three side-by-side cells at spread 0 fly three parallel lanes one spacing apart, original included; spread 20 offsets and diverges; past the cells is zero offset; a cone spawns as before; a custom pattern without offsets spawns at the shot; a non-axis shot lays lanes across travel; the moved original does not hit a Target between the muzzle and its lane; Hitscan lanes start at their offsets; pattern calls see pre-Multicast state; literal world positions; Beam pulses, `Spawned`, view, OnTravel burst, vertical forward, count below cells; Arc lanes at spread 0 / above 0 / unreachable / own speed / Homing first lock. `PatternMirrorTests`: literal world signs for Multiply OnExpire, Surface wall, and Up. Existing tests stay green (mirrored grid expectations updated)
+- Docs: ADR-057, `IMulticastOffsetPattern`, `GridMulticastPattern`, `Multicast`, package `Documentation/index.md`. `CHANGELOG` **0.2.14**
+
+**Out of scope:** offsets in `PredictPath`; moving `Spawned` after OnSpawn; offsets for Multiply; keeping a Beam's lane after `AimBeam`; inspector changes
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

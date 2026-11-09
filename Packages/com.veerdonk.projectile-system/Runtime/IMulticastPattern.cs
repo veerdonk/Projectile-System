@@ -9,8 +9,38 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>
         /// Direction for instance <paramref name="index"/> of <paramref name="count"/> total, around
         /// <paramref name="forward"/>. Index 0 is the instance that is already flying; it is re-aimed at this direction.
+        /// Every call sees the shot's position and velocity from before Multicast; the original is re-aimed after the last call.
         /// </summary>
         Vector3 GetDirection(ModifierContext context, Vector3 forward, int index, int count);
+    }
+
+    /// <summary>
+    /// A <see cref="IMulticastPattern"/> that also moves where each instance starts. Patterns without it spawn every
+    /// instance at the shot's position.
+    /// The original's <see cref="IProjectileWorld.Spawned"/> reports the request position, from before OnSpawn moves it,
+    /// just as it reports the direction from before the re-aim; each extra's reports its offset position.
+    /// A Hitscan or Beam starts its polyline at the offset. Either <see cref="IProjectileWorld.AimBeam(ProjectileId, Vector3, Vector3)"/>
+    /// overload sets the Beam's pose and so replaces the offset (the game owns that pose).
+    /// The move to the offset is not swept, so nothing between the muzzle and a lane is hit, and an instance can start
+    /// inside a wall or a target beside the muzzle. Its first cast starts there, and the hit query decides what a body
+    /// it starts inside does.
+    /// An <see cref="Delivery.Arc"/> shot with an aim point (<see cref="SpawnRequest.HomingAcquirePointSet"/>) keeps its
+    /// loft and moves, so it lands at the aim point plus its offset. Each Arc extra solves its own loft, with its own
+    /// Recipe's speed and gravity, from its lane to the aim point plus its offset, then turns it by the pattern's deviation
+    /// from the shot's direction; a lane that cannot reach takes the pattern direction around the shot's loft. Homing's
+    /// first lock still reads the original aim point. Patterns without this interface keep solving every Arc extra to the
+    /// aim point itself.
+    /// Every <see cref="IMulticastPattern.GetDirection"/> and <see cref="GetOffset"/> call sees the shot's position and
+    /// velocity from before Multicast; the original is re-aimed and moved after the last call.
+    /// </summary>
+    public interface IMulticastOffsetPattern : IMulticastPattern
+    {
+        /// <summary>
+        /// World-space offset from the shot's position for instance <paramref name="index"/> of <paramref name="count"/>
+        /// total. <paramref name="forward"/> is the shot's travel direction before the pattern re-aims anything. Index 0 is
+        /// the instance that is already flying; it moves to this offset at OnSpawn.
+        /// </summary>
+        Vector3 GetOffset(ModifierContext context, Vector3 forward, int index, int count);
     }
 
     /// <summary>Random cone around the spawn direction. Uses the world seed, so the same seed gives the same cone.</summary>

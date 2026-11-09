@@ -70,7 +70,11 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Publishes a live pose Homing can lock onto and steer toward. Call again to move it.</summary>
         void SetHomingCandidate(TargetId id, Vector3 position);
 
-        /// <summary>Drops a previously published homing pose. Locked instances that used it fly straight.</summary>
+        /// <summary>
+        /// Drops a previously published homing pose. Locked instances that used it, and whose id is not a published
+        /// hit target, re-acquire through their Homing acquisition on their next tick; a Beam does so on its next pulse,
+        /// and keeps a lock set by <c>AimBeam</c>. A Hitscan has already resolved inside <see cref="Spawn"/>.
+        /// </summary>
         void RemoveHomingCandidate(TargetId id);
 
         /// <summary>
@@ -99,7 +103,11 @@ namespace Veerdonk.ProjectileSystem
             float homingHeight,
             ProtectionLevel protection = ProtectionLevel.None);
 
-        /// <summary>Drops a previously published hit volume, sphere or capsule.</summary>
+        /// <summary>
+        /// Drops a previously published hit volume, sphere or capsule. Locked instances whose id is not also a
+        /// homing pose re-acquire through their Homing acquisition on their next tick; a Beam does so on its next pulse,
+        /// and keeps a lock set by <c>AimBeam</c>. A Hitscan has already resolved inside <see cref="Spawn"/>.
+        /// </summary>
         void RemoveHitTarget(TargetId id);
 
         /// <summary>Raised for each hit produced by the query pipeline.</summary>
@@ -119,6 +127,8 @@ namespace Veerdonk.ProjectileSystem
         /// package-made spawn (Multicast extras, Multiply children, other queued spawns). An unreachable
         /// Arc raises nothing. Hitscan raises it before its <see cref="Hit"/> and <see cref="Expired"/>.
         /// Comes before that instance's first <see cref="HomingLocked"/>, <see cref="Hit"/>, or <see cref="Expired"/>.
+        /// Raised before OnSpawn runs, so a shot that an <see cref="IMulticastOffsetPattern"/> moves or re-aims reports
+        /// the request position and direction.
         /// </summary>
         event Action<SpawnInfo> Spawned;
 
@@ -212,6 +222,9 @@ namespace Veerdonk.ProjectileSystem
         internal ChainBudget MultiplyChain;
         internal bool HomingFallbackSet;
         internal TargetId HomingFallback;
+        internal bool LoftTargetSet;
+        internal Vector3 LoftTarget;
+        internal Quaternion LoftTurn;
     }
 
     /// <summary>Opaque handle for a live instance.</summary>

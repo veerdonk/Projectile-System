@@ -65,7 +65,10 @@ namespace Veerdonk.ProjectileSystem
         public ProjectileId ParentId;
         /// <summary>Why it spawned.</summary>
         public SpawnCause Cause;
-        /// <summary>World-space spawn position.</summary>
+        /// <summary>
+        /// World-space spawn position from the request, before OnSpawn modifiers run. An <see cref="IMulticastOffsetPattern"/>
+        /// then moves the original to its offset; each Multicast extra reports its own offset position.
+        /// </summary>
         public Vector3 Position;
         /// <summary>Normalized launch direction after the Arc solve, before OnSpawn modifiers run.</summary>
         public Vector3 Direction;

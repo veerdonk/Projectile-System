@@ -6,7 +6,8 @@ namespace Veerdonk.ProjectileSystem
 {
     /// <summary>
     /// OnSpawn: total instances is <see cref="Count"/> — the original plus <see cref="Count"/> - 1 extras of an explicit
-    /// sibling Recipe. <see cref="Pattern"/> aims all of them, the original included. Extras never multicast again.
+    /// sibling Recipe. <see cref="Pattern"/> aims all of them, the original included. An <see cref="IMulticastOffsetPattern"/>
+    /// also offsets where each starts, the original included. Extras never multicast again.
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnSpawn)]
@@ -93,14 +94,36 @@ namespace Veerdonk.ProjectileSystem
             }
 
             IMulticastPattern aim = Pattern;
+            var place = aim as IMulticastOffsetPattern;
+            Vector3 origin = context.Position;
+            Vector3 originalDirection = forward;
+            Vector3 originalPosition = origin;
             for (int i = 0; i < total; i++)
             {
                 Vector3 direction = Aim(aim.GetDirection(context, forward, i, total), forward);
+                Vector3 offset = place != null ? place.GetOffset(context, forward, i, total) : Vector3.zero;
+                Vector3 position = origin + offset;
                 if (i == 0)
-                    context.Velocity = direction * speed;
+                {
+                    originalDirection = direction;
+                    originalPosition = position;
+                }
+                else if (place != null && context.HomingAcquirePointSet)
+                {
+                    context.RequestMulticastExtra(
+                        ExtraRecipe,
+                        position,
+                        direction,
+                        context.HomingAcquirePoint + offset,
+                        Quaternion.FromToRotation(forward, direction));
+                }
                 else
-                    context.RequestMulticastExtra(ExtraRecipe, context.Position, direction);
+                    context.RequestMulticastExtra(ExtraRecipe, position, direction);
             }
+
+            context.Velocity = originalDirection * speed;
+            if (place != null)
+                context.MoveTo(originalPosition);
         }
 
         static Vector3 Aim(Vector3 direction, Vector3 fallback)

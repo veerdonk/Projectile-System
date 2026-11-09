@@ -981,7 +981,7 @@ namespace Veerdonk.ProjectileSystem
                 instanceId,
                 request.Damage,
                 projectile.CriticalChance,
-                projectile.EffectRadius,
+                request.Radius,
                 request.Status,
                 Bridge.Hit,
                 Bridge.StatusApplied);
@@ -1040,7 +1040,7 @@ namespace Veerdonk.ProjectileSystem
             areaHit.Source = HitSource.Area;
             areaHit.Damage = request.Damage;
             areaHit.CriticalChance = projectile.CriticalChance;
-            areaHit.EffectRadius = projectile.EffectRadius;
+            areaHit.EffectRadius = request.Radius;
             Bridge.Hit?.Invoke(areaHit);
             if (request.Status == null)
                 return;
@@ -1109,6 +1109,13 @@ namespace Veerdonk.ProjectileSystem
             Bridge.ModifierContext.ApplyTo(ref projectile, ref velocity);
             em.SetComponentData(entity, projectile);
             em.SetComponentData(entity, velocity);
+            if (Bridge.ModifierContext.PositionMoved)
+            {
+                Vector3 moved = Bridge.ModifierContext.Position;
+                var value = new float3(moved.x, moved.y, moved.z);
+                em.SetComponentData(entity, new ProjectilePosition { Value = value });
+                em.SetComponentData(entity, new ProjectileCandidate { Value = value });
+            }
             FlushHomingLocks();
             SyncViewRadius(entity);
         }
@@ -1156,6 +1163,7 @@ namespace Veerdonk.ProjectileSystem
                 CriticalChance = projectile.CriticalChance,
                 ManaCost = projectile.ManaCost,
                 EffectRadius = projectile.EffectRadius,
+                EffectRadiusScale = projectile.EffectRadiusScale,
                 Spread = projectile.Spread,
                 IntervalSeconds = projectile.IntervalSeconds,
                 MultiplyGenerationsLeft = projectile.MultiplyGenerationsLeft,
@@ -1164,7 +1172,10 @@ namespace Veerdonk.ProjectileSystem
                 HomingIgnoredPassed = projectile.HomingHasIgnoredTarget && projectile.HomingIgnoredPassed,
                 HomingAcquirePointSet = projectile.HomingAcquirePointSet,
                 HomingAcquirePoint = ToVector3(projectile.HomingAcquirePoint),
-                HomingAimPointUsed = projectile.HomingAimPointUsed
+                HomingAimPointUsed = projectile.HomingAimPointUsed,
+                HomingHeldLock = projectile.BeamSetLockSet
+                    ? HomingTarget.Assigned(projectile.BeamSetLockId)
+                    : default
             };
             Bridge.ModifierContext.Bind(state, hasHit, hit, dt);
         }
