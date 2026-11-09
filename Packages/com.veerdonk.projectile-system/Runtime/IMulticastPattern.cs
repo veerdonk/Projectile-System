@@ -13,6 +13,20 @@ namespace Veerdonk.ProjectileSystem
         Vector3 GetDirection(ModifierContext context, Vector3 forward, int index, int count);
     }
 
+    /// <summary>
+    /// A <see cref="IMulticastPattern"/> that also moves where each instance starts. Patterns without it spawn every
+    /// instance at the shot's position.
+    /// </summary>
+    public interface IMulticastOffsetPattern : IMulticastPattern
+    {
+        /// <summary>
+        /// World-space offset from the shot's position for instance <paramref name="index"/> of <paramref name="count"/>
+        /// total. <paramref name="forward"/> is the shot's travel direction before the pattern re-aims anything. Index 0 is
+        /// the instance that is already flying; it moves to this offset at OnSpawn.
+        /// </summary>
+        Vector3 GetOffset(ModifierContext context, Vector3 forward, int index, int count);
+    }
+
     /// <summary>Random cone around the spawn direction. Uses the world seed, so the same seed gives the same cone.</summary>
     [Serializable]
     public sealed class RandomConePattern : IMulticastPattern

@@ -294,6 +294,15 @@ namespace Veerdonk.ProjectileSystem
 
         internal bool AllowsMultiply => MultiplyGenerationsLeft > 0;
 
+        /// <summary>True after <see cref="MoveTo"/> in this stage. The system then writes <see cref="Position"/> back.</summary>
+        internal bool PositionMoved { get; private set; }
+
+        internal void MoveTo(Vector3 position)
+        {
+            Position = position;
+            PositionMoved = true;
+        }
+
         internal void RequestMulticastExtra(Recipe recipe, Vector3 position, Vector3 direction)
         {
             Enqueue(recipe, position, direction, ChainBudget.Inherit(MulticastGenerationsForExtras), default, SpawnCause.Multicast, copyAimPoint: true);
@@ -355,6 +364,7 @@ namespace Veerdonk.ProjectileSystem
             MultiplyGenerationsLeft = state.MultiplyGenerationsLeft;
             InstanceId = state.InstanceId;
             Position = state.Position;
+            PositionMoved = false;
             Velocity = state.Velocity;
             Speed = state.Speed;
             Gravity = state.Gravity;

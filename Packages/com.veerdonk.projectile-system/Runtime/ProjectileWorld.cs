@@ -819,7 +819,7 @@ namespace Veerdonk.ProjectileSystem
             if (view != null)
             {
                 Projectile spawned = em.GetComponentData<Projectile>(entity);
-                view.Bind(request.Position, spawned.Radius);
+                view.Bind(ToVector3(em.GetComponentData<ProjectilePosition>(entity).Value), spawned.Radius);
             }
 
             if (recipe.Delivery == Delivery.Beam)
