@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [0.2.16] - 2026-11-10
+
+### Added
+
+- `IGroundFieldAreaSurface : IGroundFieldSurface` with `TryGetGround(point, radius, out groundPoint, out groundNormal)`. When `IProjectileWorld.GroundFieldSurface` implements it, the world calls this overload with the planted field's `GroundField.Radius` instead of the point-only one, so the game can sample the ground across the disk (for example where a ramp meets flat ground). The returned point and normal are checked and sanitized as before; false or a non-finite point plants at Y = 0, normal up. Surfaces that only implement `IGroundFieldSurface` are called as in 0.2.15 (#95).
+
 ## [0.2.15] - 2026-11-08
 
 ### Added

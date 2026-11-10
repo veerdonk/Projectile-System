@@ -1166,6 +1166,21 @@ Change request veerdonk/Projectile-System#93 from the game board (veerdonk/Untit
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 53 — Ground surface query gets the field's radius
+
+Change request veerdonk/Projectile-System#95 from the game board (veerdonk/UntitledTowerGame#728). Runs before phase 34. ADR-059. Version **0.2.16**.
+
+**In scope**
+
+- `IGroundFieldAreaSurface : IGroundFieldSurface` with `TryGetGround(point, radius, out groundPoint, out groundNormal)`; `GroundFieldSet.ResolveGround` calls it with the field's radius when the surface implements it, else the point-only overload
+- Edit Mode tests (`GroundFieldSurfaceTests`): the area overload gets the radius and its point and normal (sanitized) are used, the point-only overload is not called; two fields on one shot are asked with their own radii; false and non-finite plant at Y = 0, up. Existing ground field tests stay green
+
+**Out of scope:** sampling the ground in the package; passing the radius scaled by `EffectRadius`
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
