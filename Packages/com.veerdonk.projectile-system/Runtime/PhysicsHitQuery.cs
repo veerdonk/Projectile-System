@@ -166,7 +166,7 @@ namespace Veerdonk.ProjectileSystem
                 throw new ArgumentNullException(nameof(results));
 
             results.Clear();
-            if (radius <= 0f)
+            if (!PulseClock.IsUsableRadius(radius))
                 return;
 
             int count = OverlapSphere(center, radius, ~0, ref overlapBuffer);
@@ -210,7 +210,7 @@ namespace Veerdonk.ProjectileSystem
 
             results.Clear();
             float radius = disk.Radius;
-            if (radius <= 0f)
+            if (!PulseClock.IsUsableRadius(radius))
                 return;
 
             Vector3 center = disk.Center;

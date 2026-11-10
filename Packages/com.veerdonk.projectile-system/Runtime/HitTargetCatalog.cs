@@ -16,7 +16,7 @@ namespace Veerdonk.ProjectileSystem
 
         public void Set(TargetId id, Vector3 position, float radius, ProtectionLevel protection = ProtectionLevel.None)
         {
-            if (radius <= 0f)
+            if (!PulseClock.IsUsableRadius(radius))
             {
                 Remove(id);
                 return;
@@ -33,7 +33,7 @@ namespace Veerdonk.ProjectileSystem
             float homingHeight,
             ProtectionLevel protection = ProtectionLevel.None)
         {
-            if (radius <= 0f)
+            if (!PulseClock.IsUsableRadius(radius))
             {
                 Remove(id);
                 return;
@@ -228,7 +228,7 @@ namespace Veerdonk.ProjectileSystem
 
         public void AppendSphere(ProjectileId instanceId, Vector3 center, float radius, List<HitInfo> results)
         {
-            if (radius <= 0f || results == null)
+            if (!PulseClock.IsUsableRadius(radius) || results == null)
                 return;
 
             Compact();
@@ -250,7 +250,7 @@ namespace Veerdonk.ProjectileSystem
 
         public void AppendDisk(ProjectileId instanceId, in GroundDisk disk, List<HitInfo> results)
         {
-            if (disk.Radius <= 0f || results == null)
+            if (!PulseClock.IsUsableRadius(disk.Radius) || results == null)
                 return;
 
             Compact();

@@ -21,6 +21,21 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
+        sealed class SetIntervalSeconds : IModifier
+        {
+            readonly float seconds;
+
+            public SetIntervalSeconds(float seconds)
+            {
+                this.seconds = seconds;
+            }
+
+            public void Apply(ModifierContext context)
+            {
+                context.IntervalSeconds = seconds;
+            }
+        }
+
         sealed class CountRuns : IModifier
         {
             public int Runs;
@@ -125,6 +140,77 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
                 world.Tick(0.1f);
 
                 Assert.That(counter.Runs, Is.InRange(9, 11));
+            }
+        }
+
+        [Test]
+        public void ContextIntervalSeconds_NaN_NeverFires()
+        {
+            var counter = new CountRuns();
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "context-interval-nan",
+                speed: 10f,
+                lifetime: 5f,
+                onSpawn: new IModifier[] { new SetIntervalSeconds(float.NaN) },
+                onInterval: new IModifier[] { counter });
+            var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false);
+            using (world)
+            {
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                for (int i = 0; i < 5; i++)
+                    world.Tick(0.1f);
+
+                Assert.AreEqual(0, counter.Runs);
+            }
+        }
+
+        [Test]
+        public void Prewarm_IntervalBelowMinimum_UsesTheMinimumPeriod()
+        {
+            Recipe child = SimulationTestHelper.CreateRecipe("prewarm-tiny-child", speed: 8f, lifetime: 0.1f);
+            Recipe parent = SimulationTestHelper.CreateRecipe(
+                "prewarm-tiny-parent",
+                speed: 10f,
+                lifetime: 0.1f,
+                onSpawn: new IModifier[] { new Interval(1e-6f) },
+                onInterval: new IModifier[] { new Multiply(1, child) });
+            var world = new ProjectileWorld(new ScriptedHitQuery(), createViews: false);
+            using (world)
+            {
+                world.Prewarm(parent, 1);
+
+                Assert.That(world.AvailableCount, Is.InRange(11, 13));
+            }
+        }
+
+        [Test]
+        public void BeamPulseSeconds_NaN_PulsesOncePerTick()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe("beam-nan", speed: 10f, lifetime: 5f);
+            recipe.Delivery = Delivery.Beam;
+            recipe.BeamPulseSeconds = float.NaN;
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var seen = new List<HitInfo>();
+                world.Hit += seen.Add;
+                world.SetHitTarget(new TargetId(11), new Vector3(0f, 0f, 3f), 0.5f);
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                int afterSpawn = seen.Count;
+                world.Tick(0.05f);
+
+                Assert.AreEqual(1, seen.Count - afterSpawn);
             }
         }
 

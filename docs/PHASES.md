@@ -1187,10 +1187,10 @@ Follow-up to phases 52 and 53 (reviews of #96 and #97). Runs before phase 34. AD
 
 **In scope**
 
-- Internal `PulseClock`: 0.01 s minimum for OnInterval and ground field pulse periods; NaN never fires; shared radius check (finite, above 0) for `AreaEffect`, area / occupancy flushes, and `GroundField`
-- Edit Mode tests (`PulseLimitTests`): NaN and infinite `EffectRadius` burst nothing (burst and occupancy, `AreaEffect` and raw request) while an own finite radius still bursts; ground field and Interval periods of 1e-6 run every 0.01 s; NaN Interval never fires
+- Internal `PulseClock`: 0.01 s minimum for OnInterval and ground field pulse periods (also used by `Prewarm`); NaN never fires; shared radius check (finite, above 0) for `AreaEffect`, area / occupancy flushes, `GroundField`, `PhysicsHitQuery` overlaps, and the published-target catalog. A NaN beam period pulses every tick
+- Edit Mode tests (`PulseLimitTests`): NaN and infinite `EffectRadius` burst nothing (burst and occupancy, `AreaEffect` and raw request) while an own finite radius still bursts; ground field and Interval periods of 1e-6 run every 0.01 s; NaN Interval and NaN `ModifierContext.IntervalSeconds` never fire; prewarm uses the 0.01 s period; NaN beam period pulses once per tick
 
-**Out of scope:** Beam pulse period (already capped per tick); NaN damage
+**Out of scope:** a minimum Beam pulse period (already capped per tick); NaN damage
 
 **Proof:** Edit Mode tests above.
 

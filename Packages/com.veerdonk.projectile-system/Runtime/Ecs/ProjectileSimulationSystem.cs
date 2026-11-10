@@ -370,7 +370,7 @@ namespace Veerdonk.ProjectileSystem
 
             Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
             float period = recipe.BeamPulseSeconds;
-            if (period <= 0f)
+            if (!(period > 0f))
             {
                 PulseBeam(entity);
                 return;

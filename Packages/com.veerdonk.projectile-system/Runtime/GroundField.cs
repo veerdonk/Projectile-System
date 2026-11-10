@@ -218,7 +218,7 @@ namespace Veerdonk.ProjectileSystem
             planted?.Invoke(ToInfo(field, GroundFieldEndReason.Expired));
             if (request.Occupancy)
                 UpdateOccupancy(fields[fields.Count - 1]);
-            else if (request.IntervalSeconds > 0f)
+            else if (fields[fields.Count - 1].IntervalSeconds > 0f)
                 Pulse(fields[fields.Count - 1]);
         }
 
