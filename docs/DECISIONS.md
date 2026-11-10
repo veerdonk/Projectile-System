@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-060 — Pulse periods have a 0.01 s minimum
+
+- **Date:** 2026-11-10
+- **Decision:** One internal clock (`PulseClock`) counts OnInterval runs and ground field pulses. A positive period below 0.01 s is raised to 0.01 s; zero, negative, or NaN never fires. Area and ground field radii must be finite and above 0 (`PulseClock.IsUsableRadius`), checked in `AreaEffect.Apply`, the area and occupancy flushes, and `GroundField.Plants`. Beam pulses keep their own 8-per-tick cap.
+- **Why:** A tiny positive period fired `dt / period` times in one tick (a 1e-6 s Interval ran 100 000 times in a 0.1 s tick), freezing the game. A NaN or infinite radius passed the `<= 0` checks; an infinite one hit every Target. Found in the reviews of #96 and #97.
+- **Consequences:** No public API. Content with periods below 0.01 s pulses less often than authored (it could not have run at that rate per tick anyway at normal frame rates). `GroundFieldInfo.IntervalSeconds` reports the clamped period; `ModifierContext.IntervalSeconds` keeps the authored value.
+
 ## ADR-059 — The ground surface query gets the field's radius
 
 - **Date:** 2026-11-10

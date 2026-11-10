@@ -76,7 +76,8 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Optional status raised per Target per pulse.</summary>
         public IStatusEffect Status => status;
 
-        /// <summary>Seconds between pulses after the plant pulse. &lt;= 0 never pulses.</summary>
+        /// <summary>Seconds between pulses after the plant pulse. &lt;= 0 or NaN never pulses; a positive value below 0.01 pulses
+        /// every 0.01 s.</summary>
         public float IntervalSeconds
         {
             get => intervalSeconds;
@@ -137,7 +138,7 @@ namespace Veerdonk.ProjectileSystem
 
         internal static bool Plants(float radius, float lifetimeSeconds)
         {
-            return float.IsFinite(radius) && radius > 0f && lifetimeSeconds > 0f;
+            return PulseClock.IsUsableRadius(radius) && lifetimeSeconds > 0f;
         }
     }
 
@@ -202,7 +203,7 @@ namespace Veerdonk.ProjectileSystem
                 Disk = disk,
                 LifetimeSeconds = request.LifetimeSeconds,
                 RemainingLifetime = request.LifetimeSeconds,
-                IntervalSeconds = request.IntervalSeconds,
+                IntervalSeconds = PulseClock.Clamp(request.IntervalSeconds),
                 Damage = request.Damage,
                 Status = request.Status,
                 PresentationId = request.PresentationId,
@@ -283,7 +284,7 @@ namespace Veerdonk.ProjectileSystem
 
                 float previousElapsed = field.ElapsedSeconds;
                 field.ElapsedSeconds += dt;
-                int fires = IntervalCrossings(previousElapsed, field.ElapsedSeconds, field.IntervalSeconds);
+                int fires = PulseClock.Crossings(previousElapsed, field.ElapsedSeconds, field.IntervalSeconds);
                 field.ElapsedSeconds -= fires * field.IntervalSeconds;
                 fields[i] = field;
                 for (int f = 0; f < fires; f++)
@@ -490,17 +491,6 @@ namespace Veerdonk.ProjectileSystem
             return !float.IsNaN(v.x) && !float.IsInfinity(v.x)
                 && !float.IsNaN(v.y) && !float.IsInfinity(v.y)
                 && !float.IsNaN(v.z) && !float.IsInfinity(v.z);
-        }
-
-        static int IntervalCrossings(float previousElapsed, float elapsed, float interval)
-        {
-            if (interval <= 0f || elapsed <= previousElapsed)
-                return 0;
-
-            int before = Mathf.FloorToInt(previousElapsed / interval);
-            int after = Mathf.FloorToInt(elapsed / interval);
-            int fires = after - before;
-            return fires > 0 ? fires : 0;
         }
 
         static bool ContainsTarget(List<TargetId> ids, TargetId id)

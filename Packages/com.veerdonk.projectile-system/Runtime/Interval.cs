@@ -23,7 +23,8 @@ namespace Veerdonk.ProjectileSystem
             this.seconds = seconds;
         }
 
-        /// <summary>Period in seconds. Values &lt;= 0 mean OnInterval never fires.</summary>
+        /// <summary>Period in seconds. Values &lt;= 0 or NaN mean OnInterval never fires; a positive value below 0.01 fires
+        /// every 0.01 s.</summary>
         public float Seconds
         {
             get => seconds;

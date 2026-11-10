@@ -109,7 +109,7 @@ namespace Veerdonk.ProjectileSystem
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
             float overlapRadius = Radius > 0f ? Radius * context.EffectRadiusScale : context.EffectRadius;
-            if (overlapRadius <= 0f)
+            if (!PulseClock.IsUsableRadius(overlapRadius))
                 return;
 
             if (context.Expiring)
