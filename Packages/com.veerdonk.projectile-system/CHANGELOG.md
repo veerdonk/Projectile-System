@@ -5,6 +5,19 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.18] - 2026-11-10
+
+### Changed
+
+- Pulse periods have a minimum of 0.01 s. A positive `Interval.Seconds` (or `ModifierContext.IntervalSeconds`) or `GroundField.IntervalSeconds` below 0.01 runs every 0.01 s, so a tiny period can no longer fire thousands of times in one tick. `GroundFieldInfo.IntervalSeconds` reports the period used. `Prewarm` sizes OnInterval Multiply children from the same clamped period. Beam pulses keep their own cap of 8 per tick.
+
+### Fixed
+
+- An area overlap with a NaN or infinite radius bursts nothing, like one with radius 0. This covers `AreaEffect` (from a NaN or infinite `Recipe.EffectRadius` or `EffectRadius` scale) and `ModifierContext.RequestAreaOverlap`, for bursts and occupancy. Before, it raised `AreaBurst` with that radius and an infinite radius hit every Target.
+- A NaN `ModifierContext.IntervalSeconds` never runs OnInterval. Before, it did not run only by accident.
+- A NaN `Recipe.BeamPulseSeconds` pulses once per tick, like 0. Before, it pulsed 8 times every tick.
+- `IHitQuery.Overlap` / `OverlapDisk` in `PhysicsHitQuery` and the published-target catalog return nothing for a NaN or infinite radius, and `SetHitTarget` with one removes the Target, as a radius of 0 does.
+
 ## [0.2.17] - 2026-11-10
 
 ### Fixed

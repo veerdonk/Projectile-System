@@ -988,7 +988,7 @@ namespace Veerdonk.ProjectileSystem
             for (int i = 0; i < onSpawn.Length; i++)
             {
                 if (onSpawn[i] is Interval interval)
-                    seconds = interval.Seconds > 0f ? interval.Seconds : 0f;
+                    seconds = PulseClock.Clamp(interval.Seconds);
             }
 
             return seconds;

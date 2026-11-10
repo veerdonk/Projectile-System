@@ -370,7 +370,7 @@ namespace Veerdonk.ProjectileSystem
 
             Recipe recipe = Bridge.Recipes.Get(projectile.RecipeIndex);
             float period = recipe.BeamPulseSeconds;
-            if (period <= 0f)
+            if (!(period > 0f))
             {
                 PulseBeam(entity);
                 return;
@@ -857,7 +857,7 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             float elapsed = projectile.ElapsedSeconds;
-            int fires = IntervalCrossings(elapsed - dt, elapsed, projectile.IntervalSeconds);
+            int fires = PulseClock.Crossings(elapsed - dt, elapsed, projectile.IntervalSeconds);
             if (fires <= 0)
                 return;
 
@@ -884,17 +884,6 @@ namespace Veerdonk.ProjectileSystem
             }
 
             SyncViewRadius(entity);
-        }
-
-        static int IntervalCrossings(float previousElapsed, float elapsed, float interval)
-        {
-            if (interval <= 0f || elapsed <= previousElapsed)
-                return 0;
-
-            int before = (int)math.floor(previousElapsed / interval);
-            int after = (int)math.floor(elapsed / interval);
-            int fires = after - before;
-            return fires > 0 ? fires : 0;
         }
 
         void FlushStatusApplied(in HitInfo hit)
@@ -943,7 +932,7 @@ namespace Veerdonk.ProjectileSystem
 
         void FlushAreaRequest(in AreaOverlapRequest request, ProjectileId instanceId, in Projectile projectile, int channel)
         {
-            if (request.Radius <= 0f)
+            if (!PulseClock.IsUsableRadius(request.Radius))
                 return;
 
             RaiseAreaBurst(request, instanceId, channel);
@@ -961,7 +950,7 @@ namespace Veerdonk.ProjectileSystem
             int channel,
             int slot)
         {
-            if (request.Radius <= 0f)
+            if (!PulseClock.IsUsableRadius(request.Radius))
                 return;
 
             var key = new OccupancyKey(instanceId, channel, slot);

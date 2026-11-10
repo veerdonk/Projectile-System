@@ -128,7 +128,7 @@ namespace Veerdonk.ProjectileSystem
         /// </summary>
         public float Spread { get; set; }
 
-        /// <summary>Seconds between <c>OnInterval</c> runs. <see cref="Interval"/> writes it on <c>OnSpawn</c>; 0 never fires.</summary>
+        /// <summary>Seconds between <c>OnInterval</c> runs. <see cref="Interval"/> writes it on <c>OnSpawn</c>; 0 never fires, and below 0.01 fires every 0.01 s.</summary>
         public float IntervalSeconds { get; set; }
 
         /// <summary>True when this stage is OnHit (or expire-from-hit) with a sampled contact.</summary>

@@ -56,7 +56,7 @@ namespace Veerdonk.ProjectileSystem
         public float HeightMargin;
         /// <summary>Lifetime requested at plant.</summary>
         public float LifetimeSeconds;
-        /// <summary>Pulse interval requested at plant. 0 means no pulses.</summary>
+        /// <summary>Pulse period used: the requested value, raised to 0.01 s when below. 0 means no pulses.</summary>
         public float IntervalSeconds;
         /// <summary>True when the field raises enter/exit hits instead of pulses.</summary>
         public bool Occupancy;
