@@ -11,7 +11,8 @@ namespace Veerdonk.ProjectileSystem
     /// returns for that point, or on the world ground plane (Y = 0, normal up) without one.
     /// <see cref="Occupancy"/> replaces pulses with enter/exit while the disk lives.
     /// The modifier queues a plant; it does not call Physics or spawn a Recipe.
-    /// Radius or lifetime &lt;= 0 is a no-op. Interval &lt;= 0 never pulses when occupancy is false.
+    /// Radius &lt;= 0 or not finite, or lifetime &lt;= 0 or NaN, is a no-op. Interval &lt;= 0 or NaN never pulses when
+    /// occupancy is false.
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnHit | RecipeStage.OnExpire)]
@@ -57,7 +58,8 @@ namespace Veerdonk.ProjectileSystem
             set => radius = value;
         }
 
-        /// <summary>Seconds the disk lives. Independent of the projectile. &lt;= 0 or NaN plants nothing.</summary>
+        /// <summary>Seconds the disk lives. Independent of the projectile. &lt;= 0 or NaN plants nothing; infinity lives until
+        /// the world is disposed.</summary>
         public float LifetimeSeconds
         {
             get => lifetimeSeconds;
@@ -135,7 +137,7 @@ namespace Veerdonk.ProjectileSystem
 
         internal static bool Plants(float radius, float lifetimeSeconds)
         {
-            return radius > 0f && radius < float.PositiveInfinity && lifetimeSeconds > 0f;
+            return float.IsFinite(radius) && radius > 0f && lifetimeSeconds > 0f;
         }
     }
 
@@ -273,7 +275,7 @@ namespace Veerdonk.ProjectileSystem
                     continue;
                 }
 
-                if (field.IntervalSeconds <= 0f)
+                if (!(field.IntervalSeconds > 0f))
                 {
                     fields[i] = field;
                     continue;
@@ -282,6 +284,7 @@ namespace Veerdonk.ProjectileSystem
                 float previousElapsed = field.ElapsedSeconds;
                 field.ElapsedSeconds += dt;
                 int fires = IntervalCrossings(previousElapsed, field.ElapsedSeconds, field.IntervalSeconds);
+                field.ElapsedSeconds -= fires * field.IntervalSeconds;
                 fields[i] = field;
                 for (int f = 0; f < fires; f++)
                     Pulse(fields[i]);

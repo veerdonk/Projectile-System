@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- A ground field with a NaN or infinite radius, or a NaN lifetime, plants nothing, like one with a radius or lifetime of 0. Before, it passed the `<= 0` check and was planted, from `GroundField` or from `ModifierContext.RequestGroundField`.
+- A ground field with a NaN or infinite radius, or a NaN lifetime, plants nothing, like one with a radius or lifetime of 0. Before, it passed the `<= 0` check and was planted, from `GroundField` or from `ModifierContext.RequestGroundField`. An infinite lifetime is allowed and lives until the world is disposed.
+- A long-lived ground field keeps pulsing on time. Its pulse clock no longer grows without bound, so float rounding cannot drift or stop the pulses after many hours. A NaN interval never pulses, as an interval of 0 does.
 
 ## [0.2.16] - 2026-11-10
 
