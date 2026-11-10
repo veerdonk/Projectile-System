@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-059 — The ground surface query gets the field's radius
+
+- **Date:** 2026-11-10
+- **Decision:** New public interface `IGroundFieldAreaSurface : IGroundFieldSurface { bool TryGetGround(Vector3 point, float radius, out Vector3 groundPoint, out Vector3 groundNormal); }`. `GroundFieldSet` calls it with the field's radius when `IProjectileWorld.GroundFieldSurface` implements it, and the point-only overload otherwise. The finite check, normal sanitising, flat fallback, and height margin are unchanged.
+- **Why:** At the foot of a ramp the centre's normal is the ramp's, so the disk tilted with it and the half over flat ground went under it (veerdonk/Projectile-System#95, for veerdonk/UntitledTowerGame#728). The game wants to sample a ring at a fraction of the radius and fit a plane; the radius differs per field and one world plants them all, so a world-level value does not work. A derived interface keeps 0.2.15 surfaces source-compatible; a new parameter on `IGroundFieldSurface` would break them.
+- **Consequences:** One public interface. The package still does not sample the ground itself. The radius is `GroundField.Radius` as planted (not scaled by `EffectRadius`, as before).
+
 ## ADR-058 — A ground field can be planted on the game's ground point and normal
 
 - **Date:** 2026-11-08

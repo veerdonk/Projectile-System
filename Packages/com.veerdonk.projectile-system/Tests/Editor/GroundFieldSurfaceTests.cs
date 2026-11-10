@@ -36,6 +36,41 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
+        sealed class AreaSurface : IGroundFieldAreaSurface
+        {
+            readonly bool found;
+            readonly Vector3 point;
+            readonly Vector3 normal;
+
+            public AreaSurface(bool found, Vector3 point, Vector3 normal)
+            {
+                this.found = found;
+                this.point = point;
+                this.normal = normal;
+            }
+
+            public readonly List<float> Radii = new List<float>();
+            public readonly List<Vector3> Asked = new List<Vector3>();
+            public int PointOnlyCalls;
+
+            public bool TryGetGround(Vector3 query, float radius, out Vector3 groundPoint, out Vector3 groundNormal)
+            {
+                Asked.Add(query);
+                Radii.Add(radius);
+                groundPoint = point;
+                groundNormal = normal;
+                return found;
+            }
+
+            public bool TryGetGround(Vector3 query, out Vector3 groundPoint, out Vector3 groundNormal)
+            {
+                PointOnlyCalls++;
+                groundPoint = Vector3.zero;
+                groundNormal = Vector3.up;
+                return false;
+            }
+        }
+
         static Recipe TravelField(float heightMargin)
         {
             return SimulationTestHelper.CreateRecipe(
@@ -439,6 +474,80 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
 
             Assert.AreNotSame(field, copy);
             Assert.AreEqual(1.5f, copy.HeightMargin);
+        }
+
+        [Test]
+        public void AreaSurface_GetsTheFieldRadius_AndItsGroundIsUsed()
+        {
+            Recipe recipe = TravelField(1f);
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var surface = new AreaSurface(true, Ground, -Slope * 3f);
+                world.GroundFieldSurface = surface;
+                var uphill = new TargetId(1);
+                StandOnCapsule(world, uphill, Ground - Downhill * 2.2f);
+                var planted = new List<GroundFieldInfo>();
+                var seen = new List<HitInfo>();
+                world.GroundFieldPlanted += planted.Add;
+                world.Hit += seen.Add;
+
+                FireUp(world, recipe);
+
+                Assert.AreEqual(0, surface.PointOnlyCalls);
+                CollectionAssert.AreEqual(new[] { 2f }, surface.Radii);
+                Assert.AreEqual(new Vector3(0f, 10f, 0f), surface.Asked[0]);
+                AssertVector(Ground, planted[0].Center);
+                AssertVector(Slope, planted[0].Normal);
+                CollectionAssert.AreEquivalent(new[] { uphill }, AreaTargets(seen));
+            }
+        }
+
+        [Test]
+        public void AreaSurface_IsAskedWithEachFieldsOwnRadius()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "ground-area-radii",
+                speed: 20f,
+                lifetime: 5f,
+                onTravel: new IModifier[] { new GroundField(2f, 2f, 3f), new GroundField(3.5f, 2f, 3f) });
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var surface = new AreaSurface(true, Ground, Vector3.up);
+                world.GroundFieldSurface = surface;
+
+                FireUp(world, recipe);
+
+                CollectionAssert.AreEqual(new[] { 2f, 3.5f }, surface.Radii);
+            }
+        }
+
+        [Test]
+        public void AreaSurface_ReturningFalseOrNonFinite_PlantsAtYZero_NormalUp()
+        {
+            Recipe recipe = TravelField(0f);
+            var surfaces = new[]
+            {
+                new AreaSurface(false, Ground, Slope),
+                new AreaSurface(true, new Vector3(0f, float.PositiveInfinity, 0f), Slope)
+            };
+            for (int s = 0; s < surfaces.Length; s++)
+            {
+                (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe);
+                using (world)
+                {
+                    world.GroundFieldSurface = surfaces[s];
+                    var planted = new List<GroundFieldInfo>();
+                    world.GroundFieldPlanted += planted.Add;
+
+                    FireUp(world, recipe);
+
+                    Assert.AreEqual(0, surfaces[s].PointOnlyCalls);
+                    AssertVector(Vector3.zero, planted[0].Center);
+                    AssertVector(Vector3.up, planted[0].Normal);
+                }
+            }
         }
 
         static void AssertVector(Vector3 expected, Vector3 actual)

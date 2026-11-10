@@ -182,7 +182,7 @@ namespace Veerdonk.ProjectileSystem
             if (request.Radius <= 0f || request.LifetimeSeconds <= 0f)
                 return;
 
-            ResolveGround(request.Center, out Vector3 center, out Vector3 normal);
+            ResolveGround(request.Center, request.Radius, out Vector3 center, out Vector3 normal);
             var disk = new GroundDisk(center, normal, request.Radius, request.HeightMargin);
             int fieldNumber = nextFieldId++;
             var skipKey = new ProjectileId(-fieldNumber);
@@ -459,11 +459,14 @@ namespace Veerdonk.ProjectileSystem
             }
         }
 
-        void ResolveGround(Vector3 point, out Vector3 center, out Vector3 normal)
+        void ResolveGround(Vector3 point, float radius, out Vector3 center, out Vector3 normal)
         {
-            if (Surface != null
-                && Surface.TryGetGround(point, out Vector3 groundPoint, out Vector3 groundNormal)
-                && IsFinite(groundPoint))
+            Vector3 groundPoint = default;
+            Vector3 groundNormal = default;
+            bool found = Surface is IGroundFieldAreaSurface area
+                ? area.TryGetGround(point, radius, out groundPoint, out groundNormal)
+                : Surface != null && Surface.TryGetGround(point, out groundPoint, out groundNormal);
+            if (found && IsFinite(groundPoint))
             {
                 center = groundPoint;
                 normal = GroundDisk.SanitizeNormal(groundNormal);
