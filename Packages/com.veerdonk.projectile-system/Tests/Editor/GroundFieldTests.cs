@@ -305,6 +305,97 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
             }
         }
 
+        sealed class RawGroundField : IModifier
+        {
+            readonly float radius;
+            readonly float lifetimeSeconds;
+
+            public RawGroundField(float radius, float lifetimeSeconds)
+            {
+                this.radius = radius;
+                this.lifetimeSeconds = lifetimeSeconds;
+            }
+
+            public void Apply(ModifierContext context)
+            {
+                context.RequestGroundField(context.Position, radius, lifetimeSeconds, 3f, null, 0.5f);
+            }
+        }
+
+        [TestCase(float.NaN, 2f)]
+        [TestCase(float.PositiveInfinity, 2f)]
+        [TestCase(2f, float.NaN)]
+        public void NonFiniteRadius_OrNaNLifetime_PlantsNothing(float radius, float lifetimeSeconds)
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "ground-nan",
+                speed: 20f,
+                lifetime: 5f,
+                onTravel: new IModifier[]
+                {
+                    new GroundField(radius, lifetimeSeconds, 3f, intervalSeconds: 0.5f),
+                    new RawGroundField(radius, lifetimeSeconds)
+                });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                hits.AddOverlapTarget(new TargetId(1), Vector3.zero);
+                var planted = new List<GroundFieldInfo>();
+                var seen = new List<HitInfo>();
+                world.GroundFieldPlanted += planted.Add;
+                world.Hit += seen.Add;
+
+                world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                world.Tick(0.1f);
+                world.Tick(0.5f);
+
+                Assert.AreEqual(0, planted.Count);
+                Assert.AreEqual(0, seen.Count);
+            }
+        }
+
+        [Test]
+        public void InfiniteLifetime_PlantsAndKeepsPulsing()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "ground-forever",
+                speed: 20f,
+                lifetime: 5f,
+                onTravel: new IModifier[] { new GroundField(2f, float.PositiveInfinity, 3f, intervalSeconds: 0.5f) });
+            (ProjectileWorld world, ScriptedHitQuery hits) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                hits.AddOverlapTarget(new TargetId(1), Vector3.zero);
+                var planted = new List<GroundFieldInfo>();
+                var ended = new List<GroundFieldInfo>();
+                var seen = new List<HitInfo>();
+                world.GroundFieldPlanted += planted.Add;
+                world.GroundFieldEnded += ended.Add;
+                world.Hit += seen.Add;
+
+                ProjectileId id = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = Vector3.zero,
+                    Direction = Vector3.forward
+                });
+                world.Despawn(id);
+                int afterPlant = seen.Count;
+                for (int i = 0; i < 40; i++)
+                    world.Tick(0.5f);
+
+                Assert.AreEqual(1, planted.Count);
+                Assert.AreEqual(0, ended.Count);
+                Assert.AreEqual(1, afterPlant);
+                Assert.AreEqual(41, seen.Count);
+            }
+        }
+
         [Test]
         public void RadiusZero_OrLifetimeZero_PlantsNothing()
         {

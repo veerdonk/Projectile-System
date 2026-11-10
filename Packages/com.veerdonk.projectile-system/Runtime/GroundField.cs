@@ -11,7 +11,8 @@ namespace Veerdonk.ProjectileSystem
     /// returns for that point, or on the world ground plane (Y = 0, normal up) without one.
     /// <see cref="Occupancy"/> replaces pulses with enter/exit while the disk lives.
     /// The modifier queues a plant; it does not call Physics or spawn a Recipe.
-    /// Radius or lifetime &lt;= 0 is a no-op. Interval &lt;= 0 never pulses when occupancy is false.
+    /// Radius &lt;= 0 or not finite, or lifetime &lt;= 0 or NaN, is a no-op. Interval &lt;= 0 or NaN never pulses when
+    /// occupancy is false.
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnHit | RecipeStage.OnExpire)]
@@ -50,14 +51,15 @@ namespace Veerdonk.ProjectileSystem
             HeightMargin = heightMargin;
         }
 
-        /// <summary>Disk radius in meters, measured in the ground plane. &lt;= 0 plants nothing.</summary>
+        /// <summary>Disk radius in meters, measured in the ground plane. &lt;= 0, NaN, or infinite plants nothing.</summary>
         public float Radius
         {
             get => radius;
             set => radius = value;
         }
 
-        /// <summary>Seconds the disk lives. Independent of the projectile. &lt;= 0 plants nothing.</summary>
+        /// <summary>Seconds the disk lives. Independent of the projectile. &lt;= 0 or NaN plants nothing; infinity lives until
+        /// the world is disposed.</summary>
         public float LifetimeSeconds
         {
             get => lifetimeSeconds;
@@ -117,7 +119,7 @@ namespace Veerdonk.ProjectileSystem
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
-            if (Radius <= 0f || LifetimeSeconds <= 0f)
+            if (!Plants(Radius, LifetimeSeconds))
                 return;
 
             Vector3 center = context.HasHit ? context.Hit.Point : context.Position;
@@ -131,6 +133,11 @@ namespace Veerdonk.ProjectileSystem
                 PresentationId,
                 Occupancy,
                 HeightMargin);
+        }
+
+        internal static bool Plants(float radius, float lifetimeSeconds)
+        {
+            return float.IsFinite(radius) && radius > 0f && lifetimeSeconds > 0f;
         }
     }
 
@@ -179,7 +186,7 @@ namespace Veerdonk.ProjectileSystem
 
         public void Plant(ProjectileId sourceId, in GroundFieldPlantRequest request)
         {
-            if (request.Radius <= 0f || request.LifetimeSeconds <= 0f)
+            if (!GroundField.Plants(request.Radius, request.LifetimeSeconds))
                 return;
 
             ResolveGround(request.Center, request.Radius, out Vector3 center, out Vector3 normal);
@@ -268,7 +275,7 @@ namespace Veerdonk.ProjectileSystem
                     continue;
                 }
 
-                if (field.IntervalSeconds <= 0f)
+                if (!(field.IntervalSeconds > 0f))
                 {
                     fields[i] = field;
                     continue;
@@ -277,6 +284,7 @@ namespace Veerdonk.ProjectileSystem
                 float previousElapsed = field.ElapsedSeconds;
                 field.ElapsedSeconds += dt;
                 int fires = IntervalCrossings(previousElapsed, field.ElapsedSeconds, field.IntervalSeconds);
+                field.ElapsedSeconds -= fires * field.IntervalSeconds;
                 fields[i] = field;
                 for (int f = 0; f < fires; f++)
                     Pulse(fields[i]);

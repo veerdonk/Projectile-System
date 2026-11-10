@@ -5,6 +5,13 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.17] - 2026-11-10
+
+### Fixed
+
+- A ground field with a NaN or infinite radius, or a NaN lifetime, plants nothing, like one with a radius or lifetime of 0. Before, it passed the `<= 0` check and was planted, from `GroundField` or from `ModifierContext.RequestGroundField`. An infinite lifetime is allowed and lives until the world is disposed.
+- A long-lived ground field keeps pulsing on time. Its pulse clock no longer grows without bound, so float rounding cannot drift or stop the pulses after many hours. A NaN interval never pulses, as an interval of 0 does.
+
 ## [0.2.16] - 2026-11-10
 
 ### Added
