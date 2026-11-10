@@ -36,7 +36,7 @@ One session's leftovers, overwritten by the next — not a spec, and safe to del
 
 **Phase 53 — Ground surface query gets the field's radius (done; phase 34 is next)**
 
-- Change request veerdonk/Projectile-System#95 (game card UntitledTowerGame#728). Ships in **0.2.16** (`package.json` bumped, CHANGELOG dated 2026-11-10; update to the merge date if later). Branch `cr-95-ground-surface-radius` from `origin/main` 43509ef (#94 merged). Tag `v0.2.15` if it is not tagged yet.
+- Change request veerdonk/Projectile-System#95 (game card UntitledTowerGame#728). Ships in **0.2.16** (`package.json` bumped, CHANGELOG dated 2026-11-10; update to the merge date if later). Branch `cr-95-ground-surface-radius` from `origin/main` 43509ef (#94 merged). `v0.2.15` is tagged by the release workflow.
 - Shape: derived `IGroundFieldAreaSurface` (ADR-059) so 0.2.15 surfaces still compile; the radius passed is `GroundField.Radius` as planted.
 - Tests via Unity MCP with the Editor open: Edit Mode **488/488**, Play Mode **57/57**. After a forced compile the `My project` bridge drops for ~20 s; pass `unity_instance` on the call if `set_active_instance` reports it missing. Batch mode (Editor closed) works as in phase 52.
 - `.github/context-cold.md` and `.github/copilot-instructions.md` show as modified (SigMap regeneration); not committed.
