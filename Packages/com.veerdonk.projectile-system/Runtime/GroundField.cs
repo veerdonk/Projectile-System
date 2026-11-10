@@ -50,14 +50,14 @@ namespace Veerdonk.ProjectileSystem
             HeightMargin = heightMargin;
         }
 
-        /// <summary>Disk radius in meters, measured in the ground plane. &lt;= 0 plants nothing.</summary>
+        /// <summary>Disk radius in meters, measured in the ground plane. &lt;= 0, NaN, or infinite plants nothing.</summary>
         public float Radius
         {
             get => radius;
             set => radius = value;
         }
 
-        /// <summary>Seconds the disk lives. Independent of the projectile. &lt;= 0 plants nothing.</summary>
+        /// <summary>Seconds the disk lives. Independent of the projectile. &lt;= 0 or NaN plants nothing.</summary>
         public float LifetimeSeconds
         {
             get => lifetimeSeconds;
@@ -117,7 +117,7 @@ namespace Veerdonk.ProjectileSystem
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
-            if (Radius <= 0f || LifetimeSeconds <= 0f)
+            if (!Plants(Radius, LifetimeSeconds))
                 return;
 
             Vector3 center = context.HasHit ? context.Hit.Point : context.Position;
@@ -131,6 +131,11 @@ namespace Veerdonk.ProjectileSystem
                 PresentationId,
                 Occupancy,
                 HeightMargin);
+        }
+
+        internal static bool Plants(float radius, float lifetimeSeconds)
+        {
+            return radius > 0f && radius < float.PositiveInfinity && lifetimeSeconds > 0f;
         }
     }
 
@@ -179,7 +184,7 @@ namespace Veerdonk.ProjectileSystem
 
         public void Plant(ProjectileId sourceId, in GroundFieldPlantRequest request)
         {
-            if (request.Radius <= 0f || request.LifetimeSeconds <= 0f)
+            if (!GroundField.Plants(request.Radius, request.LifetimeSeconds))
                 return;
 
             ResolveGround(request.Center, request.Radius, out Vector3 center, out Vector3 normal);
