@@ -186,6 +186,9 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>True while the OnExpire list runs.</summary>
         internal bool Expiring { get; set; }
 
+        /// <summary>The bound instance's shield response; package-made spawns copy it.</summary>
+        internal ShieldResponse ShieldResponse { get; private set; }
+
         /// <summary>Published homing poses for this world.</summary>
         public HomingCatalog HomingCatalog { get; }
 
@@ -388,7 +391,8 @@ namespace Veerdonk.ProjectileSystem
                 MulticastChain = multicast,
                 MultiplyChain = multiply,
                 HomingAcquirePointSet = copyAimPoint && HomingAcquirePointSet,
-                HomingAcquirePoint = copyAimPoint ? HomingAcquirePoint : default
+                HomingAcquirePoint = copyAimPoint ? HomingAcquirePoint : default,
+                ShieldResponse = ShieldResponse
             });
         }
 
@@ -446,6 +450,7 @@ namespace Veerdonk.ProjectileSystem
             HomingAimPointUsed = state.HomingAimPointUsed;
             HomingHeldLock = state.HomingHeldLock;
             HomingLockDropped = false;
+            ShieldResponse = state.ShieldResponse;
         }
 
         internal void ApplyTo(ref Projectile projectile, ref ProjectileVelocity velocity)
@@ -580,5 +585,6 @@ namespace Veerdonk.ProjectileSystem
         public Vector3 HomingAcquirePoint;
         public bool HomingAimPointUsed;
         public HomingTarget HomingHeldLock;
+        public ShieldResponse ShieldResponse;
     }
 }

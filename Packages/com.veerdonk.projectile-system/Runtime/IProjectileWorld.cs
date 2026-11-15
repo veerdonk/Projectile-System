@@ -111,6 +111,20 @@ namespace Veerdonk.ProjectileSystem
         void RemoveHitTarget(TargetId id);
 
         /// <summary>
+        /// Adds a one-way shield sphere and returns its id (above 0). A Straight or Arc shot whose centre moves from outside
+        /// the sphere to inside it during a tick, or passes through it, is stopped where its centre first meets the surface,
+        /// and then breaks or bounces by its <see cref="SpawnRequest.ShieldResponse"/>. A shot that starts inside (spawned
+        /// there, or moving out) is not affected. Hitscan and Beam polylines end at the crossing whatever the response.
+        /// A Direct contact before the crossing hits as usual. Spheres may overlap; each blocks on its own. The sphere stays
+        /// until <see cref="RemoveShieldSphere"/>. A non-finite center, or a radius that is not finite and above 0,
+        /// adds nothing and returns 0. <see cref="PredictPath"/>, area, and ground queries ignore shields.
+        /// </summary>
+        int AddShieldSphere(Vector3 center, float radius);
+
+        /// <summary>Removes a shield sphere added by <see cref="AddShieldSphere"/>. Unknown ids do nothing.</summary>
+        void RemoveShieldSphere(int id);
+
+        /// <summary>
         /// Ground for <c>GroundField</c> plants. When set and it returns true, a field is centered on the returned
         /// point, lies across the returned normal, and its pulses and occupancy test that plane
         /// (<see cref="GroundField.HeightMargin"/>). Null, the default, or a false return plants at Y = 0 with normal up.
@@ -171,6 +185,13 @@ namespace Veerdonk.ProjectileSystem
         /// <see cref="Hit"/> events. An occupancy overlap raises it only when it is first made, not each tick.
         /// </summary>
         event Action<AreaBurstInfo> AreaBurst;
+
+        /// <summary>
+        /// Raised when a shot crosses a shield sphere inward (<see cref="AddShieldSphere"/>), at the crossing.
+        /// For a break it comes before that shot's <see cref="Expired"/> (<see cref="ExpireReason.Blocked"/>).
+        /// A Beam raises it on every pulse that reaches the shield, not on an <c>AimBeam</c> redraw.
+        /// </summary>
+        event Action<ShieldBlockInfo> ShieldBlocked;
     }
 
     /// <summary>Payload for <see cref="IProjectileWorld.StatusApplied"/>.</summary>
@@ -224,6 +245,12 @@ namespace Veerdonk.ProjectileSystem
         public bool IgnoreTargetSet;
         /// <summary>Hit target that fired this shot. Ignored unless <see cref="IgnoreTargetSet"/> is true.</summary>
         public TargetId IgnoreTarget;
+        /// <summary>
+        /// What this shot does at a shield sphere (<see cref="IProjectileWorld.AddShieldSphere"/>). Default
+        /// <see cref="ShieldResponse.Break"/>. Multicast extras, Multiply children, and other package-made spawns copy it.
+        /// Hitscan and Beam always stop at the shield.
+        /// </summary>
+        public ShieldResponse ShieldResponse;
         internal ProjectileId InheritIgnoreFrom;
         internal ProjectileId ParentId;
         internal SpawnCause Cause;

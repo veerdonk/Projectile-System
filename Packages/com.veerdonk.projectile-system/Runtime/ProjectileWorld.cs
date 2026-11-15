@@ -23,6 +23,7 @@ namespace Veerdonk.ProjectileSystem
         readonly ModifierContext modifierContext;
         readonly SimulationBridge bridge;
         readonly GroundFieldSet groundFields;
+        readonly ShieldSphereSet shields = new ShieldSphereSet();
         World ecsWorld;
         ProjectilePool pool;
         SimulationSystemGroup simulationGroup;
@@ -106,7 +107,9 @@ namespace Veerdonk.ProjectileSystem
                 HomingLocked = info => HomingLocked?.Invoke(info),
                 StatusApplied = info => StatusApplied?.Invoke(info),
                 AreaBurst = info => AreaBurst?.Invoke(info),
-                GroundFields = groundFields
+                GroundFields = groundFields,
+                Shields = shields,
+                ShieldBlocked = info => ShieldBlocked?.Invoke(info)
             };
             simulation.Bridge = bridge;
         }
@@ -137,6 +140,9 @@ namespace Veerdonk.ProjectileSystem
 
         /// <inheritdoc />
         public event Action<AreaBurstInfo> AreaBurst;
+
+        /// <inheritdoc />
+        public event Action<ShieldBlockInfo> ShieldBlocked;
 
         /// <inheritdoc />
         public IGroundFieldSurface GroundFieldSurface
@@ -355,6 +361,20 @@ namespace Veerdonk.ProjectileSystem
         {
             ThrowIfDisposed();
             hitTargets.Remove(id);
+        }
+
+        /// <inheritdoc />
+        public int AddShieldSphere(Vector3 center, float radius)
+        {
+            ThrowIfDisposed();
+            return shields.Add(center, radius);
+        }
+
+        /// <inheritdoc />
+        public void RemoveShieldSphere(int id)
+        {
+            ThrowIfDisposed();
+            shields.Remove(id);
         }
 
         bool TryGetLiveEntity(ProjectileId id, out Entity entity)
@@ -792,7 +812,8 @@ namespace Veerdonk.ProjectileSystem
                 BeamPulseElapsed = 0f,
                 BeamOrigin = position,
                 BeamDirection = new float3(direction.x, direction.y, direction.z),
-                HomingAssignedAtSpawn = request.HomingTarget.IsAssigned
+                HomingAssignedAtSpawn = request.HomingTarget.IsAssigned,
+                ShieldResponse = request.ShieldResponse
             });
             em.SetComponentData(entity, new ProjectilePosition { Value = position });
             em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });

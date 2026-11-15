@@ -20,6 +20,8 @@ namespace Veerdonk.ProjectileSystem
         public System.Action<StatusInfo> StatusApplied;
         public System.Action<AreaBurstInfo> AreaBurst;
         public GroundFieldSet GroundFields;
+        public ShieldSphereSet Shields;
+        public System.Action<ShieldBlockInfo> ShieldBlocked;
         public readonly List<ProjectileId> RetiredIds = new List<ProjectileId>();
     }
 
@@ -259,14 +261,25 @@ namespace Veerdonk.ProjectileSystem
                 if (keepInstance)
                     AppendBeamPoint(origin);
 
+                bool shielded = TryFindShieldEntry(
+                    origin,
+                    origin + direction * castDistance,
+                    out float shieldFraction,
+                    out ShieldBlockInfo block);
                 if (!Bridge.HitQuery.TryCast(
                         new ProjectileId(projectile.Id),
                         origin,
                         direction,
-                        castDistance,
+                        shielded ? castDistance * shieldFraction : castDistance,
                         projectile.Radius,
                         out HitInfo hit))
                 {
+                    if (shielded)
+                    {
+                        StopPolylineAtShield(entity, projectile.Id, keepInstance, raiseContacts, origin, block);
+                        return;
+                    }
+
                     bool partial = curve && castDistance < remaining - 1e-3f;
                     if (partial)
                     {
@@ -321,6 +334,84 @@ namespace Veerdonk.ProjectileSystem
                 FinishBeamPulse(entity);
             else
                 Despawn(entity, runOnHit: false, default, reason: ExpireReason.HitscanEnd);
+        }
+
+        void StopPolylineAtShield(
+            Entity entity,
+            int instanceId,
+            bool keepInstance,
+            bool raiseContacts,
+            Vector3 origin,
+            ShieldBlockInfo block)
+        {
+            EntityManager em = EntityManager;
+            block.InstanceId = new ProjectileId(instanceId);
+            block.Outcome = HitOutcome.Ended;
+            if (keepInstance)
+            {
+                AppendBeamSpan(origin, block.Position);
+                if (raiseContacts)
+                    Bridge.ShieldBlocked?.Invoke(block);
+                if (IsLive(entity, instanceId))
+                    FinishBeamPulse(entity);
+                return;
+            }
+
+            AdvanceBeam(entity, block.Position);
+            Bridge.ShieldBlocked?.Invoke(block);
+            if (IsLive(entity, instanceId))
+                ReturnToPool(entity, em.GetComponentData<Projectile>(entity), ExpireReason.Blocked);
+        }
+
+        bool TryFindShieldEntry(Vector3 from, Vector3 to, out float fraction, out ShieldBlockInfo block)
+        {
+            block = default;
+            fraction = 1f;
+            if (Bridge.Shields == null
+                || !Bridge.Shields.TryFindEntry(from, to, out fraction, out int shieldId, out Vector3 point, out Vector3 normal))
+                return false;
+
+            block.ShieldId = shieldId;
+            block.Position = point;
+            block.Normal = normal;
+            return true;
+        }
+
+        void BlockAtShield(Entity entity, in Projectile projectile, Vector3 velocity, ShieldBlockInfo block)
+        {
+            const float clearance = 1e-3f;
+            EntityManager em = EntityManager;
+            bool bounce = projectile.ShieldResponse == ShieldResponse.Bounce;
+            Vector3 position = bounce ? block.Position + block.Normal * clearance : block.Position;
+            var p = new float3(position.x, position.y, position.z);
+            em.SetComponentData(entity, new ProjectilePosition { Value = p });
+            em.SetComponentData(entity, new ProjectileCandidate { Value = p });
+            if (bounce && Vector3.Dot(velocity, block.Normal) < 0f)
+            {
+                velocity = Vector3.Reflect(velocity, block.Normal);
+                em.SetComponentData(entity, new ProjectileVelocity { Value = new float3(velocity.x, velocity.y, velocity.z) });
+            }
+
+            block.InstanceId = new ProjectileId(projectile.Id);
+            block.Outcome = bounce ? HitOutcome.Bounced : HitOutcome.Ended;
+            Bridge.ShieldBlocked?.Invoke(block);
+            if (!IsLive(entity, projectile.Id))
+                return;
+
+            if (bounce)
+            {
+                if (Bridge.Pool.TryGetView(entity, out ProjectileView view))
+                    view.SetPose(position, velocity);
+                return;
+            }
+
+            ReturnToPool(entity, em.GetComponentData<Projectile>(entity), ExpireReason.Blocked);
+        }
+
+        bool IsLive(Entity entity, int instanceId)
+        {
+            EntityManager em = EntityManager;
+            return em.Exists(entity) && em.IsEnabled(entity) && em.GetComponentData<Projectile>(entity).Id == instanceId;
         }
 
         void AdvanceBeam(Entity entity, Vector3 position)
@@ -689,12 +780,13 @@ namespace Veerdonk.ProjectileSystem
             Vector3 delta = to - from;
             float distance = delta.magnitude;
             Vector3 direction = distance > 1e-8f ? delta / distance : ToVector3(velocity.Value);
+            bool shielded = TryFindShieldEntry(from, to, out float shieldFraction, out ShieldBlockInfo block);
 
             if (Bridge.HitQuery.TryCast(
                     new ProjectileId(projectile.Id),
                     from,
                     direction,
-                    distance,
+                    shielded ? distance * shieldFraction : distance,
                     projectile.Radius,
                     out HitInfo hit))
             {
@@ -703,6 +795,12 @@ namespace Veerdonk.ProjectileSystem
                 hit.EffectRadius = projectile.EffectRadius;
                 hit.Source = HitSource.Direct;
                 Despawn(entity, runOnHit: true, hit);
+                return;
+            }
+
+            if (shielded)
+            {
+                BlockAtShield(entity, projectile, ToVector3(velocity.Value), block);
                 return;
             }
 
@@ -1164,7 +1262,8 @@ namespace Veerdonk.ProjectileSystem
                 HomingAimPointUsed = projectile.HomingAimPointUsed,
                 HomingHeldLock = projectile.BeamSetLockSet
                     ? HomingTarget.Assigned(projectile.BeamSetLockId)
-                    : default
+                    : default,
+                ShieldResponse = projectile.ShieldResponse
             };
             Bridge.ModifierContext.Bind(state, hasHit, hit, dt);
         }

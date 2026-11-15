@@ -1196,6 +1196,22 @@ Follow-up to phases 52 and 53 (reviews of #96 and #97). Runs before phase 34. AD
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 55 — One-way shield sphere
+
+Change request veerdonk/Projectile-System#100 from the game board (veerdonk/UntitledTowerGame#718). Runs before phase 34. ADR-061. Version **0.2.19**.
+
+**In scope**
+
+- `IProjectileWorld.AddShieldSphere(center, radius)` / `RemoveShieldSphere(id)`, internal `ShieldSphereSet`; `SpawnRequest.ShieldResponse` (`Break`, `Bounce`) copied by package-made spawns; `ShieldBlocked` with `ShieldBlockInfo`; `ExpireReason.Blocked`
+- Straight and Arc: the earliest inward crossing by the shot's centre over the tick's segment (including passing through) shortens the Direct cast; a contact before it hits as usual. Break pools at the crossing without OnHit / OnExpire; Bounce reflects about the outward normal, is not a hit, spends no Bounce charge. Hitscan and Beam segments end at the crossing
+- Edit Mode tests (`ShieldSphereTests`): break on Straight and Arc with no Hit and no OnExpire burst, event order; spawned inside leaves; miss and removed sphere; pass-through in one tick; overlapping spheres; contact before the shield hits and a target behind it is not hit; bounce reflects and keeps charges; an Arc lob never enters and lands outside; Multicast extras inherit; Homing curving in is blocked; Hitscan and Beam stop (Beam per pulse, not on `AimBeam`); invalid input
+
+**Out of scope:** shields in `PredictPath`, area or ground queries; shield lifetime in the package; a radius-based crossing; continuing the rest of the tick's travel after a bounce
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters
