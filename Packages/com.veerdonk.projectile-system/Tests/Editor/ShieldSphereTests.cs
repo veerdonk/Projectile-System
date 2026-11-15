@@ -354,6 +354,136 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void PierceThroughTargetOnTheSurface_IsStillBlocked()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "shield-pierce",
+                speed: 20f,
+                lifetime: 5f,
+                onHit: new IModifier[] { new Pierce(1) });
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                world.AddShieldSphere(Center, ShieldRadius);
+                world.SetHitTarget(new TargetId(1), new Vector3(0f, 0f, 6.3f), 0.5f);
+                var hits = new List<HitInfo>();
+                ExpireInfo? expired = null;
+                int blocks = 0;
+                world.Hit += info => hits.Add(info);
+                world.ShieldBlocked += _ => blocks++;
+                world.Expired += info => expired = info;
+
+                Spawn(world, recipe, Vector3.zero, Vector3.forward);
+                for (int i = 0; i < 10 && world.ActiveCount > 0; i++)
+                    world.Tick(0.1f);
+
+                Assert.AreEqual(1, hits.Count);
+                Assert.AreEqual(HitOutcome.Pierced, hits[0].Outcome);
+                Assert.AreEqual(1, blocks);
+                Assert.AreEqual(ExpireReason.Blocked, expired.Value.Reason);
+                AssertNear(new Vector3(0f, 0f, 6f), expired.Value.Position);
+            }
+        }
+
+        [Test]
+        public void BeamAndHitscanPierceOnTheSurface_StopAtShield()
+        {
+            Recipe beam = SimulationTestHelper.CreateRecipe(
+                "shield-beam-pierce",
+                speed: 20f,
+                lifetime: 5f,
+                onHit: new IModifier[] { new Pierce(2) });
+            beam.Delivery = Delivery.Beam;
+            Recipe hitscan = SimulationTestHelper.CreateRecipe(
+                "shield-hitscan-pierce",
+                lifetime: 5f,
+                onHit: new IModifier[] { new Pierce(2) });
+            hitscan.Delivery = Delivery.Hitscan;
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(beam);
+            using (world)
+            {
+                world.AddShieldSphere(Center, ShieldRadius);
+                world.SetHitTarget(new TargetId(1), new Vector3(0f, 0f, 6.3f), 0.5f);
+                world.SetHitTarget(new TargetId(2), Center, 0.5f);
+                var hitIds = new List<TargetId>();
+                int blocks = 0;
+                ExpireInfo? expired = null;
+                world.Hit += info => hitIds.Add(info.TargetId);
+                world.ShieldBlocked += _ => blocks++;
+                world.Expired += info => expired = info;
+
+                Spawn(world, beam, Vector3.zero, Vector3.forward);
+                Assert.AreEqual(new[] { new TargetId(1) }, hitIds.ToArray());
+                Assert.AreEqual(1, blocks);
+                Assert.AreEqual(1, world.ActiveCount);
+
+                hitIds.Clear();
+                Spawn(world, hitscan, Vector3.zero, Vector3.forward);
+                Assert.AreEqual(new[] { new TargetId(1) }, hitIds.ToArray());
+                Assert.AreEqual(2, blocks);
+                Assert.AreEqual(ExpireReason.Blocked, expired.Value.Reason);
+                AssertNear(new Vector3(0f, 0f, 6f), expired.Value.Position);
+            }
+        }
+
+        [Test]
+        public void MultiplyChildren_InheritTheResponse()
+        {
+            Recipe child = SimulationTestHelper.CreateRecipe("shield-child", speed: 20f, lifetime: 5f);
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "shield-multiply",
+                speed: 20f,
+                lifetime: 0.15f,
+                onExpire: new IModifier[] { new Multiply(2, child) });
+            recipe.MultiplyGenerations = 1;
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe, prewarm: 8);
+            using (world)
+            {
+                world.AddShieldSphere(Center, ShieldRadius);
+                var blocks = new List<ShieldBlockInfo>();
+                world.ShieldBlocked += info => blocks.Add(info);
+
+                Spawn(world, recipe, Vector3.zero, Vector3.forward, ShieldResponse.Bounce);
+                for (int i = 0; i < 6; i++)
+                    world.Tick(0.1f);
+
+                Assert.AreEqual(2, blocks.Count);
+                Assert.AreEqual(2, world.ActiveCount);
+                for (int i = 0; i < blocks.Count; i++)
+                    Assert.AreEqual(HitOutcome.Bounced, blocks[i].Outcome);
+            }
+        }
+
+        [Test]
+        public void ShieldBlockedHandler_DespawnsAndSpawns_WithoutDoubleExpire()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe("shield-reentrant", speed: 20f, lifetime: 5f);
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe, prewarm: 1);
+            using (world)
+            {
+                int shield = world.AddShieldSphere(Center, ShieldRadius);
+                var expired = new List<ExpireInfo>();
+                ProjectileId replacement = default;
+                world.Expired += info => expired.Add(info);
+                world.ShieldBlocked += info =>
+                {
+                    world.RemoveShieldSphere(shield);
+                    world.Despawn(info.InstanceId);
+                    replacement = Spawn(world, recipe, new Vector3(20f, 0f, 0f), Vector3.forward);
+                };
+
+                ProjectileId id = Spawn(world, recipe, Vector3.zero, Vector3.forward);
+                for (int i = 0; i < 4; i++)
+                    world.Tick(0.1f);
+
+                Assert.AreEqual(1, expired.Count);
+                Assert.AreEqual(id, expired[0].InstanceId);
+                Assert.AreEqual(ExpireReason.Despawned, expired[0].Reason);
+                Assert.IsTrue(world.TryGetState(replacement, out _, out _, out _));
+            }
+        }
+
+        [Test]
         public void AddShieldSphere_RejectsUnusableInput()
         {
             Recipe recipe = SimulationTestHelper.CreateRecipe("shield-invalid");

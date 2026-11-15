@@ -46,7 +46,7 @@ SampleLab.Update
                  move/hit on the same list; skip if a hit already disabled the entity
                  shield spheres first (ADR-061): the earliest inward crossing of pos → candidate by the shot's centre shortens the cast to that point
                  IHitQuery.TryCast (ScriptedHitQuery in Edit Mode, PhysicsHitQuery in Play Mode), nearest of PhysX and published hit spheres (ADR-030)
-                 no contact but a shield crossing: ShieldBlocked, then Break → pool at the crossing (Expired Blocked, no OnHit / OnExpire), or Bounce → reflect velocity about the outward normal, sit just outside, fly on
+                 no contact but a shield crossing: ShieldBlocked, then Break → pool at the crossing (Expired Blocked, no OnHit / OnExpire), or Bounce → reflect velocity about the outward normal, sit just outside, fly on. The Pierce / Bounce placement past a contact is tested for a crossing as well
                  sample the instance combat stats (damage, crit chance, effect radius) onto that HitInfo; Source = Direct
                  on hit: OnHit, then Direct Hit unless AreaEffect suppressed it, then Direct StatusApplied unless suppressed
                  then IHitQuery.Overlap for each queued AreaEffect; Area Hit / StatusApplied per Target (World colliders ignored)

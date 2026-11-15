@@ -202,6 +202,8 @@ namespace Veerdonk.ProjectileSystem
 
         const float uncappedDrawLength = 40f;
         float beamDrawCap;
+        bool hasPendingShieldStop;
+        ShieldBlockInfo pendingShieldStop;
 
         void ResolvePolyline(Entity entity, bool keepInstance, bool raiseContacts = true)
         {
@@ -210,6 +212,7 @@ namespace Veerdonk.ProjectileSystem
             const int maxCurveSteps = 128;
             const float curveStep = 0.5f;
             beamPoints.Clear();
+            hasPendingShieldStop = false;
             if (keepInstance)
                 PrepareBeamPulse(entity);
 
@@ -317,6 +320,13 @@ namespace Veerdonk.ProjectileSystem
                 {
                     if (keepInstance)
                         FinishBeamPulse(entity);
+                    return;
+                }
+
+                if (hasPendingShieldStop)
+                {
+                    hasPendingShieldStop = false;
+                    StopPolylineAtShield(entity, projectile.Id, keepInstance, raiseContacts, hit.Point, pendingShieldStop);
                     return;
                 }
 
@@ -929,6 +939,21 @@ namespace Veerdonk.ProjectileSystem
             Vector3 travel = vel.sqrMagnitude > 1e-12f ? vel.normalized : hit.Normal;
             float clearance = projectile.Radius + (projectile.Delivery == Delivery.Beam ? 0.08f : 0.01f);
             Vector3 position = hit.Point + travel * clearance;
+            Vector3 before = ToVector3(em.GetComponentData<ProjectilePosition>(entity).Value);
+            if (TryFindShieldEntry(before, position, out _, out ShieldBlockInfo block))
+            {
+                if (projectile.Delivery == Delivery.Beam || projectile.Delivery == Delivery.Hitscan)
+                {
+                    AdvanceBeam(entity, block.Position);
+                    pendingShieldStop = block;
+                    hasPendingShieldStop = true;
+                    return;
+                }
+
+                BlockAtShield(entity, projectile, vel, block);
+                return;
+            }
+
             float3 p = new float3(position.x, position.y, position.z);
             em.SetComponentData(entity, new ProjectilePosition { Value = p });
             em.SetComponentData(entity, new ProjectileCandidate { Value = p });
