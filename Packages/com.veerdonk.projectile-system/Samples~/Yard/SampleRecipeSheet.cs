@@ -196,7 +196,15 @@ namespace Veerdonk.ProjectileSystem.Samples
 
         static void DrawGroundField(string key, GroundField field)
         {
-            field.Radius = FloatField(key + "r", "GroundField r", field.Radius);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("GroundField " + field.Shape, GUILayout.Width(140f));
+            if (GUILayout.Button("Shape"))
+                field.Shape = (GroundFieldShape)(((int)field.Shape + 1) % 3);
+            GUILayout.EndHorizontal();
+            field.Radius = FloatField(key + "r", "  Radius (disk)", field.Radius);
+            field.Length = FloatField(key + "len", "  Length", field.Length);
+            field.Width = FloatField(key + "w", "  Width (rect)", field.Width);
+            field.AngleDegrees = FloatField(key + "a", "  Angle (sector)", field.AngleDegrees);
             field.LifetimeSeconds = FloatField(key + "l", "  Lifetime", field.LifetimeSeconds);
             field.Damage = FloatField(key + "d", "  Damage", field.Damage);
             field.IntervalSeconds = FloatField(key + "i", "  Interval", field.IntervalSeconds);

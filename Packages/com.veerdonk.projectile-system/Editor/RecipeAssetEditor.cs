@@ -430,7 +430,7 @@ namespace Veerdonk.ProjectileSystem
                 case AreaEffect:
                     return 5;
                 case GroundField:
-                    return 7;
+                    return 11;
                 default:
                     return 0;
             }
@@ -502,7 +502,11 @@ namespace Veerdonk.ProjectileSystem
             }
             else if (value is GroundField)
             {
-                DrawProperty(ref line, element, "radius");
+                DrawProperty(ref line, element, "shape");
+                DrawProperty(ref line, element, "radius", "Radius (disk)");
+                DrawProperty(ref line, element, "length", "Length (rectangle, sector)");
+                DrawProperty(ref line, element, "width", "Width (rectangle)");
+                DrawProperty(ref line, element, "angleDegrees", "Angle (sector, degrees)");
                 DrawProperty(ref line, element, "lifetimeSeconds");
                 DrawProperty(ref line, element, "damage");
                 DrawStatus(ref line, element.FindPropertyRelative("status"));

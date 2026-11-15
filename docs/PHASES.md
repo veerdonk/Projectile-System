@@ -1212,6 +1212,25 @@ Change request veerdonk/Projectile-System#100 from the game board (veerdonk/Unti
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 56 — Rectangle and sector ground fields
+
+Change request veerdonk/Projectile-System#99 from the game board (UntitledTowerGame #572, REQ-057). Runs before phase 34. ADR-062. Version **0.2.20**.
+
+**In scope**
+
+- `GroundFieldShape` (`Disk` default, `Rectangle`, `Sector`) and `GroundField.Shape` / `Length` / `Width` / `AngleDegrees`; the direction is the shot's horizontal travel (spawn or aim direction at speed 0, world forward when vertical)
+- Rectangle from the plant point along the direction; sector with its apex there; both keep lifetime, interval, occupancy, the immediate pulse, the three field events (with the shape, direction, and measures), the ground surface (sampled at the shape's middle), and the height margin
+- Published volumes count their radius against the shape's edges; the physics query is the capsule around the anchor with the shape's reach, then the shape test
+- Primitive views take a box or sector mesh; factory views are placed at the anchor facing the direction; pools per shape
+- Recipe inspector and sample sheet draw the new fields
+- Edit Mode tests (`GroundFieldShapeTests`): rectangle and sector containment (narrow, wide, full turn), travel and fallback direction, events, disk unchanged, surface sampled at the middle and anchor on the plane, capsule radius at edges and corners, sector edge distance, occupancy, unusable measures. Play Mode (`GroundFieldShapePlayModeTests`): physics colliders inside each shape, primitive meshes and per-shape pooling
+
+**Out of scope:** a shaped `ModifierContext.RequestGroundField`; a shape-aware `IGroundFieldViewFactory`; shaped `AreaEffect`; a tighter physics query than the reach capsule
+
+**Proof:** Edit Mode and Play Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

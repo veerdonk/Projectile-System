@@ -34,12 +34,12 @@ This is a Unity 6 LTS (`6000.6.0f1`) embedded UPM package plus a sandbox lab. Sp
 
 One session's leftovers, overwritten by the next — not a spec, and safe to delete. A rule the next phase must follow belongs in `docs/PHASES.md`, an architectural choice in `docs/DECISIONS.md`, a DOTS trap in `docs/ECS.md`, an Editor or MCP trap in `docs/MCP.md`.
 
-**Phase 55 — One-way shield sphere (done; phase 34 is next)**
+**Phase 56 — Rectangle and sector ground fields (done; phase 34 is next)**
 
-- Change request veerdonk/Projectile-System#100 (game card UntitledTowerGame#718). Ships in **0.2.19** (`package.json` bumped, CHANGELOG dated 2026-11-15; update to the merge date if later). Branch `cr-100-shield-sphere` from `origin/main` cb43921 (#98 merged). ADR-061.
-- Shape: `ShieldSphereSet` lives on `ProjectileWorld` and the `SimulationBridge`; `TryMoveOrHit` and `ResolvePolyline` test the centre segment before `TryCast` and shorten the cast to the crossing. `ShieldResponse` rides on the `Projectile` row and `ModifierContext.Enqueue` copies it. `ShieldBlockInfo.Outcome` reuses `HitOutcome`; `ExpireReason.Blocked` is appended after `Other`.
-- Tests via Unity MCP with the Editor open: Edit Mode **520/520** (18 new in `ShieldSphereTests`; the two pierce tests were checked to fail before the review fix), Play Mode **57/57**. Two Editors are connected (`My project` and `UntitledTowerGame`); `set_active_instance` to `My project@…` first.
-- `.github/context-cold.md` and `.github/copilot-instructions.md` show as modified (SigMap regeneration); not committed.
+- Change request veerdonk/Projectile-System#99 (game card UntitledTowerGame #572, REQ-057). Ships in **0.2.20** (`package.json` bumped, CHANGELOG dated 2026-11-15; update to the merge date if later). Branch `cr-99-shaped-ground-fields` from `origin/main` 37561bd (#101 merged). ADR-062.
+- Shape: `GroundDisk` (internal) carries the shape, so `OverlapDisk`, `AppendDisk`, and `ScriptedHitQuery` needed no change; its `Radius` is the reach from the anchor for a shape. The direction comes from the new internal `ModifierContext.TravelDirection` (velocity, else the `Projectile.BeamDirection` set at spawn). The ground is sampled at the shape's middle (`GroundFieldSize.SampleCircle`).
+- Tests via Unity MCP with the Editor open: Edit Mode **537/537** (17 new in `GroundFieldShapeTests`), Play Mode **60/60** (3 new in `GroundFieldShapePlayModeTests`). Two Editors are connected (`My project` and `UntitledTowerGame`); `set_active_instance` to `My project@…` first, and again after each domain reload.
+- `Samples~/Yard/SampleRecipeSheet.cs` gained a shape button; `Samples~` is not compiled in this project, so it was not compile-checked here.
 - Older notes that still apply: Unity runs field initializers on `[SerializeReference]` objects whose data lacks the field; `ClosestInTravelDirectionAcquisition` reads the cone and fallback from internal context (ADR-052); `run_tests` can start before a requested compile finishes (check the test DLL time in `Library/ScriptAssemblies`); `get_test_job` gives no assertion messages unless `include_failed_tests`; `npx sigmap` output is not committed; never move or delete a released `v*` tag; do **not** run **Projectile Lab > Rebuild**; `HomingAcquirePoint` is the only aim point; catalog `Compact()` leftover from phase 29; capsule `TryPierceExit` approximation from phase 41; `PredictPath` false return does not say lifetime vs `MaxSteps` (phase 43).
 
 ## Do not
