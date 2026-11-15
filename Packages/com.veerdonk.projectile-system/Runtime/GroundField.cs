@@ -27,7 +27,7 @@ namespace Veerdonk.ProjectileSystem
     /// instance position. The field lies on the ground that <see cref="IProjectileWorld.GroundFieldSurface"/>
     /// returns, or on the world ground plane (Y = 0, normal up) without one.
     /// A rectangle or sector points along the instance's horizontal travel when the stage starts (its spawn or aim direction
-    /// when it has no speed; world forward, +Z, when that is vertical too).
+    /// when that travel is zero or vertical; world forward, +Z, when the aim is vertical too).
     /// <see cref="Occupancy"/> replaces pulses with enter/exit while the field lives.
     /// The modifier queues a plant; it does not call Physics or spawn a Recipe.
     /// A size that is &lt;= 0 or not finite (see <see cref="Shape"/>), or lifetime &lt;= 0 or NaN, is a no-op.
@@ -84,7 +84,7 @@ namespace Veerdonk.ProjectileSystem
             set => radius = value;
         }
 
-        /// <summary>Seconds the disk lives. Independent of the projectile. &lt;= 0 or NaN plants nothing; infinity lives until
+        /// <summary>Seconds the field lives. Independent of the projectile. &lt;= 0 or NaN plants nothing; infinity lives until
         /// the world is disposed.</summary>
         public float LifetimeSeconds
         {
@@ -131,7 +131,7 @@ namespace Veerdonk.ProjectileSystem
         }
 
         /// <summary>
-        /// Meters a Target's foot (the bottom of its capsule axis) may lie above or below the disk's plane, measured
+        /// Meters a Target's foot (the bottom of its capsule axis) may lie above or below the field's plane, measured
         /// along the ground normal. 0, which existing assets read, does not test height (a collider still has to be found by
         /// the query capsule, about 1 m above and below the plane plus the slope's rise). A negative or non-finite value is stored as 0.
         /// </summary>
@@ -631,7 +631,7 @@ namespace Veerdonk.ProjectileSystem
         {
             string key = presentationId ?? string.Empty;
             if (shape != GroundFieldShape.Disk)
-                key += "" + (int)shape;
+                key += "\u0001" + (int)shape;
             if (!viewPools.TryGetValue(key, out Stack<ProjectileView> stack))
             {
                 stack = new Stack<ProjectileView>();
@@ -929,6 +929,10 @@ namespace Veerdonk.ProjectileSystem
                 return box;
 
             GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Collider collider = cube.GetComponent<Collider>();
+            collider.enabled = false;
+            UnityEngine.Object.DestroyImmediate(collider);
+            cube.SetActive(false);
             box = cube.GetComponent<MeshFilter>().sharedMesh;
             Destroy(cube);
             return box;

@@ -213,6 +213,36 @@ namespace Veerdonk.ProjectileSystem.Editor.Tests
         }
 
         [Test]
+        public void ShapedField_FallingStraightDown_KeepsTheAimDirection()
+        {
+            Recipe recipe = SimulationTestHelper.CreateRecipe(
+                "ground-shape-fall",
+                speed: 0f,
+                lifetime: 5f,
+                gravity: 9.81f,
+                onExpire: new IModifier[] { Rectangle(4f, 1f) });
+            recipe.Delivery = Delivery.Arc;
+            (ProjectileWorld world, ScriptedHitQuery _) = SimulationTestHelper.CreateWorld(recipe);
+            using (world)
+            {
+                var planted = new List<GroundFieldInfo>();
+                world.GroundFieldPlanted += planted.Add;
+
+                ProjectileId id = world.Spawn(new SpawnRequest
+                {
+                    Recipe = recipe,
+                    Position = new Vector3(0f, 5f, 0f),
+                    Direction = Vector3.right
+                });
+                world.Tick(0.1f);
+                world.Despawn(id);
+
+                Assert.AreEqual(1, planted.Count);
+                AssertVector(Vector3.right, planted[0].Direction);
+            }
+        }
+
+        [Test]
         public void ShapedField_StraightUpOrDown_PointsWorldForward()
         {
             Recipe recipe = Carrier(Rectangle(4f, 1f));

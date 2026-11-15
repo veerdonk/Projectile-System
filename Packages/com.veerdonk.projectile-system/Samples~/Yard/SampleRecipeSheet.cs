@@ -201,14 +201,10 @@ namespace Veerdonk.ProjectileSystem.Samples
             if (GUILayout.Button("Shape"))
                 field.Shape = (GroundFieldShape)(((int)field.Shape + 1) % 3);
             GUILayout.EndHorizontal();
-            if (field.Shape == GroundFieldShape.Disk)
-                field.Radius = FloatField(key + "r", "  Radius", field.Radius);
-            else
-                field.Length = FloatField(key + "len", "  Length", field.Length);
-            if (field.Shape == GroundFieldShape.Rectangle)
-                field.Width = FloatField(key + "w", "  Width", field.Width);
-            if (field.Shape == GroundFieldShape.Sector)
-                field.AngleDegrees = FloatField(key + "a", "  Angle", field.AngleDegrees);
+            field.Radius = FloatField(key + "r", "  Radius (disk)", field.Radius);
+            field.Length = FloatField(key + "len", "  Length", field.Length);
+            field.Width = FloatField(key + "w", "  Width (rect)", field.Width);
+            field.AngleDegrees = FloatField(key + "a", "  Angle (sector)", field.AngleDegrees);
             field.LifetimeSeconds = FloatField(key + "l", "  Lifetime", field.LifetimeSeconds);
             field.Damage = FloatField(key + "d", "  Damage", field.Damage);
             field.IntervalSeconds = FloatField(key + "i", "  Interval", field.IntervalSeconds);

@@ -81,7 +81,10 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Velocity when this stage was bound, before OnHit modifiers rewrite it.</summary>
         internal Vector3 ContactVelocity { get; private set; }
 
-        /// <summary>Velocity when this stage was bound, or the spawn / aim direction when that is zero.</summary>
+        /// <summary>
+        /// Velocity when this stage was bound, or the spawn / aim direction when that velocity has no meaningful horizontal
+        /// part (zero, or straight up or down).
+        /// </summary>
         internal Vector3 TravelDirection { get; private set; }
 
         /// <summary>True when this hit resolved a far surface for a pierce-through multiply.</summary>
@@ -434,6 +437,12 @@ namespace Veerdonk.ProjectileSystem
             return value;
         }
 
+        static bool HasHorizontalTravel(Vector3 velocity)
+        {
+            float horizontal = velocity.x * velocity.x + velocity.z * velocity.z;
+            return horizontal > 1e-12f && horizontal > 1e-6f * velocity.sqrMagnitude;
+        }
+
         internal void Bind(in ModifierBindState state, bool hasHit, in HitInfo hit, float deltaTime)
         {
             MultiplyGenerationsLeft = state.MultiplyGenerationsLeft;
@@ -447,7 +456,7 @@ namespace Veerdonk.ProjectileSystem
             RemainingPierce = state.RemainingPierce;
             PierceAtContact = state.RemainingPierce;
             ContactVelocity = state.Velocity;
-            TravelDirection = state.Velocity.sqrMagnitude > 1e-12f ? state.Velocity : state.AimDirection;
+            TravelDirection = HasHorizontalTravel(state.Velocity) ? state.Velocity : state.AimDirection;
             ClearPierceExit();
             RemainingBounce = state.RemainingBounce;
             Radius = state.Radius;
