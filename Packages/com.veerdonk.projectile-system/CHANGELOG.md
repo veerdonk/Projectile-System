@@ -5,6 +5,15 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.19] - 2026-11-15
+
+### Added
+
+- One-way shield spheres. `IProjectileWorld.AddShieldSphere(center, radius)` returns an id and `RemoveShieldSphere(id)` removes it; several may overlap and each blocks on its own. A Straight or Arc shot whose centre crosses a sphere's surface inward during a tick (or passes through it) is stopped at the crossing; a shot that starts inside leaves freely. A Direct contact before the crossing still hits, and a Pierce or Bounce placement past that contact cannot jump inside.
+- `SpawnRequest.ShieldResponse`: `Break` (default) ends the shot at the crossing with the new `ExpireReason.Blocked`, without OnHit or OnExpire; `Bounce` reflects it about the surface normal so it flies on outside, without a hit or spending a Bounce charge. Multicast extras, Multiply children, and other package-made spawns copy it.
+- `IProjectileWorld.ShieldBlocked` with `ShieldBlockInfo` (instance, shield id, position, normal, `Ended` or `Bounced`), raised at the crossing and before `Expired` on a break.
+- Hitscan and Beam polylines end at an inward crossing; nothing beyond it is hit.
+
 ## [0.2.18] - 2026-11-10
 
 ### Changed

@@ -177,6 +177,8 @@ interface IProjectileWorld
     // ADR-045, phase 41. Upright capsule, height includes caps. Hits test the capsule; Homing reads bottom + homingHeight.
     void RemoveHitTarget(TargetId id);
     IGroundFieldSurface GroundFieldSurface { get; set; } // ADR-058. Ground point and normal for GroundField plants; null is Y = 0, up
+    int AddShieldSphere(Vector3 center, float radius);   // ADR-061, phase 55. One-way: an inward crossing of the shot's centre stops it; 0 = rejected
+    void RemoveShieldSphere(int id);
     event Action<HitInfo> Hit;
     event Action<ExpireInfo> Expired;
     event Action<StatusInfo> StatusApplied; // after OnHit / area / ground-field flush (ADR-011, ADR-016, ADR-022)
@@ -186,13 +188,17 @@ interface IProjectileWorld
     event Action<GroundFieldPulseInfo> GroundFieldPulsed;  // every pulse, empty or not, after that pulse's Area Hits
     event Action<GroundFieldInfo> GroundFieldEnded;        // lifetime out (Expired) or world Dispose (Disposed)
     event Action<AreaBurstInfo> AreaBurst;                 // every AreaEffect overlap, before its Area Hits; occupancy once
+    event Action<ShieldBlockInfo> ShieldBlocked;           // ADR-061. At the crossing; before Expired (Blocked) on a break
 }
+
+struct ShieldBlockInfo { ProjectileId InstanceId; int ShieldId; Vector3 Position; Vector3 Normal; HitOutcome Outcome; } // Ended or Bounced
+enum ShieldResponse { Break, Bounce } // SpawnRequest.ShieldResponse, copied by package-made spawns
 
 struct SpawnInfo { ProjectileId InstanceId; ProjectileId ParentId; SpawnCause Cause; Vector3 Position; Vector3 Direction; Recipe Recipe; }
 enum SpawnCause { Game, Multicast, Multiply, Other }
 
 struct ExpireInfo { ProjectileId InstanceId; Vector3 Position; Vector3 Direction; ExpireReason Reason; } // pose read before the view is released
-enum ExpireReason { Lifetime, Hit, Absorbed, Despawned, HitscanEnd, Other }
+enum ExpireReason { Lifetime, Hit, Absorbed, Despawned, HitscanEnd, Other, Blocked }
 
 enum HitOutcome { None, Ended, Pierced, Bounced, Continued }
 
@@ -342,7 +348,7 @@ docs/          this spec
 AGENTS.md      pairing protocol (repo root)
 ```
 
-Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038). Phase 37 (0.2.3) adds `SpawnRequest.IgnoreColliders` (ADR-041). Phase 40 (0.2.6) adds `Recipe.MaxRange` (ADR-043) and the four-argument `AimBeam` that sets a live Beam's homing lock (ADR-044). Phase 41 (0.2.7) adds the upright capsule `SetHitTarget` overload with a homing point (ADR-045). Phase 42 (0.2.8) adds `SpawnRequest.IgnoreTargetSet` / `IgnoreTarget` and `ModifierContext.ShooterTarget` (ADR-046), and authorable-only inspector popups (ADR-047). Phase 43 (0.2.9) adds `IProjectileWorld.PredictPath` with `PathPrediction` and `PathHit` (ADR-048). Phase 44 (0.2.10) removes the upper clamp on critical chance (ADR-049). Phase 45 (0.2.11) serializes `Multicast.Pattern` and `RandomConePattern`'s half-angle and adds `GridMulticastPattern` (ADR-050). Phase 47 (0.2.12) adds `Homing.AcquireHalfAngleDegrees` and the last-hit fallback (ADR-052). Phase 48 (0.2.12) adds `MultiplyDirection`, `Multiply.Direction`, and `Multiply.LockRange` (ADR-053). Phase 52 (0.2.15) adds `IGroundFieldSurface`, `IProjectileWorld.GroundFieldSurface`, `GroundField.HeightMargin`, and the ground normal on the field events (ADR-058). Phase 53 (0.2.16) adds `IGroundFieldAreaSurface` (ADR-059).
+Package id `com.veerdonk.projectile-system`, namespace `Veerdonk.ProjectileSystem` (ADR-025). Public API through 0.1.9 includes Protection, the view factories, GroundField, `RecipeAsset`, `ModifierKit`, `Recipe.Clone` / `Append` / `Compose` (ADR-032), the needed-arc `BallisticAim` signature, `SetHitTarget` / `RemoveHitTarget` (ADR-030, ADR-031), `SpawnRequest.HomingAcquirePoint` / `ClosestToPointAcquisition` (ADR-033), indexed catalogs (ADR-034), `SpawnRequest.IgnoreCollider` (ADR-037), `Delivery` Straight / Arc / Hitscan / Beam with `BeamPulseSeconds` and `Despawn` (ADR-035, ADR-036), and the Recipe / Modifier Kit `IMultiplyPattern` type catalog (0.1.9). Phase 33 (0.1.10) adds `MultiplyPatternAsset`, `GridMultiplyPattern`, and `IMultiplyPattern.GetDirection` / `ResolveCount` (ADR-038). Phase 37 (0.2.3) adds `SpawnRequest.IgnoreColliders` (ADR-041). Phase 40 (0.2.6) adds `Recipe.MaxRange` (ADR-043) and the four-argument `AimBeam` that sets a live Beam's homing lock (ADR-044). Phase 41 (0.2.7) adds the upright capsule `SetHitTarget` overload with a homing point (ADR-045). Phase 42 (0.2.8) adds `SpawnRequest.IgnoreTargetSet` / `IgnoreTarget` and `ModifierContext.ShooterTarget` (ADR-046), and authorable-only inspector popups (ADR-047). Phase 43 (0.2.9) adds `IProjectileWorld.PredictPath` with `PathPrediction` and `PathHit` (ADR-048). Phase 44 (0.2.10) removes the upper clamp on critical chance (ADR-049). Phase 45 (0.2.11) serializes `Multicast.Pattern` and `RandomConePattern`'s half-angle and adds `GridMulticastPattern` (ADR-050). Phase 47 (0.2.12) adds `Homing.AcquireHalfAngleDegrees` and the last-hit fallback (ADR-052). Phase 48 (0.2.12) adds `MultiplyDirection`, `Multiply.Direction`, and `Multiply.LockRange` (ADR-053). Phase 52 (0.2.15) adds `IGroundFieldSurface`, `IProjectileWorld.GroundFieldSurface`, `GroundField.HeightMargin`, and the ground normal on the field events (ADR-058). Phase 53 (0.2.16) adds `IGroundFieldAreaSurface` (ADR-059). Phase 55 (0.2.19) adds shield spheres: `AddShieldSphere` / `RemoveShieldSphere`, `SpawnRequest.ShieldResponse`, `ShieldBlocked` with `ShieldBlockInfo`, and `ExpireReason.Blocked` (ADR-061).
 
 New Runtime folders (for example `Runtime/Modifiers/`) need an ADR if they are a new pattern; adding files under an existing agreed folder does not.
 

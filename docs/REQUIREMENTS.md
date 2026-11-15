@@ -908,6 +908,12 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** the shot flies until its lifetime runs out
 - **Then:** one `AreaBurst` with `Stage = OnExpire` at the expire position, then one Area `Hit` of 4 on the near dummy, then `Expired`; the far dummy takes nothing. The same shot ending on a Direct hit raises no burst
 
+### Phase 55 — A dome shield lets shots out but not in
+
+- **Given:** a shield sphere of radius 4 at a point, and shots aimed at its centre
+- **When:** an Arc shot from 10 m outside flies in; a Straight shot spawned at the centre flies out; a `ShieldResponse.Bounce` lob comes down on top; the sphere is removed and the first shot is fired again
+- **Then:** the first shot raises `ShieldBlocked` (`Ended`) and `Expired` with reason `Blocked` on the surface, and no `Hit`; the outward shot flies on; the lob reflects off the surface and lands outside, never inside; with the sphere removed the shot reaches the centre
+
 ## Product constraints
 
 - Sandbox uses URP

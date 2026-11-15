@@ -29,7 +29,12 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>A Hitscan ray finished without a killing hit.</summary>
         HitscanEnd,
         /// <summary>Released any other way.</summary>
-        Other
+        Other,
+        /// <summary>
+        /// A shield sphere stopped it (<see cref="ShieldResponse.Break"/>, or a Hitscan ray ending at a shield).
+        /// No OnHit or OnExpire ran. <see cref="ExpireInfo.Position"/> is the crossing point.
+        /// </summary>
+        Blocked
     }
 
     /// <summary>What happened to the shot after a Direct <see cref="HitInfo"/>. Area, occupancy, and ground hits are <see cref="None"/>.</summary>
