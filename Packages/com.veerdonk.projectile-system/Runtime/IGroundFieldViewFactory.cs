@@ -3,17 +3,23 @@ using UnityEngine;
 namespace Veerdonk.ProjectileSystem
 {
     /// <summary>
-    /// Creates a GameObject view for a planted <see cref="GroundField"/>.
-    /// Overlap stays the XZ disk of the modifier radius; the mesh is display only.
+    /// Creates a GameObject view for a planted <see cref="GroundField"/>. The mesh is display only.
+    /// The world places a disk's view at its center, turned up to the ground normal. A rectangle's or sector's view is
+    /// placed at its anchor (<see cref="GroundFieldInfo.Center"/>) with forward along <see cref="GroundFieldInfo.Direction"/>
+    /// and up along the normal; views are pooled per presentation id and shape.
     /// </summary>
     public interface IGroundFieldViewFactory
     {
-        /// <summary>Creates a disk view of <paramref name="radius"/> meters. Unknown ids use the primitive cylinder.</summary>
+        /// <summary>
+        /// Creates a view for a field of <paramref name="radius"/> meters (<see cref="GroundFieldInfo.Radius"/>, the reach of a
+        /// rectangle or sector). Unknown ids use the primitive.
+        /// </summary>
         ProjectileView Create(float radius, string presentationId, Transform poolParent);
     }
 
     /// <summary>
-    /// Default factory: a thin cylinder scaled to <c>2 * radius</c> on XZ.
+    /// Default factory: a thin cylinder scaled to <c>2 * radius</c> on XZ. For a rectangle or sector field the world swaps
+    /// its mesh for a thin box or a flat sector and scales it to the shape.
     /// </summary>
     public sealed class PrimitiveGroundFieldViewFactory : IGroundFieldViewFactory
     {

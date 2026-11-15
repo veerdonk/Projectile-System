@@ -1265,6 +1265,7 @@ namespace Veerdonk.ProjectileSystem
                 InstanceId = new ProjectileId(projectile.Id),
                 Position = ToVector3(position.Value),
                 Velocity = ToVector3(velocity.Value),
+                AimDirection = ToVector3(projectile.BeamDirection),
                 Speed = projectile.Speed,
                 Gravity = projectile.Gravity,
                 RemainingLifetime = projectile.RemainingLifetime,

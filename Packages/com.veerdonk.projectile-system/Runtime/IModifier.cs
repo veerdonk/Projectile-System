@@ -81,6 +81,9 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Velocity when this stage was bound, before OnHit modifiers rewrite it.</summary>
         internal Vector3 ContactVelocity { get; private set; }
 
+        /// <summary>Velocity when this stage was bound, or the spawn / aim direction when that is zero.</summary>
+        internal Vector3 TravelDirection { get; private set; }
+
         /// <summary>True when this hit resolved a far surface for a pierce-through multiply.</summary>
         internal bool PierceExitSet { get; private set; }
 
@@ -241,10 +244,36 @@ namespace Veerdonk.ProjectileSystem
             bool occupancy = false,
             float heightMargin = 0f)
         {
+            RequestGroundField(
+                center,
+                TravelDirection,
+                GroundFieldSize.Disk(radius),
+                lifetimeSeconds,
+                damage,
+                status,
+                intervalSeconds,
+                presentationId,
+                occupancy,
+                heightMargin);
+        }
+
+        internal void RequestGroundField(
+            Vector3 center,
+            Vector3 direction,
+            in GroundFieldSize size,
+            float lifetimeSeconds,
+            float damage,
+            IStatusEffect status,
+            float intervalSeconds,
+            string presentationId,
+            bool occupancy,
+            float heightMargin)
+        {
             requestedGroundFields.Add(
                 new GroundFieldPlantRequest(
                     center,
-                    radius,
+                    direction,
+                    size,
                     lifetimeSeconds,
                     damage,
                     status,
@@ -418,6 +447,7 @@ namespace Veerdonk.ProjectileSystem
             RemainingPierce = state.RemainingPierce;
             PierceAtContact = state.RemainingPierce;
             ContactVelocity = state.Velocity;
+            TravelDirection = state.Velocity.sqrMagnitude > 1e-12f ? state.Velocity : state.AimDirection;
             ClearPierceExit();
             RemainingBounce = state.RemainingBounce;
             Radius = state.Radius;
@@ -520,7 +550,8 @@ namespace Veerdonk.ProjectileSystem
     {
         public GroundFieldPlantRequest(
             Vector3 center,
-            float radius,
+            Vector3 direction,
+            in GroundFieldSize size,
             float lifetimeSeconds,
             float damage,
             IStatusEffect status,
@@ -530,7 +561,8 @@ namespace Veerdonk.ProjectileSystem
             float heightMargin = 0f)
         {
             Center = center;
-            Radius = radius;
+            Direction = direction;
+            Size = size;
             LifetimeSeconds = lifetimeSeconds;
             Damage = damage;
             Status = status;
@@ -542,7 +574,9 @@ namespace Veerdonk.ProjectileSystem
 
         public Vector3 Center { get; }
 
-        public float Radius { get; }
+        public Vector3 Direction { get; }
+
+        public GroundFieldSize Size { get; }
 
         public float LifetimeSeconds { get; }
 
@@ -564,6 +598,7 @@ namespace Veerdonk.ProjectileSystem
         public ProjectileId InstanceId;
         public Vector3 Position;
         public Vector3 Velocity;
+        public Vector3 AimDirection;
         public float Speed;
         public float Gravity;
         public float RemainingLifetime;

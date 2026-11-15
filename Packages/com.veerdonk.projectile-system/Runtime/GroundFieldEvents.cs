@@ -45,12 +45,16 @@ namespace Veerdonk.ProjectileSystem
         public ProjectileId SourceId;
         /// <summary>
         /// Disk center on the ground: the point <see cref="IProjectileWorld.GroundFieldSurface"/> returned,
-        /// or the plant point at Y = 0 without one.
+        /// or the plant point at Y = 0 without one. For a rectangle or sector, the anchor (the middle of the near edge, or
+        /// the apex): the plant point moved straight up or down onto the plane the surface returned for the shape's middle.
         /// </summary>
         public Vector3 Center;
-        /// <summary>Unit ground normal the disk lies across. <see cref="Vector3.up"/> without a ground surface.</summary>
+        /// <summary>Unit ground normal the field lies across. <see cref="Vector3.up"/> without a ground surface.</summary>
         public Vector3 Normal;
-        /// <summary>Disk radius in meters, measured in the ground plane.</summary>
+        /// <summary>
+        /// Disk radius in meters, measured in the ground plane. For a rectangle or sector, the distance from
+        /// <see cref="Center"/> to the shape's farthest point.
+        /// </summary>
         public float Radius;
         /// <summary>Height margin requested at plant (<see cref="GroundField.HeightMargin"/>). 0 means height does not count.</summary>
         public float HeightMargin;
@@ -64,6 +68,19 @@ namespace Veerdonk.ProjectileSystem
         public string PresentationId;
         /// <summary>Meaningful on Ended only. Planted leaves it at <see cref="GroundFieldEndReason.Expired"/>.</summary>
         public GroundFieldEndReason Reason;
+        /// <summary>Outline of the field (<see cref="GroundField.Shape"/>). Disk for every field planted before shapes.</summary>
+        public GroundFieldShape Shape;
+        /// <summary>
+        /// Unit direction in the field's plane that a rectangle or sector points along; its horizontal part is the planted
+        /// direction. A disk reports it too, though it has no orientation.
+        /// </summary>
+        public Vector3 Direction;
+        /// <summary>Rectangle length or sector radius in meters, in the plane. 0 for a disk.</summary>
+        public float Length;
+        /// <summary>Rectangle width in meters. 0 for a disk or sector.</summary>
+        public float Width;
+        /// <summary>Sector total angle in degrees, capped at 360. 0 for a disk or rectangle.</summary>
+        public float AngleDegrees;
     }
 
     /// <summary>Payload for <see cref="IProjectileWorld.GroundFieldPulsed"/>.</summary>
@@ -73,14 +90,27 @@ namespace Veerdonk.ProjectileSystem
         public GroundFieldId FieldId;
         /// <summary>Instance that planted the field.</summary>
         public ProjectileId SourceId;
-        /// <summary>Disk center on the ground, the same as <see cref="GroundFieldInfo.Center"/>.</summary>
+        /// <summary>Field center or anchor on the ground, the same as <see cref="GroundFieldInfo.Center"/>.</summary>
         public Vector3 Center;
         /// <summary>Unit ground normal, the same as <see cref="GroundFieldInfo.Normal"/>.</summary>
         public Vector3 Normal;
-        /// <summary>Disk radius in meters.</summary>
+        /// <summary>Disk radius in meters, or the shape's reach from <see cref="Center"/> (<see cref="GroundFieldInfo.Radius"/>).</summary>
         public float Radius;
-        /// <summary>Distinct Targets that raised an Area <see cref="HitInfo"/> this pulse. 0 for an empty disk.</summary>
+        /// <summary>Distinct Targets that raised an Area <see cref="HitInfo"/> this pulse. 0 for an empty field.</summary>
         public int TargetsHit;
+        /// <summary>Outline of the field the same as <see cref="GroundFieldInfo.Shape"/>.</summary>
+        public GroundFieldShape Shape;
+        /// <summary>
+        /// Unit direction in the field's plane that a rectangle or sector points along; its horizontal part is the planted
+        /// direction. A disk reports it too, though it has no orientation.
+        /// </summary>
+        public Vector3 Direction;
+        /// <summary>Rectangle length or sector radius in meters, in the plane. 0 for a disk.</summary>
+        public float Length;
+        /// <summary>Rectangle width in meters. 0 for a disk or sector.</summary>
+        public float Width;
+        /// <summary>Sector total angle in degrees, capped at 360. 0 for a disk or rectangle.</summary>
+        public float AngleDegrees;
     }
 
     /// <summary>Payload for <see cref="IProjectileWorld.AreaBurst"/>.</summary>

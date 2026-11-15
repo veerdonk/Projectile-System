@@ -4,15 +4,34 @@ using UnityEngine;
 
 namespace Veerdonk.ProjectileSystem
 {
+    /// <summary>Outline of a planted <see cref="GroundField"/> in its ground plane (ADR-062).</summary>
+    public enum GroundFieldShape
+    {
+        /// <summary>A disk of <see cref="GroundField.Radius"/> around the plant point. The default.</summary>
+        Disk,
+        /// <summary>
+        /// A rectangle that starts at the plant point and runs <see cref="GroundField.Length"/> along the direction,
+        /// <see cref="GroundField.Width"/> wide and centred on that line.
+        /// </summary>
+        Rectangle,
+        /// <summary>
+        /// A circular sector (cone) with its apex at the plant point, radius <see cref="GroundField.Length"/>, and a total
+        /// angle of <see cref="GroundField.AngleDegrees"/> centred on the direction.
+        /// </summary>
+        Sector
+    }
+
     /// <summary>
-    /// Plants a lingering disk. Size, lifetime, damage, optional status, and pulse
+    /// Plants a lingering disk, rectangle, or sector (<see cref="Shape"/>). Size, lifetime, damage, optional status, and pulse
     /// period live on this modifier. OnHit uses the contact point; OnExpire / OnTravel use the
-    /// instance position. The disk lies on the ground that <see cref="IProjectileWorld.GroundFieldSurface"/>
-    /// returns for that point, or on the world ground plane (Y = 0, normal up) without one.
-    /// <see cref="Occupancy"/> replaces pulses with enter/exit while the disk lives.
+    /// instance position. The field lies on the ground that <see cref="IProjectileWorld.GroundFieldSurface"/>
+    /// returns, or on the world ground plane (Y = 0, normal up) without one.
+    /// A rectangle or sector points along the instance's horizontal travel when the stage starts (its spawn or aim direction
+    /// when it has no speed; world forward, +Z, when that is vertical too).
+    /// <see cref="Occupancy"/> replaces pulses with enter/exit while the field lives.
     /// The modifier queues a plant; it does not call Physics or spawn a Recipe.
-    /// Radius &lt;= 0 or not finite, or lifetime &lt;= 0 or NaN, is a no-op. Interval &lt;= 0 or NaN never pulses when
-    /// occupancy is false.
+    /// A size that is &lt;= 0 or not finite (see <see cref="Shape"/>), or lifetime &lt;= 0 or NaN, is a no-op.
+    /// Interval &lt;= 0 or NaN never pulses when occupancy is false.
     /// </summary>
     [Serializable]
     [ModifierStage(RecipeStage.OnTravel | RecipeStage.OnHit | RecipeStage.OnExpire)]
@@ -26,6 +45,10 @@ namespace Veerdonk.ProjectileSystem
         [SerializeField] string presentationId;
         [SerializeField] bool occupancy;
         [SerializeField, Min(0f)] float heightMargin;
+        [SerializeField] GroundFieldShape shape;
+        [SerializeField] float length;
+        [SerializeField] float width;
+        [SerializeField] float angleDegrees;
 
         public GroundField()
         {
@@ -51,7 +74,10 @@ namespace Veerdonk.ProjectileSystem
             HeightMargin = heightMargin;
         }
 
-        /// <summary>Disk radius in meters, measured in the ground plane. &lt;= 0, NaN, or infinite plants nothing.</summary>
+        /// <summary>
+        /// Disk radius in meters, measured in the ground plane. With <see cref="GroundFieldShape.Disk"/>, &lt;= 0, NaN, or
+        /// infinite plants nothing. Rectangle and Sector fields ignore it.
+        /// </summary>
         public float Radius
         {
             get => radius;
@@ -115,18 +141,57 @@ namespace Veerdonk.ProjectileSystem
             set => heightMargin = GroundDisk.ClampMargin(value);
         }
 
+        /// <summary>
+        /// Outline of the field. <see cref="GroundFieldShape.Disk"/> (the default, which existing assets read) uses
+        /// <see cref="Radius"/>. <see cref="GroundFieldShape.Rectangle"/> needs <see cref="Length"/> and <see cref="Width"/>
+        /// above 0 and finite. <see cref="GroundFieldShape.Sector"/> needs <see cref="Length"/> above 0 and finite and
+        /// <see cref="AngleDegrees"/> above 0.
+        /// </summary>
+        public GroundFieldShape Shape
+        {
+            get => shape;
+            set => shape = value;
+        }
+
+        /// <summary>Rectangle length, or sector radius, in meters along the ground plane from the plant point.</summary>
+        public float Length
+        {
+            get => length;
+            set => length = value;
+        }
+
+        /// <summary>Rectangle width in meters, centred on the direction. Disk and Sector fields ignore it.</summary>
+        public float Width
+        {
+            get => width;
+            set => width = value;
+        }
+
+        /// <summary>
+        /// Sector total angle in degrees, centred on the direction. &lt;= 0 or NaN plants nothing; 360 or more is a full
+        /// disk of <see cref="Length"/>. Disk and Rectangle fields ignore it.
+        /// </summary>
+        public float AngleDegrees
+        {
+            get => angleDegrees;
+            set => angleDegrees = value;
+        }
+
         /// <inheritdoc />
         public void Apply(ModifierContext context)
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
-            if (!Plants(Radius, LifetimeSeconds))
+
+            var size = new GroundFieldSize(Shape, Radius, Length, Width, AngleDegrees);
+            if (!Plants(size, LifetimeSeconds))
                 return;
 
             Vector3 center = context.HasHit ? context.Hit.Point : context.Position;
             context.RequestGroundField(
                 center,
-                Radius,
+                context.TravelDirection,
+                size,
                 LifetimeSeconds,
                 Damage,
                 Status,
@@ -136,9 +201,79 @@ namespace Veerdonk.ProjectileSystem
                 HeightMargin);
         }
 
-        internal static bool Plants(float radius, float lifetimeSeconds)
+        internal static bool Plants(in GroundFieldSize size, float lifetimeSeconds)
         {
-            return PulseClock.IsUsableRadius(radius) && lifetimeSeconds > 0f;
+            return size.IsUsable && lifetimeSeconds > 0f;
+        }
+    }
+
+    /// <summary>Shape and size of a field as requested: the disk radius, or the rectangle or sector measures.</summary>
+    readonly struct GroundFieldSize
+    {
+        public GroundFieldSize(GroundFieldShape shape, float radius, float length, float width, float angleDegrees)
+        {
+            Shape = shape;
+            Radius = radius;
+            Length = length;
+            Width = width;
+            AngleDegrees = angleDegrees;
+        }
+
+        public static GroundFieldSize Disk(float radius) => new GroundFieldSize(GroundFieldShape.Disk, radius, 0f, 0f, 0f);
+
+        public GroundFieldShape Shape { get; }
+
+        public float Radius { get; }
+
+        public float Length { get; }
+
+        public float Width { get; }
+
+        public float AngleDegrees { get; }
+
+        public bool IsUsable
+        {
+            get
+            {
+                switch (Shape)
+                {
+                    case GroundFieldShape.Disk:
+                        return PulseClock.IsUsableRadius(Radius);
+                    case GroundFieldShape.Rectangle:
+                        return PulseClock.IsUsableRadius(Length) && PulseClock.IsUsableRadius(Width);
+                    case GroundFieldShape.Sector:
+                        return PulseClock.IsUsableRadius(Length) && AngleDegrees > 0f;
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        /// <summary>Total angle used for a sector: the requested angle, capped at 360.</summary>
+        public float ClampedAngleDegrees => Mathf.Min(AngleDegrees, 360f);
+
+        /// <summary>
+        /// Distance along the direction from the plant point to the point the ground is sampled at, and the radius of a circle
+        /// around that point that covers the shape. A disk samples at its centre with its radius.
+        /// </summary>
+        public void SampleCircle(out float offset, out float radius)
+        {
+            switch (Shape)
+            {
+                case GroundFieldShape.Rectangle:
+                    offset = Length * 0.5f;
+                    radius = Mathf.Sqrt(offset * offset + Width * Width * 0.25f);
+                    return;
+                case GroundFieldShape.Sector:
+                    offset = Length * 0.5f;
+                    float halfAngle = ClampedAngleDegrees * 0.5f * Mathf.Deg2Rad;
+                    radius = Length * Mathf.Sqrt(Mathf.Max(0.25f, 1.25f - Mathf.Cos(halfAngle)));
+                    return;
+                default:
+                    offset = 0f;
+                    radius = Radius;
+                    return;
+            }
         }
     }
 
@@ -158,6 +293,7 @@ namespace Veerdonk.ProjectileSystem
         readonly List<ProjectileView> allViews = new List<ProjectileView>();
         readonly List<HitInfo> overlapResults = new List<HitInfo>();
         readonly List<TargetId> seenTargets = new List<TargetId>();
+        readonly GroundFieldShapeMeshes shapeMeshes = new GroundFieldShapeMeshes();
         int nextFieldId = 1;
         bool disposed;
 
@@ -187,11 +323,24 @@ namespace Veerdonk.ProjectileSystem
 
         public void Plant(ProjectileId sourceId, in GroundFieldPlantRequest request)
         {
-            if (!GroundField.Plants(request.Radius, request.LifetimeSeconds))
+            GroundFieldSize size = request.Size;
+            if (!GroundField.Plants(size, request.LifetimeSeconds))
                 return;
 
-            ResolveGround(request.Center, request.Radius, out Vector3 center, out Vector3 normal);
-            var disk = new GroundDisk(center, normal, request.Radius, request.HeightMargin);
+            Vector3 planar = GroundDisk.PlanarDirection(request.Direction);
+            size.SampleCircle(out float sampleOffset, out float sampleRadius);
+            Vector3 sample = request.Center + planar * sampleOffset;
+            ResolveGround(sample, sampleRadius, out Vector3 sampleGround, out Vector3 normal);
+            GroundDisk disk;
+            if (size.Shape == GroundFieldShape.Disk)
+            {
+                disk = new GroundDisk(sampleGround, normal, size.Radius, request.HeightMargin, planar);
+            }
+            else
+            {
+                Vector3 center = GroundDisk.OnPlane(request.Center, sampleGround, normal);
+                disk = GroundDisk.Shaped(center, normal, planar, size, request.HeightMargin);
+            }
             int fieldNumber = nextFieldId++;
             var skipKey = new ProjectileId(-fieldNumber);
             hitQuery.CopyIgnoreSet(sourceId, skipKey);
@@ -318,6 +467,7 @@ namespace Veerdonk.ProjectileSystem
             allViews.Clear();
             viewPools.Clear();
             fields.Clear();
+            shapeMeshes.Dispose();
         }
 
         void UpdateOccupancy(in LiveField field)
@@ -380,7 +530,12 @@ namespace Veerdonk.ProjectileSystem
                 Center = field.Disk.Center,
                 Normal = field.Disk.Normal,
                 Radius = field.Disk.Radius,
-                TargetsHit = seenTargets.Count
+                TargetsHit = seenTargets.Count,
+                Shape = field.Disk.Shape,
+                Direction = field.Disk.Axis,
+                Length = field.Disk.Length,
+                Width = field.Disk.Width,
+                AngleDegrees = field.Disk.AngleDegrees
             });
         }
 
@@ -398,24 +553,56 @@ namespace Veerdonk.ProjectileSystem
                 IntervalSeconds = field.IntervalSeconds,
                 Occupancy = field.Occupancy,
                 PresentationId = field.PresentationId,
-                Reason = reason
+                Reason = reason,
+                Shape = field.Disk.Shape,
+                Direction = field.Disk.Axis,
+                Length = field.Disk.Length,
+                Width = field.Disk.Width,
+                AngleDegrees = field.Disk.AngleDegrees
             };
         }
 
         ProjectileView RentView(in GroundDisk disk, string presentationId)
         {
-            Stack<ProjectileView> stack = ViewStack(presentationId);
+            Stack<ProjectileView> stack = ViewStack(presentationId, disk.Shape);
             ProjectileView view = stack.Count > 0 ? stack.Pop() : CreateView(disk.Radius, presentationId);
             Transform transform = view.transform;
             transform.position = disk.Center;
-            transform.rotation = Quaternion.FromToRotation(Vector3.up, disk.Normal);
+            transform.rotation = disk.Shape == GroundFieldShape.Disk
+                ? Quaternion.FromToRotation(Vector3.up, disk.Normal)
+                : Quaternion.LookRotation(disk.Axis, disk.Normal);
             if (view.ScaleToRadius)
-                transform.localScale = new Vector3(
-                    disk.Radius * 2f,
-                    PrimitiveGroundFieldViewFactory.DiskHalfHeight,
-                    disk.Radius * 2f);
+                ShapePrimitive(view, disk);
             view.gameObject.SetActive(true);
             return view;
+        }
+
+        void ShapePrimitive(ProjectileView view, in GroundDisk disk)
+        {
+            Transform transform = view.transform;
+            float thickness = PrimitiveGroundFieldViewFactory.DiskHalfHeight;
+            switch (disk.Shape)
+            {
+                case GroundFieldShape.Rectangle:
+                    SetMesh(view, shapeMeshes.Box());
+                    transform.position = disk.Center + disk.Axis * (disk.Length * 0.5f);
+                    transform.localScale = new Vector3(disk.Width, thickness * 2f, disk.Length);
+                    return;
+                case GroundFieldShape.Sector:
+                    SetMesh(view, shapeMeshes.Sector(disk.AngleDegrees));
+                    transform.localScale = new Vector3(disk.Length, thickness * 2f, disk.Length);
+                    return;
+                default:
+                    transform.localScale = new Vector3(disk.Radius * 2f, thickness, disk.Radius * 2f);
+                    return;
+            }
+        }
+
+        static void SetMesh(ProjectileView view, Mesh mesh)
+        {
+            var filter = view.GetComponent<MeshFilter>();
+            if (filter != null)
+                filter.sharedMesh = mesh;
         }
 
         ProjectileView CreateView(float radius, string presentationId)
@@ -437,12 +624,14 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             field.View.Release();
-            ViewStack(field.PresentationId).Push(field.View);
+            ViewStack(field.PresentationId, field.Disk.Shape).Push(field.View);
         }
 
-        Stack<ProjectileView> ViewStack(string presentationId)
+        Stack<ProjectileView> ViewStack(string presentationId, GroundFieldShape shape)
         {
             string key = presentationId ?? string.Empty;
+            if (shape != GroundFieldShape.Disk)
+                key += "" + (int)shape;
             if (!viewPools.TryGetValue(key, out Stack<ProjectileView> stack))
             {
                 stack = new Stack<ProjectileView>();
@@ -525,20 +714,75 @@ namespace Veerdonk.ProjectileSystem
     }
 
     /// <summary>
-    /// The disk a field tests: a center on the ground, the ground normal, a radius in that plane, and an optional
-    /// height margin. A Target stands where the vertical line through it meets the plane.
-    /// With normal up and margin 0 this is the flat XZ disk.
+    /// The area a field tests: a disk, rectangle, or sector in the ground plane through <see cref="Center"/>, and an
+    /// optional height margin. A Target stands where the vertical line through it meets the plane.
+    /// With normal up and margin 0 a disk is the flat XZ disk.
     /// </summary>
     readonly struct GroundDisk
     {
         const float MinNormalY = 0.1f;
 
+        readonly float halfWidth;
+        readonly float cosHalfAngle;
+        readonly float sinHalfAngle;
+
         public GroundDisk(Vector3 center, Vector3 normal, float radius, float heightMargin)
+            : this(center, normal, radius, heightMargin, Vector3.forward)
+        {
+        }
+
+        public GroundDisk(Vector3 center, Vector3 normal, float radius, float heightMargin, Vector3 planarDirection)
         {
             Center = center;
             Normal = normal;
             Radius = radius;
             HeightMargin = ClampMargin(heightMargin);
+            Shape = GroundFieldShape.Disk;
+            Axis = AlongPlane(planarDirection, normal);
+            Side = Vector3.Cross(normal, Axis).normalized;
+            Length = 0f;
+            Width = 0f;
+            AngleDegrees = 0f;
+            halfWidth = 0f;
+            cosHalfAngle = -1f;
+            sinHalfAngle = 0f;
+        }
+
+        GroundDisk(Vector3 center, Vector3 normal, Vector3 planarDirection, in GroundFieldSize size, float heightMargin)
+        {
+            Center = center;
+            Normal = normal;
+            HeightMargin = ClampMargin(heightMargin);
+            Shape = size.Shape;
+            Axis = AlongPlane(planarDirection, normal);
+            Side = Vector3.Cross(normal, Axis).normalized;
+            Length = size.Length;
+            if (size.Shape == GroundFieldShape.Rectangle)
+            {
+                Width = size.Width;
+                AngleDegrees = 0f;
+                halfWidth = size.Width * 0.5f;
+                cosHalfAngle = 1f;
+                sinHalfAngle = 0f;
+                Radius = Mathf.Sqrt(Length * Length + halfWidth * halfWidth);
+            }
+            else
+            {
+                Width = 0f;
+                AngleDegrees = size.ClampedAngleDegrees;
+                halfWidth = 0f;
+                float halfAngle = AngleDegrees * 0.5f * Mathf.Deg2Rad;
+                cosHalfAngle = AngleDegrees >= 360f ? -1f : Mathf.Cos(halfAngle);
+                sinHalfAngle = AngleDegrees >= 360f ? 0f : Mathf.Sin(halfAngle);
+                Radius = Length;
+            }
+        }
+
+        public static GroundDisk Shaped(Vector3 center, Vector3 normal, Vector3 planarDirection, in GroundFieldSize size, float heightMargin)
+        {
+            return size.Shape == GroundFieldShape.Disk
+                ? new GroundDisk(center, normal, size.Radius, heightMargin, planarDirection)
+                : new GroundDisk(center, normal, planarDirection, size, heightMargin);
         }
 
         public static float ClampMargin(float margin)
@@ -550,9 +794,24 @@ namespace Veerdonk.ProjectileSystem
 
         public Vector3 Normal { get; }
 
+        /// <summary>Disk radius; for a rectangle or sector, the distance from <see cref="Center"/> to its farthest point.</summary>
         public float Radius { get; }
 
         public float HeightMargin { get; }
+
+        public GroundFieldShape Shape { get; }
+
+        /// <summary>Unit direction in the plane whose horizontal part is the planted direction.</summary>
+        public Vector3 Axis { get; }
+
+        /// <summary>Unit direction in the plane, square to <see cref="Axis"/>.</summary>
+        public Vector3 Side { get; }
+
+        public float Length { get; }
+
+        public float Width { get; }
+
+        public float AngleDegrees { get; }
 
         /// <summary>Unit normal facing up. Zero, non-finite, or more than about 84 degrees from up becomes up.</summary>
         public static Vector3 SanitizeNormal(Vector3 normal)
@@ -567,17 +826,43 @@ namespace Veerdonk.ProjectileSystem
             return normal.y >= MinNormalY ? normal : Vector3.up;
         }
 
-        /// <summary>Where the vertical line through <paramref name="point"/> meets the disk's plane.</summary>
-        public Vector3 OnPlane(Vector3 point)
+        /// <summary>Horizontal unit part of <paramref name="direction"/>; world forward when it has none or is not finite.</summary>
+        public static Vector3 PlanarDirection(Vector3 direction)
         {
-            float rise = Vector3.Dot(Center - point, Normal) / Normal.y;
+            var planar = new Vector3(direction.x, 0f, direction.z);
+            float length = planar.magnitude;
+            return length > 1e-6f && !float.IsInfinity(length) && !float.IsNaN(length)
+                ? planar / length
+                : Vector3.forward;
+        }
+
+        /// <summary>Lifts a horizontal unit direction into the plane with <paramref name="normal"/> and normalizes it.</summary>
+        static Vector3 AlongPlane(Vector3 planarDirection, Vector3 normal)
+        {
+            if (!(normal.y > 1e-6f))
+                return planarDirection;
+
+            float rise = -(planarDirection.x * normal.x + planarDirection.z * normal.z) / normal.y;
+            return new Vector3(planarDirection.x, rise, planarDirection.z).normalized;
+        }
+
+        /// <summary>Where the vertical line through <paramref name="point"/> meets the plane through <paramref name="center"/>.</summary>
+        public static Vector3 OnPlane(Vector3 point, Vector3 center, Vector3 normal)
+        {
+            float rise = Vector3.Dot(center - point, normal) / normal.y;
             return new Vector3(point.x, point.y + rise, point.z);
         }
 
+        /// <summary>Where the vertical line through <paramref name="point"/> meets the field's plane.</summary>
+        public Vector3 OnPlane(Vector3 point)
+        {
+            return OnPlane(point, Center, Normal);
+        }
+
         /// <summary>
-        /// True when the vertical line through <paramref name="stand"/> meets the plane within
-        /// <see cref="Radius"/> plus <paramref name="extraRadius"/> of the center and, with a margin,
-        /// <paramref name="foot"/> lies within <see cref="HeightMargin"/> of the plane.
+        /// True when the vertical line through <paramref name="stand"/> meets the plane inside the shape grown by
+        /// <paramref name="extraRadius"/> and, with a margin, <paramref name="foot"/> lies within <see cref="HeightMargin"/>
+        /// of the plane.
         /// </summary>
         public bool Contains(Vector3 stand, Vector3 foot, float extraRadius, out Vector3 inPlaneDelta)
         {
@@ -585,8 +870,122 @@ namespace Veerdonk.ProjectileSystem
             if (HeightMargin > 0f && Mathf.Abs(Vector3.Dot(foot - Center, Normal)) > HeightMargin)
                 return false;
 
-            float limit = Radius + extraRadius;
-            return inPlaneDelta.sqrMagnitude <= limit * limit;
+            switch (Shape)
+            {
+                case GroundFieldShape.Rectangle:
+                    return InRectangle(inPlaneDelta, extraRadius);
+                case GroundFieldShape.Sector:
+                    return InSector(inPlaneDelta, extraRadius);
+                default:
+                    float limit = Radius + extraRadius;
+                    return inPlaneDelta.sqrMagnitude <= limit * limit;
+            }
+        }
+
+        bool InRectangle(Vector3 delta, float extra)
+        {
+            float along = Vector3.Dot(delta, Axis);
+            float side = Mathf.Abs(Vector3.Dot(delta, Side));
+            float outAlong = Mathf.Max(0f, Mathf.Max(-along, along - Length));
+            float outSide = Mathf.Max(0f, side - halfWidth);
+            return outAlong * outAlong + outSide * outSide <= extra * extra;
+        }
+
+        bool InSector(Vector3 delta, float extra)
+        {
+            float along = Vector3.Dot(delta, Axis);
+            float side = Mathf.Abs(Vector3.Dot(delta, Side));
+            float sqrDistance = along * along + side * side;
+            float reach = Length + extra;
+            if (sqrDistance > reach * reach)
+                return false;
+
+            // side >= 0, so this is sin(half - angle) >= 0: the angle to the axis is at most the half angle.
+            if (along * sinHalfAngle >= side * cosHalfAngle)
+                return true;
+
+            if (!(extra > 0f))
+                return false;
+
+            float t = Mathf.Clamp(along * cosHalfAngle + side * sinHalfAngle, 0f, Length);
+            float dx = along - t * cosHalfAngle;
+            float dy = side - t * sinHalfAngle;
+            return dx * dx + dy * dy <= extra * extra;
+        }
+    }
+
+    /// <summary>Meshes the world gives the primitive view of a rectangle or sector field. Destroyed with the field set.</summary>
+    sealed class GroundFieldShapeMeshes : IDisposable
+    {
+        const int SegmentsPerFullTurn = 64;
+
+        readonly Dictionary<int, Mesh> sectors = new Dictionary<int, Mesh>();
+        Mesh box;
+
+        /// <summary>Unit cube centred on the origin.</summary>
+        public Mesh Box()
+        {
+            if (box != null)
+                return box;
+
+            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            box = cube.GetComponent<MeshFilter>().sharedMesh;
+            Destroy(cube);
+            return box;
+        }
+
+        /// <summary>Flat sector of radius 1 in XZ, apex at the origin, centred on +Z, facing up.</summary>
+        public Mesh Sector(float angleDegrees)
+        {
+            int key = Mathf.RoundToInt(angleDegrees * 10f);
+            if (sectors.TryGetValue(key, out Mesh mesh) && mesh != null)
+                return mesh;
+
+            float total = key / 10f * Mathf.Deg2Rad;
+            int segments = Mathf.Max(1, Mathf.CeilToInt(SegmentsPerFullTurn * total / (2f * Mathf.PI)));
+            var vertices = new Vector3[segments + 2];
+            var triangles = new int[segments * 3];
+            vertices[0] = Vector3.zero;
+            for (int i = 0; i <= segments; i++)
+            {
+                float angle = -total * 0.5f + total * i / segments;
+                vertices[i + 1] = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+            }
+
+            for (int i = 0; i < segments; i++)
+            {
+                triangles[i * 3] = 0;
+                triangles[i * 3 + 1] = i + 1;
+                triangles[i * 3 + 2] = i + 2;
+            }
+
+            mesh = new Mesh { name = "GroundFieldSector" };
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            sectors[key] = mesh;
+            return mesh;
+        }
+
+        public void Dispose()
+        {
+            foreach (Mesh mesh in sectors.Values)
+            {
+                if (mesh != null)
+                    Destroy(mesh);
+            }
+
+            sectors.Clear();
+            box = null;
+        }
+
+        static void Destroy(UnityEngine.Object obj)
+        {
+            if (Application.isPlaying)
+                UnityEngine.Object.Destroy(obj);
+            else
+                UnityEngine.Object.DestroyImmediate(obj);
         }
     }
 }

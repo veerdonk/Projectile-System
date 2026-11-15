@@ -5,6 +5,14 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.20] - 2026-11-15
+
+### Added
+
+- Rectangle and sector ground fields. `GroundField.Shape` (`GroundFieldShape.Disk`, the default, `Rectangle`, or `Sector`) with `Length`, `Width`, and `AngleDegrees`. A rectangle runs `Length` from the plant point along the shot's horizontal travel, `Width` wide; a sector has its apex at the plant point, radius `Length`, and a total angle `AngleDegrees` (360 or more is a full disk). A shot with no speed uses its spawn or aim direction. Lifetime, interval, occupancy, the immediate pulse, the ground surface, and the height margin work as for a disk; the surface is asked at the shape's middle with a radius that covers it.
+- `GroundFieldInfo` and `GroundFieldPulseInfo` carry `Shape`, `Direction`, `Length`, `Width`, and `AngleDegrees`. For a shape, `Center` is the anchor (the near edge's middle or the apex) and `Radius` the distance to its farthest point.
+- The primitive ground field view draws a thin box or a flat sector for those shapes; a factory view is placed at the anchor facing the direction.
+
 ## [0.2.19] - 2026-11-15
 
 ### Added

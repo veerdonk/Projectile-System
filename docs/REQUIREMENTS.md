@@ -914,6 +914,12 @@ Each scenario is owned by one phase. Do not implement a scenario before that pha
 - **When:** an Arc shot from 10 m outside flies in; a Straight shot spawned at the centre flies out; a `ShieldResponse.Bounce` lob comes down on top; the sphere is removed and the first shot is fired again
 - **Then:** the first shot raises `ShieldBlocked` (`Ended`) and `Expired` with reason `Blocked` on the surface, and no `Hit`; the outward shot flies on; the lob reflects off the surface and lands outside, never inside; with the sphere removed the shot reaches the centre
 
+### Phase 56 — A line spell and a cone spell plant shaped fields
+
+- **Given:** a carrier shot at the wizard aimed along +X carrying an OnExpire `GroundField` with `Shape = Rectangle`, `Length` 6, `Width` 2, and another aimed along +Z with `Shape = Sector`, `Length` 5, `AngleDegrees` 60; dummies along and beside each shape
+- **When:** each carrier is spawned and despawned, and the fields pulse
+- **Then:** the rectangle hits only dummies within 6 m ahead and 1 m to either side; the sector only dummies within 5 m and 30° of +Z; `GroundFieldPlanted` reports the shape, the anchor at the wizard's foot, the direction, and the measures; a disk field planted the same way behaves as before
+
 ## Product constraints
 
 - Sandbox uses URP
