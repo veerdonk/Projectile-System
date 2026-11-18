@@ -60,6 +60,8 @@ Inspect `user-unityMCP` and call `GetDynamicTools` for a tool’s schema before 
 
 After creating or editing scripts, wait until compilation finishes (`ready_for_tools`) and check `read_console` before using new types.
 
+With Enter Play Mode Options' domain reload off, a Play Mode `run_tests` can find an empty test tree although the Editor's Test Runner lists the tests. Force a script reload (`EditorUtility.RequestScriptReload()`, for example through `execute_code`), wait for `ready_for_tools`, and run again.
+
 Keep payloads small: page searches, `include_properties=false` until you need properties, no asset previews unless asked.
 
 ## Project constraints

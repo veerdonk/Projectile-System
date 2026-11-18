@@ -7,9 +7,9 @@ namespace Veerdonk.ProjectileSystem
     static class OccupancyExchange
     {
         public static void Exchange(
-            List<TargetId> previous,
+            TargetSet previous,
             List<HitInfo> overlaps,
-            List<TargetId> current,
+            TargetSet current,
             ProjectileId instanceId,
             float damage,
             float criticalChance,
@@ -24,11 +24,10 @@ namespace Veerdonk.ProjectileSystem
                 HitInfo areaHit = overlaps[i];
                 if (areaHit.Kind != HitKind.Target || areaHit.Protection == ProtectionLevel.Strong)
                     continue;
-                if (Contains(current, areaHit.TargetId))
+                if (!current.Add(areaHit.TargetId))
                     continue;
 
-                current.Add(areaHit.TargetId);
-                if (Contains(previous, areaHit.TargetId))
+                if (previous.Contains(areaHit.TargetId))
                     continue;
 
                 areaHit.InstanceId = instanceId;
@@ -51,7 +50,7 @@ namespace Veerdonk.ProjectileSystem
             for (int i = 0; i < previous.Count; i++)
             {
                 TargetId id = previous[i];
-                if (Contains(current, id))
+                if (current.Contains(id))
                     continue;
 
                 onHit?.Invoke(new HitInfo
@@ -70,16 +69,36 @@ namespace Veerdonk.ProjectileSystem
             for (int i = 0; i < current.Count; i++)
                 previous.Add(current[i]);
         }
+    }
 
-        static bool Contains(List<TargetId> ids, TargetId id)
+    // Ids in insertion order without duplicates; membership is a hash lookup instead of a scan of the order.
+    sealed class TargetSet
+    {
+        readonly List<TargetId> order = new List<TargetId>();
+        readonly HashSet<TargetId> members = new HashSet<TargetId>();
+
+        public int Count => order.Count;
+
+        public TargetId this[int index] => order[index];
+
+        public bool Contains(TargetId id)
         {
-            for (int i = 0; i < ids.Count; i++)
-            {
-                if (ids[i] == id)
-                    return true;
-            }
+            return members.Contains(id);
+        }
 
-            return false;
+        public bool Add(TargetId id)
+        {
+            if (!members.Add(id))
+                return false;
+
+            order.Add(id);
+            return true;
+        }
+
+        public void Clear()
+        {
+            order.Clear();
+            members.Clear();
         }
     }
 }

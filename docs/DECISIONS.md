@@ -2,6 +2,13 @@
 
 Short ADRs. Newest first. Do not relitigate a decision in code; add a new ADR if it should change.
 
+## ADR-064 — Live instances by id, and a cached list of homing-only poses
+
+- **Date:** 2026-11-18
+- **Decision:** `SimulationBridge` keeps a dictionary from `ProjectileId` to the live entity. `ProjectileWorld.SpawnCore` adds it right after a rented entity's `Projectile` (with its new id) is written, before `Spawned`; `ReturnToPool`, the only place an entity is disabled, removes it before `Pool.Return`; `Dispose` clears it. `Despawn`, `AimBeam`, and the per-instance getters look ids up there instead of scanning the live query; a pooled, recycled, or hitscan entity is never in it under its old id. `HomingCatalog` keeps an internal list of the slots of poses whose id is not a hit target, with the catalog's own membership version, the hit catalog it was built against, and that catalog's membership version. Each version bumps only when an id is added or removed (an unusable radius counts as a remove), not when a published id moves, so the list is rebuilt (after compaction) only on a membership change, and positions are read live through it. A slot cannot move while the list is current, because compaction needs a remove, which bumps the version. The built-in acquisitions and Multiply `LockRange` scan the hit targets once compacted, then this list; the public `TryGet` path is unchanged for custom acquisitions.
+- **Why:** With 1000–2000 targets re-published every tick and often also homing candidates, every unlocked homing shot paid a dictionary lookup per pose and a compaction check per read, and every `Despawn` or `AimBeam` by id walked all live entities (veerdonk/Projectile-System#103 follow-up). Bumping only on membership keeps the per-tick re-`Set` of a moving crowd from rebuilding the list.
+- **Consequences:** No public API change. Scan order, ties, and picks are those of the old scan (tests compare against it). The map must be kept by any future path that enables or disables a pooled entity. Phase 58.
+
 ## ADR-063 — Published hit targets have an XZ grid broad phase
 
 - **Date:** 2026-11-18

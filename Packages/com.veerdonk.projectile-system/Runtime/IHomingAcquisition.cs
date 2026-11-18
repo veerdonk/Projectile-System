@@ -11,7 +11,12 @@ namespace Veerdonk.ProjectileSystem
     {
         readonly List<(TargetId id, Vector3 position)> poses = new List<(TargetId id, Vector3 position)>();
         readonly Dictionary<TargetId, int> indexById = new Dictionary<TargetId, int>();
+        readonly List<int> homingOnlySlots = new List<int>();
         int deadSlots;
+        int membershipVersion;
+        int homingOnlyVersion = -1;
+        int homingOnlyHitVersion = -1;
+        HitTargetCatalog homingOnlyHitTargets;
 
         /// <summary>Number of published poses.</summary>
         public int Count => indexById.Count;
@@ -32,13 +37,48 @@ namespace Veerdonk.ProjectileSystem
 
             indexById.Add(id, poses.Count);
             poses.Add((id, position));
+            membershipVersion++;
         }
 
         /// <summary>Drops a previously published pose.</summary>
         public void Remove(TargetId id)
         {
-            if (indexById.Remove(id))
-                deadSlots++;
+            if (!indexById.Remove(id))
+                return;
+
+            deadSlots++;
+            membershipVersion++;
+        }
+
+        // The poses, in TryGet order, whose id is not a hit target in hitTargets. Slots are rebuilt only when either
+        // catalog gains or loses an id, so positions are read live and a slot never moves while the list is current.
+        internal int PrepareHomingOnly(HitTargetCatalog hitTargets)
+        {
+            int hitVersion = hitTargets != null ? hitTargets.MembershipVersion : 0;
+            if (homingOnlyVersion == membershipVersion
+                && ReferenceEquals(homingOnlyHitTargets, hitTargets)
+                && homingOnlyHitVersion == hitVersion)
+                return homingOnlySlots.Count;
+
+            Compact();
+            homingOnlySlots.Clear();
+            for (int slot = 0; slot < poses.Count; slot++)
+            {
+                if (hitTargets == null || !hitTargets.Contains(poses[slot].id))
+                    homingOnlySlots.Add(slot);
+            }
+
+            homingOnlyVersion = membershipVersion;
+            homingOnlyHitTargets = hitTargets;
+            homingOnlyHitVersion = hitVersion;
+            return homingOnlySlots.Count;
+        }
+
+        internal void GetHomingOnly(int index, out TargetId id, out Vector3 position)
+        {
+            (TargetId poseId, Vector3 posePosition) = poses[homingOnlySlots[index]];
+            id = poseId;
+            position = posePosition;
         }
 
         /// <summary>Indexed read for acquisition. False when <paramref name="index"/> is out of range.</summary>
@@ -153,23 +193,19 @@ namespace Veerdonk.ProjectileSystem
             HitTargetCatalog hitTargets = context.HitTargets;
             if (hitTargets != null)
             {
-                int hitCount = hitTargets.Count;
+                int hitCount = hitTargets.PrepareScan();
                 for (int i = 0; i < hitCount; i++)
                 {
-                    if (!hitTargets.TryGet(i, out TargetId id, out Vector3 position))
-                        continue;
+                    hitTargets.AimAt(i, out TargetId id, out Vector3 position);
                     Consider(context, id, position, cone, ref best, ref fallbackInCone);
                 }
             }
 
             HomingCatalog catalog = context.HomingCatalog;
-            int count = catalog.Count;
+            int count = catalog.PrepareHomingOnly(hitTargets);
             for (int i = 0; i < count; i++)
             {
-                if (!catalog.TryGet(i, out TargetId id, out Vector3 position))
-                    continue;
-                if (hitTargets != null && hitTargets.Contains(id))
-                    continue;
+                catalog.GetHomingOnly(i, out TargetId id, out Vector3 position);
                 Consider(context, id, position, cone, ref best, ref fallbackInCone);
             }
 
@@ -203,6 +239,10 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             Vector3 toTarget = position - context.Position;
+            float sqrDistance = toTarget.sqrMagnitude;
+            // Once a candidate is found the fallback flag is never read, so a farther one needs no cone test.
+            if (best.Found && sqrDistance >= best.SqrDistance)
+                return;
             if (!cone.Contains(toTarget))
                 return;
 
@@ -212,10 +252,6 @@ namespace Veerdonk.ProjectileSystem
                 return;
             }
 
-            float sqrDistance = toTarget.sqrMagnitude;
-            if (best.Found && sqrDistance >= best.SqrDistance)
-                return;
-
             best.SqrDistance = sqrDistance;
             best.Id = id;
             best.Found = true;
@@ -224,6 +260,7 @@ namespace Veerdonk.ProjectileSystem
         readonly struct Cone
         {
             readonly Vector3 travel;
+            readonly float travelMagnitude;
             readonly float cos;
             readonly bool all;
             readonly bool none;
@@ -231,6 +268,7 @@ namespace Veerdonk.ProjectileSystem
             public Cone(float halfAngleDegrees, Vector3 travel)
             {
                 this.travel = travel;
+                travelMagnitude = travel.magnitude;
                 float half = Mathf.Clamp(halfAngleDegrees, 0f, 180f);
                 all = half >= 180f;
                 none = half <= 0f;
@@ -248,7 +286,7 @@ namespace Veerdonk.ProjectileSystem
                 float dot = Vector3.Dot(toTarget, travel);
                 if (cos == 0f)
                     return dot > 0f;
-                return dot > cos * toTarget.magnitude * travel.magnitude;
+                return dot > cos * toTarget.magnitude * travelMagnitude;
             }
         }
 
@@ -282,23 +320,19 @@ namespace Veerdonk.ProjectileSystem
             HitTargetCatalog hitTargets = context.HitTargets;
             if (hitTargets != null)
             {
-                int hitCount = hitTargets.Count;
+                int hitCount = hitTargets.PrepareScan();
                 for (int i = 0; i < hitCount; i++)
                 {
-                    if (!hitTargets.TryGet(i, out TargetId id, out Vector3 position))
-                        continue;
+                    hitTargets.AimAt(i, out TargetId id, out Vector3 position);
                     Consider(context, id, position, point, ref best);
                 }
             }
 
             HomingCatalog catalog = context.HomingCatalog;
-            int count = catalog.Count;
+            int count = catalog.PrepareHomingOnly(hitTargets);
             for (int i = 0; i < count; i++)
             {
-                if (!catalog.TryGet(i, out TargetId id, out Vector3 position))
-                    continue;
-                if (hitTargets != null && hitTargets.Contains(id))
-                    continue;
+                catalog.GetHomingOnly(i, out TargetId id, out Vector3 position);
                 Consider(context, id, position, point, ref best);
             }
 

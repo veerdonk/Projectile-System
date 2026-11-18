@@ -31,6 +31,7 @@ namespace Veerdonk.ProjectileSystem
         Entity deltaTimeEntity;
         EntityQuery liveQuery;
         int nextId = 1;
+        int pendingHead;
         bool disposed;
 
         /// <summary>
@@ -379,52 +380,20 @@ namespace Veerdonk.ProjectileSystem
 
         bool TryGetLiveEntity(ProjectileId id, out Entity entity)
         {
-            EntityManager em = ecsWorld.EntityManager;
-            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
-            try
-            {
-                for (int i = 0; i < entities.Length; i++)
-                {
-                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
-                    if (new ProjectileId(projectile.Id) != id)
-                        continue;
-
-                    entity = entities[i];
-                    return true;
-                }
-            }
-            finally
-            {
-                entities.Dispose();
-            }
-
-            entity = Entity.Null;
-            return false;
+            return bridge.LiveEntities.TryGetValue(id, out entity);
         }
 
         internal bool TryGetState(ProjectileId id, out Vector3 position, out Vector3 velocity, out Recipe recipe)
         {
             ThrowIfDisposed();
             EntityManager em = ecsWorld.EntityManager;
-            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
-            try
+            if (TryGetLiveEntity(id, out Entity entity))
             {
-                for (int i = 0; i < entities.Length; i++)
-                {
-                    Entity entity = entities[i];
-                    Projectile projectile = em.GetComponentData<Projectile>(entity);
-                    if (new ProjectileId(projectile.Id) != id)
-                        continue;
-
-                    position = ToVector3(em.GetComponentData<ProjectilePosition>(entity).Value);
-                    velocity = ToVector3(em.GetComponentData<ProjectileVelocity>(entity).Value);
-                    recipe = recipes.Get(projectile.RecipeIndex);
-                    return true;
-                }
-            }
-            finally
-            {
-                entities.Dispose();
+                Projectile projectile = em.GetComponentData<Projectile>(entity);
+                position = ToVector3(em.GetComponentData<ProjectilePosition>(entity).Value);
+                velocity = ToVector3(em.GetComponentData<ProjectileVelocity>(entity).Value);
+                recipe = recipes.Get(projectile.RecipeIndex);
+                return true;
             }
 
             position = default;
@@ -448,22 +417,11 @@ namespace Veerdonk.ProjectileSystem
         {
             ThrowIfDisposed();
             EntityManager em = ecsWorld.EntityManager;
-            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
-            try
+            if (TryGetLiveEntity(id, out Entity entity))
             {
-                for (int i = 0; i < entities.Length; i++)
-                {
-                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
-                    if (new ProjectileId(projectile.Id) != id)
-                        continue;
-
-                    radius = projectile.Radius;
-                    return true;
-                }
-            }
-            finally
-            {
-                entities.Dispose();
+                Projectile projectile = em.GetComponentData<Projectile>(entity);
+                radius = projectile.Radius;
+                return true;
             }
 
             radius = 0f;
@@ -474,22 +432,11 @@ namespace Veerdonk.ProjectileSystem
         {
             ThrowIfDisposed();
             EntityManager em = ecsWorld.EntityManager;
-            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
-            try
+            if (TryGetLiveEntity(id, out Entity entity))
             {
-                for (int i = 0; i < entities.Length; i++)
-                {
-                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
-                    if (new ProjectileId(projectile.Id) != id)
-                        continue;
-
-                    gravity = projectile.Gravity;
-                    return true;
-                }
-            }
-            finally
-            {
-                entities.Dispose();
+                Projectile projectile = em.GetComponentData<Projectile>(entity);
+                gravity = projectile.Gravity;
+                return true;
             }
 
             gravity = 0f;
@@ -500,22 +447,11 @@ namespace Veerdonk.ProjectileSystem
         {
             ThrowIfDisposed();
             EntityManager em = ecsWorld.EntityManager;
-            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
-            try
+            if (TryGetLiveEntity(id, out Entity entity))
             {
-                for (int i = 0; i < entities.Length; i++)
-                {
-                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
-                    if (new ProjectileId(projectile.Id) != id)
-                        continue;
-
-                    spread = projectile.Spread;
-                    return true;
-                }
-            }
-            finally
-            {
-                entities.Dispose();
+                Projectile projectile = em.GetComponentData<Projectile>(entity);
+                spread = projectile.Spread;
+                return true;
             }
 
             spread = 0f;
@@ -531,25 +467,14 @@ namespace Veerdonk.ProjectileSystem
         {
             ThrowIfDisposed();
             EntityManager em = ecsWorld.EntityManager;
-            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
-            try
+            if (TryGetLiveEntity(id, out Entity entity))
             {
-                for (int i = 0; i < entities.Length; i++)
-                {
-                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
-                    if (new ProjectileId(projectile.Id) != id)
-                        continue;
-
-                    damage = projectile.Damage;
-                    criticalChance = projectile.CriticalChance;
-                    manaCost = projectile.ManaCost;
-                    effectRadius = projectile.EffectRadius;
-                    return true;
-                }
-            }
-            finally
-            {
-                entities.Dispose();
+                Projectile projectile = em.GetComponentData<Projectile>(entity);
+                damage = projectile.Damage;
+                criticalChance = projectile.CriticalChance;
+                manaCost = projectile.ManaCost;
+                effectRadius = projectile.EffectRadius;
+                return true;
             }
 
             damage = 0f;
@@ -563,23 +488,12 @@ namespace Veerdonk.ProjectileSystem
         {
             ThrowIfDisposed();
             EntityManager em = ecsWorld.EntityManager;
-            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
-            try
+            if (TryGetLiveEntity(id, out Entity entity))
             {
-                for (int i = 0; i < entities.Length; i++)
-                {
-                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
-                    if (new ProjectileId(projectile.Id) != id)
-                        continue;
-
-                    remainingPierce = projectile.RemainingPierce;
-                    remainingBounce = projectile.RemainingBounce;
-                    return true;
-                }
-            }
-            finally
-            {
-                entities.Dispose();
+                Projectile projectile = em.GetComponentData<Projectile>(entity);
+                remainingPierce = projectile.RemainingPierce;
+                remainingBounce = projectile.RemainingBounce;
+                return true;
             }
 
             remainingPierce = 0;
@@ -591,24 +505,13 @@ namespace Veerdonk.ProjectileSystem
         {
             ThrowIfDisposed();
             EntityManager em = ecsWorld.EntityManager;
-            NativeArray<Entity> entities = liveQuery.ToEntityArray(Allocator.Temp);
-            try
+            if (TryGetLiveEntity(id, out Entity entity))
             {
-                for (int i = 0; i < entities.Length; i++)
-                {
-                    Projectile projectile = em.GetComponentData<Projectile>(entities[i]);
-                    if (new ProjectileId(projectile.Id) != id)
-                        continue;
-
-                    target = projectile.HomingHasTarget
-                        ? HomingTarget.Assigned(projectile.HomingTargetId)
-                        : default;
-                    return true;
-                }
-            }
-            finally
-            {
-                entities.Dispose();
+                Projectile projectile = em.GetComponentData<Projectile>(entity);
+                target = projectile.HomingHasTarget
+                    ? HomingTarget.Assigned(projectile.HomingTargetId)
+                    : default;
+                return true;
             }
 
             target = default;
@@ -664,6 +567,7 @@ namespace Veerdonk.ProjectileSystem
             groundFields?.Dispose();
             pool?.Dispose();
             pool = null;
+            bridge.LiveEntities.Clear();
 
             if (ecsWorld != null && ecsWorld.IsCreated)
             {
@@ -815,6 +719,7 @@ namespace Veerdonk.ProjectileSystem
                 HomingAssignedAtSpawn = request.HomingTarget.IsAssigned,
                 ShieldResponse = request.ShieldResponse
             });
+            bridge.LiveEntities[new ProjectileId(idValue)] = entity;
             em.SetComponentData(entity, new ProjectilePosition { Value = position });
             em.SetComponentData(entity, new ProjectileVelocity { Value = velocity });
             em.SetComponentData(entity, new ProjectileCandidate { Value = position });
@@ -870,12 +775,16 @@ namespace Veerdonk.ProjectileSystem
 
         void FlushPendingSpawns()
         {
-            while (pendingSpawns.Count > 0)
+            // The head is shared, so a flush nested in a spawn handler carries on where this one stopped.
+            while (pendingHead < pendingSpawns.Count)
             {
-                SpawnRequest request = pendingSpawns[0];
-                pendingSpawns.RemoveAt(0);
+                SpawnRequest request = pendingSpawns[pendingHead];
+                pendingHead++;
                 SpawnCore(request);
             }
+
+            pendingSpawns.Clear();
+            pendingHead = 0;
 
             for (int i = 0; i < bridge.RetiredIds.Count; i++)
             {

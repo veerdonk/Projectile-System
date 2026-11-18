@@ -292,7 +292,7 @@ namespace Veerdonk.ProjectileSystem
         readonly Dictionary<string, Stack<ProjectileView>> viewPools = new Dictionary<string, Stack<ProjectileView>>();
         readonly List<ProjectileView> allViews = new List<ProjectileView>();
         readonly List<HitInfo> overlapResults = new List<HitInfo>();
-        readonly List<TargetId> seenTargets = new List<TargetId>();
+        readonly TargetSet seenTargets = new TargetSet();
         readonly GroundFieldShapeMeshes shapeMeshes = new GroundFieldShapeMeshes();
         int nextFieldId = 1;
         bool disposed;
@@ -358,7 +358,7 @@ namespace Veerdonk.ProjectileSystem
                 PresentationId = request.PresentationId,
                 PlantedThisTick = true,
                 Occupancy = request.Occupancy,
-                Occupants = request.Occupancy ? new List<TargetId>() : null
+                Occupants = request.Occupancy ? new TargetSet() : null
             };
             if (createViews)
                 field.View = RentView(disk, request.PresentationId);
@@ -501,10 +501,9 @@ namespace Veerdonk.ProjectileSystem
                 HitInfo areaHit = overlapResults[i];
                 if (areaHit.Kind != HitKind.Target || areaHit.Protection == ProtectionLevel.Strong)
                     continue;
-                if (ContainsTarget(seenTargets, areaHit.TargetId))
+                if (!seenTargets.Add(areaHit.TargetId))
                     continue;
 
-                seenTargets.Add(areaHit.TargetId);
                 areaHit.InstanceId = field.SourceId;
                 areaHit.Source = HitSource.Area;
                 areaHit.Damage = field.Damage;
@@ -682,17 +681,6 @@ namespace Veerdonk.ProjectileSystem
                 && !float.IsNaN(v.z) && !float.IsInfinity(v.z);
         }
 
-        static bool ContainsTarget(List<TargetId> ids, TargetId id)
-        {
-            for (int i = 0; i < ids.Count; i++)
-            {
-                if (ids[i] == id)
-                    return true;
-            }
-
-            return false;
-        }
-
         struct LiveField
         {
             public GroundFieldId FieldId;
@@ -709,7 +697,7 @@ namespace Veerdonk.ProjectileSystem
             public ProjectileView View;
             public bool PlantedThisTick;
             public bool Occupancy;
-            public List<TargetId> Occupants;
+            public TargetSet Occupants;
         }
     }
 
