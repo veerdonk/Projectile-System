@@ -23,6 +23,8 @@ namespace Veerdonk.ProjectileSystem
         public ShieldSphereSet Shields;
         public System.Action<ShieldBlockInfo> ShieldBlocked;
         public readonly List<ProjectileId> RetiredIds = new List<ProjectileId>();
+        // Enabled pooled entities by the id they carry: added where a rent gets its id, removed where it is returned.
+        public readonly Dictionary<ProjectileId, Entity> LiveEntities = new Dictionary<ProjectileId, Entity>();
     }
 
     [DisableAutoCreation]
@@ -36,11 +38,12 @@ namespace Veerdonk.ProjectileSystem
 
         readonly List<HitInfo> overlapResults = new List<HitInfo>();
         readonly List<Vector3> beamPoints = new List<Vector3>();
-        readonly List<TargetId> seenAreaTargets = new List<TargetId>();
-        readonly List<TargetId> occupancyCurrent = new List<TargetId>();
-        readonly List<OccupancyKey> occupancyRemove = new List<OccupancyKey>();
+        readonly HashSet<TargetId> seenAreaTargets = new HashSet<TargetId>();
+        readonly TargetSet occupancyCurrent = new TargetSet();
         readonly List<int> expiringIds = new List<int>();
-        readonly Dictionary<OccupancyKey, List<TargetId>> occupancyInside = new Dictionary<OccupancyKey, List<TargetId>>();
+        readonly Dictionary<OccupancyKey, TargetSet> occupancyInside = new Dictionary<OccupancyKey, TargetSet>();
+        readonly Dictionary<ProjectileId, List<OccupancyKey>> occupancyKeysByInstance = new Dictionary<ProjectileId, List<OccupancyKey>>();
+        readonly Stack<List<OccupancyKey>> spareOccupancyKeys = new Stack<List<OccupancyKey>>();
 
         public SimulationBridge Bridge;
 
@@ -920,6 +923,8 @@ namespace Veerdonk.ProjectileSystem
                 : ToVector3(projectile.BeamDirection);
             ClearOccupancy(instanceId);
             Bridge.RetiredIds.Add(instanceId);
+            if (Bridge.LiveEntities.TryGetValue(instanceId, out Entity live) && live == entity)
+                Bridge.LiveEntities.Remove(instanceId);
             Bridge.Pool.Return(projectile.RecipeIndex, entity);
             Bridge.Expired?.Invoke(new ExpireInfo
             {
@@ -1077,10 +1082,11 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             var key = new OccupancyKey(instanceId, channel, slot);
-            if (!occupancyInside.TryGetValue(key, out List<TargetId> previous))
+            if (!occupancyInside.TryGetValue(key, out TargetSet previous))
             {
-                previous = new List<TargetId>();
+                previous = new TargetSet();
                 occupancyInside[key] = previous;
+                NoteOccupancyKey(key);
                 RaiseAreaBurst(request, instanceId, channel);
             }
 
@@ -1123,17 +1129,28 @@ namespace Veerdonk.ProjectileSystem
             }
         }
 
-        void ClearOccupancy(ProjectileId instanceId)
+        void NoteOccupancyKey(in OccupancyKey key)
         {
-            occupancyRemove.Clear();
-            foreach (KeyValuePair<OccupancyKey, List<TargetId>> pair in occupancyInside)
+            if (!occupancyKeysByInstance.TryGetValue(key.Instance, out List<OccupancyKey> keys))
             {
-                if (pair.Key.Instance == instanceId)
-                    occupancyRemove.Add(pair.Key);
+                keys = spareOccupancyKeys.Count > 0 ? spareOccupancyKeys.Pop() : new List<OccupancyKey>();
+                occupancyKeysByInstance.Add(key.Instance, keys);
             }
 
-            for (int i = 0; i < occupancyRemove.Count; i++)
-                occupancyInside.Remove(occupancyRemove[i]);
+            keys.Add(key);
+        }
+
+        void ClearOccupancy(ProjectileId instanceId)
+        {
+            if (!occupancyKeysByInstance.TryGetValue(instanceId, out List<OccupancyKey> keys))
+                return;
+
+            occupancyKeysByInstance.Remove(instanceId);
+            for (int i = 0; i < keys.Count; i++)
+                occupancyInside.Remove(keys[i]);
+
+            keys.Clear();
+            spareOccupancyKeys.Push(keys);
         }
 
         void TryEmitAreaHit(
@@ -1144,10 +1161,9 @@ namespace Veerdonk.ProjectileSystem
         {
             if (areaHit.Kind != HitKind.Target || areaHit.Protection == ProtectionLevel.Strong)
                 return;
-            if (ContainsTarget(seenAreaTargets, areaHit.TargetId))
+            if (!seenAreaTargets.Add(areaHit.TargetId))
                 return;
 
-            seenAreaTargets.Add(areaHit.TargetId);
             areaHit.InstanceId = instanceId;
             areaHit.Source = HitSource.Area;
             areaHit.Damage = request.Damage;
@@ -1175,17 +1191,6 @@ namespace Veerdonk.ProjectileSystem
             var instanceId = new ProjectileId(projectile.Id);
             for (int i = 0; i < requests.Count; i++)
                 Bridge.GroundFields.Plant(instanceId, requests[i]);
-        }
-
-        static bool ContainsTarget(List<TargetId> ids, TargetId id)
-        {
-            for (int i = 0; i < ids.Count; i++)
-            {
-                if (ids[i] == id)
-                    return true;
-            }
-
-            return false;
         }
 
         void RunStage(IModifier[] modifiers, Entity entity, bool hasHit, in HitInfo hit, float dt, bool skipMulticast = false)

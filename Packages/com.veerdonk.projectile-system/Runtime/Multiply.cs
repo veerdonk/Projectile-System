@@ -242,22 +242,19 @@ namespace Veerdonk.ProjectileSystem
             HitTargetCatalog hitTargets = context.HitTargets;
             if (hitTargets != null)
             {
-                int hitCount = hitTargets.Count;
+                int hitCount = hitTargets.PrepareScan();
                 for (int i = 0; i < hitCount; i++)
                 {
-                    if (hitTargets.TryGet(i, out TargetId id, out Vector3 position))
-                        ConsiderLock(context, id, position, origin, maxSqr, hitTarget, ref hitTargetInRange);
+                    hitTargets.AimAt(i, out TargetId id, out Vector3 position);
+                    ConsiderLock(context, id, position, origin, maxSqr, hitTarget, ref hitTargetInRange);
                 }
             }
 
             HomingCatalog catalog = context.HomingCatalog;
-            int count = catalog.Count;
+            int count = catalog.PrepareHomingOnly(hitTargets);
             for (int i = 0; i < count; i++)
             {
-                if (!catalog.TryGet(i, out TargetId id, out Vector3 position))
-                    continue;
-                if (hitTargets != null && hitTargets.Contains(id))
-                    continue;
+                catalog.GetHomingOnly(i, out TargetId id, out Vector3 position);
                 ConsiderLock(context, id, position, origin, maxSqr, hitTarget, ref hitTargetInRange);
             }
 

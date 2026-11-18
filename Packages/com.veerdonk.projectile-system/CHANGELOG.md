@@ -5,11 +5,16 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.21] - 2026-11-18
 
 ### Changed
 
 - Published hit targets (`SetHitTarget`) are found through an XZ grid: Direct sweeps, area spheres, and ground fields test only the targets near them instead of every published target, so a large moving crowd no longer makes every shot cost the whole catalog. What is hit, which hit wins, and the order of results are unchanged.
+- Homing acquisition and Multiply `LockRange` no longer look up every homing candidate among the hit targets on each scan, and skip the cone test for candidates farther than the best so far. Picks, ties, and the fallback rule are unchanged.
+- Area bursts, ground field pulses, and occupancy (AreaEffect and GroundField) check repeat targets with a hash set instead of a list scan, so hundreds of overlapping targets no longer cost a scan per target. Hits, enter and exit events, and their order are unchanged.
+- `Despawn`, `AimBeam`, and the per-instance getters such as `TryGetRadius` find the instance through an id map instead of scanning every live instance.
+- Spawns queued during a tick are drained without shifting the queue, and a retired shot's occupancy is cleared without scanning every occupancy entry. Spawn order is unchanged.
+- Beam views no longer allocate when their polyline changes (renderer lookup, segment components, and the length UVs are reused).
 
 ### Fixed
 

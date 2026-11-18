@@ -36,6 +36,9 @@ namespace Veerdonk.ProjectileSystem
 
         internal int SlotCount => volumes.Count;
 
+        // Bumps when an id is added or removed, not when a published id moves.
+        internal int MembershipVersion { get; private set; }
+
         internal int NarrowPhaseTests { get; private set; }
 
         public void Set(TargetId id, Vector3 position, float radius, ProtectionLevel protection = ProtectionLevel.None)
@@ -93,6 +96,7 @@ namespace Veerdonk.ProjectileSystem
                 volumes.Add(volume);
                 links.Add(CellLink.Unlinked);
                 Link(index, cell);
+                MembershipVersion++;
             }
 
             if (cell != OversizeCell && extent > maxExtent)
@@ -140,6 +144,21 @@ namespace Veerdonk.ProjectileSystem
             indexById.Remove(id);
             Unlink(index);
             deadSlots++;
+            MembershipVersion++;
+        }
+
+        // Compacts once so AimAt reads slots 0..Count-1 in TryGet order without a check per read.
+        internal int PrepareScan()
+        {
+            Compact();
+            return volumes.Count;
+        }
+
+        internal void AimAt(int slot, out TargetId id, out Vector3 position)
+        {
+            Volume volume = volumes[slot];
+            id = volume.Id;
+            position = volume.Aim;
         }
 
         public void HoldIgnore(ProjectileId instanceId)

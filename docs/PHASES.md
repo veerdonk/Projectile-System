@@ -1248,6 +1248,26 @@ Change request veerdonk/Projectile-System#103 from the game board (veerdonk/Unti
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 58 — Per-tick hot paths
+
+Follow-up to phase 57 (veerdonk/Projectile-System#103): the remaining per-tick costs with 1000–2000 published targets that are also homing candidates and 100–300 live shots. Runs before phase 34. ADR-064. Version **0.2.21**. Behaviour is unchanged: same picks, ties, event order, RNG draws, and public API.
+
+**In scope**
+
+- Homing acquisition (`ClosestInTravelDirectionAcquisition`, `ClosestToPointAcquisition`) and Multiply `LockRange`: one compaction per scan instead of one per read; an internal list of homing-only poses (not also hit targets) in `HomingCatalog`, rebuilt only when either catalog adds or removes an id; the cone test skipped for a candidate no nearer than the best (the fallback flag is never read once a candidate is found); the cone's travel length computed once
+- `HashSet`-backed membership for area burst, ground field pulse, and occupancy repeat checks (`TargetSet`: insertion order kept for events and `TargetsHit`)
+- Occupancy entries indexed by instance, so a retired shot clears only its own
+- An id → entity map in the bridge, filled where a rented entity gets its id and emptied where it returns to the pool, for `Despawn`, both `AimBeam` overloads, and the per-instance getters (`TryGetActiveAt` still walks the query)
+- The pending spawn queue drains through a head index shared with nested flushes, then clears
+- Beam views: no allocation on a polyline change (root renderers into a reused list, cached segment filter and renderer, a reused length-UV buffer); `SetPose` uses `SetPositionAndRotation`
+- Edit Mode tests (`HotPathAcquisitionTests`, `HotPathWorldTests`): acquisition and lock picks against the old full scan under catalog churn (both catalogs, either, removed and re-added, position-only moves, another or no hit catalog), equal-distance ties, ignored and fallback targets; area bursts and ground pulses with hundreds of duplicate overlaps; occupancy enter and exit order with many occupants and `OccupancyExchange` against the list scan; lookups, `Despawn`, and `AimBeam` by a stale id after pooling and re-spawn, hitscan, and despawn from `Spawned`; spawn order with spawns queued during the flush and from a `Spawned` handler; no allocation for steady-state acquisition over 2000 targets
+
+**Out of scope:** acquiring once per beam pulse instead of per curve step; caching `GetComponentInParent` results or skipping the pre-cast `OverlapSphere` in `PhysicsHitQuery`; replacing the pool's `Disabled` structural change; `PredictPath` changes; a spatial index for homing acquisition; merging or re-laying beam segments
+
+**Proof:** Edit Mode and Play Mode tests (existing ones unchanged).
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

@@ -11,11 +11,15 @@ namespace Veerdonk.ProjectileSystem
     {
         bool scaleToRadius = true;
         readonly List<Transform> beamSegments = new List<Transform>();
+        readonly List<MeshFilter> beamFilters = new List<MeshFilter>();
+        readonly List<MeshRenderer> beamRenderers = new List<MeshRenderer>();
         readonly List<Mesh> beamMeshes = new List<Mesh>();
         readonly List<Vector3> drawnBeamPoints = new List<Vector3>();
+        static readonly List<Renderer> RootRenderers = new List<Renderer>();
         static Mesh cylinderTemplate;
         static Vector3[] cylinderVertices;
         static Vector2[] cylinderUv;
+        static Vector2[] lengthUv;
         static float cylinderMinY;
         static float cylinderMaxY;
 
@@ -46,9 +50,10 @@ namespace Veerdonk.ProjectileSystem
         /// <summary>Moves the view and looks along <paramref name="velocity"/> when it is non-zero.</summary>
         public void SetPose(Vector3 position, Vector3 velocity)
         {
-            transform.position = position;
             if (velocity.sqrMagnitude > 1e-8f)
-                transform.rotation = Quaternion.LookRotation(velocity);
+                transform.SetPositionAndRotation(position, Quaternion.LookRotation(velocity));
+            else
+                transform.position = position;
         }
 
         void OnDestroy()
@@ -109,11 +114,11 @@ namespace Veerdonk.ProjectileSystem
 
             transform.SetPositionAndRotation(points[0], Quaternion.identity);
             transform.localScale = Vector3.one;
-            Renderer[] rootRenderers = GetComponents<Renderer>();
+            GetComponents(RootRenderers);
             Material material = null;
-            for (int i = 0; i < rootRenderers.Length; i++)
+            for (int i = 0; i < RootRenderers.Count; i++)
             {
-                Renderer renderer = rootRenderers[i];
+                Renderer renderer = RootRenderers[i];
                 if (renderer == null)
                     continue;
 
@@ -122,9 +127,10 @@ namespace Veerdonk.ProjectileSystem
                 renderer.enabled = false;
             }
 
+            RootRenderers.Clear();
             int count = points.Count - 1;
             while (beamSegments.Count < count)
-                beamSegments.Add(CreateBeamSegment());
+                AddBeamSegment();
 
             float total = 0f;
             for (int i = 0; i < count; i++)
@@ -139,7 +145,7 @@ namespace Veerdonk.ProjectileSystem
                 float v1 = total > 1e-4f ? (traveled + length) / total : 1f;
                 Transform segment = beamSegments[i];
                 segment.gameObject.SetActive(true);
-                PlaceBeamSegment(segment, points[i], points[i + 1], diameter, material, v0, v1);
+                PlaceBeamSegment(segment, beamFilters[i], beamRenderers[i], points[i], points[i + 1], diameter, material, v0, v1);
                 traveled += length;
             }
 
@@ -168,6 +174,14 @@ namespace Veerdonk.ProjectileSystem
                 if (beamSegments[i] != null)
                     beamSegments[i].gameObject.SetActive(false);
             }
+        }
+
+        void AddBeamSegment()
+        {
+            Transform segment = CreateBeamSegment();
+            beamSegments.Add(segment);
+            beamFilters.Add(segment.GetComponent<MeshFilter>());
+            beamRenderers.Add(segment.GetComponent<MeshRenderer>());
         }
 
         Transform CreateBeamSegment()
@@ -231,7 +245,10 @@ namespace Veerdonk.ProjectileSystem
             if (cylinderVertices.Length != cylinderUv.Length)
                 return;
 
-            var uv = new Vector2[cylinderUv.Length];
+            if (lengthUv == null || lengthUv.Length != cylinderUv.Length)
+                lengthUv = new Vector2[cylinderUv.Length];
+
+            Vector2[] uv = lengthUv;
             float span = cylinderMaxY - cylinderMinY;
             for (int i = 0; i < uv.Length; i++)
             {
@@ -239,11 +256,13 @@ namespace Veerdonk.ProjectileSystem
                 uv[i] = new Vector2(cylinderUv[i].x, Mathf.Lerp(v0, v1, t));
             }
 
-            mesh.uv = uv;
+            mesh.SetUVs(0, uv);
         }
 
         static void PlaceBeamSegment(
             Transform segment,
+            MeshFilter filter,
+            MeshRenderer renderer,
             Vector3 start,
             Vector3 end,
             float diameter,
@@ -268,11 +287,9 @@ namespace Veerdonk.ProjectileSystem
             if (parent != null)
                 segment.SetParent(parent, true);
 
-            MeshFilter filter = segment.GetComponent<MeshFilter>();
             if (filter != null)
                 ApplyLengthUv(filter.sharedMesh, v0, v1);
 
-            MeshRenderer renderer = segment.GetComponent<MeshRenderer>();
             if (renderer == null)
                 return;
 
