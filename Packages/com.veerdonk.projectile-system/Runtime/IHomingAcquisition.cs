@@ -11,10 +11,12 @@ namespace Veerdonk.ProjectileSystem
     {
         readonly List<(TargetId id, Vector3 position)> poses = new List<(TargetId id, Vector3 position)>();
         readonly Dictionary<TargetId, int> indexById = new Dictionary<TargetId, int>();
-        bool hasDeadSlots;
+        int deadSlots;
 
         /// <summary>Number of published poses.</summary>
         public int Count => indexById.Count;
+
+        internal int SlotCount => poses.Count;
 
         /// <summary>Publishes or moves a candidate pose.</summary>
         public void Set(TargetId id, Vector3 position)
@@ -25,6 +27,9 @@ namespace Veerdonk.ProjectileSystem
                 return;
             }
 
+            if (deadSlots > indexById.Count)
+                Compact();
+
             indexById.Add(id, poses.Count);
             poses.Add((id, position));
         }
@@ -33,7 +38,7 @@ namespace Veerdonk.ProjectileSystem
         public void Remove(TargetId id)
         {
             if (indexById.Remove(id))
-                hasDeadSlots = true;
+                deadSlots++;
         }
 
         /// <summary>Indexed read for acquisition. False when <paramref name="index"/> is out of range.</summary>
@@ -74,7 +79,7 @@ namespace Veerdonk.ProjectileSystem
 
         void Compact()
         {
-            if (!hasDeadSlots)
+            if (deadSlots == 0)
                 return;
 
             int write = 0;
@@ -95,7 +100,7 @@ namespace Veerdonk.ProjectileSystem
             }
 
             poses.RemoveRange(write, poses.Count - write);
-            hasDeadSlots = false;
+            deadSlots = 0;
         }
     }
 

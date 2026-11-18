@@ -1,18 +1,42 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace Veerdonk.ProjectileSystem
 {
+    // Queries test volumes in list order whatever the broad phase picks, so the nearest-hit tie-break and the
+    // order of overlap results never depend on the grid (ADR-063).
     sealed class HitTargetCatalog
     {
+        // A power of two, so a cell index is the same in float and double.
+        const float CellSize = 2f;
+        const float MaxCellCoordinate = 1e6f;
+        const long OversizeCell = long.MaxValue;
+        const long NoCell = long.MinValue;
+
         readonly List<Volume> volumes = new List<Volume>();
+        readonly List<CellLink> links = new List<CellLink>();
         readonly Dictionary<TargetId, int> indexById = new Dictionary<TargetId, int>();
+        readonly Dictionary<long, int> cellHeads = new Dictionary<long, int>();
         readonly Dictionary<ProjectileId, IgnoredContact> ignored = new Dictionary<ProjectileId, IgnoredContact>();
         readonly HashSet<ProjectileId> holdRelease = new HashSet<ProjectileId>();
         readonly Dictionary<ProjectileId, ShooterSkip> shooters = new Dictionary<ProjectileId, ShooterSkip>();
-        bool hasDeadSlots;
+        readonly bool broadPhase;
+        int[] candidates = new int[64];
+        int candidateCount;
+        float maxExtent;
+        int deadSlots;
+
+        public HitTargetCatalog(bool broadPhase = true)
+        {
+            this.broadPhase = broadPhase;
+        }
 
         public int Count => indexById.Count;
+
+        internal int SlotCount => volumes.Count;
+
+        internal int NarrowPhaseTests { get; private set; }
 
         public void Set(TargetId id, Vector3 position, float radius, ProtectionLevel protection = ProtectionLevel.None)
         {
@@ -49,14 +73,30 @@ namespace Veerdonk.ProjectileSystem
         void Store(Volume volume)
         {
             TargetId id = volume.Id;
+            long cell = CellOf(volume, out float extent);
             if (indexById.TryGetValue(id, out int index))
             {
                 volumes[index] = volume;
-                return;
+                if (links[index].Cell != cell)
+                {
+                    Unlink(index);
+                    Link(index, cell);
+                }
+            }
+            else
+            {
+                if (deadSlots > indexById.Count)
+                    Compact();
+
+                index = volumes.Count;
+                indexById.Add(id, index);
+                volumes.Add(volume);
+                links.Add(CellLink.Unlinked);
+                Link(index, cell);
             }
 
-            indexById.Add(id, volumes.Count);
-            volumes.Add(volume);
+            if (cell != OversizeCell && extent > maxExtent)
+                maxExtent = extent;
         }
 
         public bool TryGet(int index, out TargetId id, out Vector3 position)
@@ -94,8 +134,12 @@ namespace Veerdonk.ProjectileSystem
 
         public void Remove(TargetId id)
         {
-            if (indexById.Remove(id))
-                hasDeadSlots = true;
+            if (!indexById.TryGetValue(id, out int index))
+                return;
+
+            indexById.Remove(id);
+            Unlink(index);
+            deadSlots++;
         }
 
         public void HoldIgnore(ProjectileId instanceId)
@@ -197,9 +241,11 @@ namespace Veerdonk.ProjectileSystem
             TargetId ignoredId = ignoredContact.Id;
             bool hasShooter = shooters.TryGetValue(instanceId, out ShooterSkip shooter) && shooter.Active;
 
-            for (int i = 0; i < volumes.Count; i++)
+            GatherSweep(origin, direction, distance, radius);
+            for (int c = 0; c < candidateCount; c++)
             {
-                Volume volume = volumes[i];
+                Volume volume = volumes[candidates[c]];
+                NarrowPhaseTests++;
                 if (hasIgnore && volume.Id.Equals(ignoredId))
                     continue;
                 if (hasShooter && volume.Id.Equals(shooter.Id))
@@ -232,9 +278,13 @@ namespace Veerdonk.ProjectileSystem
                 return;
 
             Compact();
-            for (int i = 0; i < volumes.Count; i++)
+            if (!GatherCells(center.x, center.z, center.x, center.z, radius))
+                GatherAll();
+
+            for (int c = 0; c < candidateCount; c++)
             {
-                Volume volume = volumes[i];
+                Volume volume = volumes[candidates[c]];
+                NarrowPhaseTests++;
                 if (volume.Protection == ProtectionLevel.Strong)
                     continue;
 
@@ -255,9 +305,13 @@ namespace Veerdonk.ProjectileSystem
 
             Compact();
             Vector3 center = disk.Center;
-            for (int i = 0; i < volumes.Count; i++)
+            if (!TryDiskReach(disk, out float reach) || !GatherCells(center.x, center.z, center.x, center.z, reach))
+                GatherAll();
+
+            for (int c = 0; c < candidateCount; c++)
             {
-                Volume volume = volumes[i];
+                Volume volume = volumes[candidates[c]];
+                NarrowPhaseTests++;
                 if (volume.Protection == ProtectionLevel.Strong)
                     continue;
 
@@ -283,10 +337,11 @@ namespace Veerdonk.ProjectileSystem
 
         void Compact()
         {
-            if (!hasDeadSlots)
+            if (deadSlots == 0)
                 return;
 
             int write = 0;
+            float liveExtent = 0f;
             for (int read = 0; read < volumes.Count; read++)
             {
                 Volume volume = volumes[read];
@@ -298,13 +353,276 @@ namespace Veerdonk.ProjectileSystem
                 {
                     volumes[write] = volume;
                     indexById[volume.Id] = write;
+                    MoveLink(read, write);
                 }
 
+                if (CellOf(volume, out float extent) != OversizeCell && extent > liveExtent)
+                    liveExtent = extent;
                 write++;
             }
 
             volumes.RemoveRange(write, volumes.Count - write);
-            hasDeadSlots = false;
+            links.RemoveRange(write, links.Count - write);
+            maxExtent = liveExtent;
+            deadSlots = 0;
+        }
+
+        void GatherAll()
+        {
+            candidateCount = 0;
+            for (int i = 0; i < volumes.Count; i++)
+                AddCandidate(i);
+        }
+
+        void GatherSweep(Vector3 origin, Vector3 direction, float distance, float radius)
+        {
+            if (!IsFinite(origin) || !IsFinite(direction) || !float.IsFinite(distance) || !float.IsFinite(radius))
+            {
+                GatherAll();
+                return;
+            }
+
+            Vector3 end = origin;
+            if (distance > 1e-8f && direction.sqrMagnitude > 1e-12f)
+                end = origin + direction.normalized * distance;
+
+            // The narrow phase squares the radius sum, so a negative shot radius reaches as far as its size.
+            if (!GatherCells(origin.x, origin.z, end.x, end.z, Mathf.Abs(radius)))
+                GatherAll();
+        }
+
+        // Fills candidates, in slot order, with every volume whose XZ centre is within reach plus the largest stored
+        // extent of the XZ segment a-b. Each row of cells takes the cells around the part of the segment within reach
+        // of that row. False (and the caller scans every volume) when the inputs are unusable or the walk would visit
+        // more cells than there are volumes.
+        bool GatherCells(float ax, float az, float bx, float bz, float reach)
+        {
+            candidateCount = 0;
+            if (!broadPhase)
+                return false;
+
+            double maxAbs = Math.Max(Math.Max(Math.Abs((double)ax), Math.Abs((double)az)), Math.Max(Math.Abs((double)bx), Math.Abs((double)bz)));
+            double grow = (double)reach + maxExtent;
+            // Covers float rounding in the narrow phase and in the stored centres and extents.
+            grow += 1e-3 + 1e-5 * (maxAbs + grow);
+            if (!(maxAbs + grow < MaxCellCoordinate))
+                return false;
+
+            double dx = (double)bx - ax;
+            double dz = (double)bz - az;
+            int rowFirst = (int)Math.Floor((Math.Min(az, bz) - grow) / CellSize);
+            int rowLast = (int)Math.Floor((Math.Max(az, bz) + grow) / CellSize);
+            long budget = indexById.Count;
+            long visited = 0;
+            for (int row = rowFirst; row <= rowLast; row++)
+            {
+                double low = row * (double)CellSize - grow;
+                double high = (row + 1) * (double)CellSize + grow;
+                double t0 = 0d;
+                double t1 = 1d;
+                if (Math.Abs(dz) > 1e-12)
+                {
+                    double ta = (low - az) / dz;
+                    double tb = (high - az) / dz;
+                    t0 = Math.Max(0d, Math.Min(ta, tb));
+                    t1 = Math.Min(1d, Math.Max(ta, tb));
+                    if (t0 > t1)
+                        continue;
+                }
+                else if (az < low || az > high)
+                {
+                    continue;
+                }
+
+                double x0 = ax + dx * t0;
+                double x1 = ax + dx * t1;
+                int columnFirst = (int)Math.Floor((Math.Min(x0, x1) - grow) / CellSize);
+                int columnLast = (int)Math.Floor((Math.Max(x0, x1) + grow) / CellSize);
+                visited += columnLast - columnFirst + 1L;
+                if (visited > budget)
+                    return false;
+
+                for (int column = columnFirst; column <= columnLast; column++)
+                    AppendCell(PackCell(column, row));
+            }
+
+            AppendCell(OversizeCell);
+            SortCandidates();
+            return true;
+        }
+
+        void AppendCell(long cell)
+        {
+            if (!cellHeads.TryGetValue(cell, out int slot))
+                return;
+
+            while (slot >= 0)
+            {
+                AddCandidate(slot);
+                slot = links[slot].Next;
+            }
+        }
+
+        void AddCandidate(int slot)
+        {
+            if (candidateCount == candidates.Length)
+                Array.Resize(ref candidates, candidates.Length * 2);
+            candidates[candidateCount++] = slot;
+        }
+
+        // List<int>.Sort allocates under Unity's Mono; insertion sort for a handful, heapsort beyond.
+        void SortCandidates()
+        {
+            int[] items = candidates;
+            int count = candidateCount;
+            if (count <= 16)
+            {
+                for (int i = 1; i < count; i++)
+                {
+                    int value = items[i];
+                    int j = i - 1;
+                    while (j >= 0 && items[j] > value)
+                    {
+                        items[j + 1] = items[j];
+                        j--;
+                    }
+
+                    items[j + 1] = value;
+                }
+
+                return;
+            }
+
+            for (int start = count / 2 - 1; start >= 0; start--)
+                SiftDown(items, start, count);
+
+            for (int end = count - 1; end > 0; end--)
+            {
+                int top = items[0];
+                items[0] = items[end];
+                items[end] = top;
+                SiftDown(items, 0, end);
+            }
+        }
+
+        static void SiftDown(int[] items, int root, int count)
+        {
+            int value = items[root];
+            while (true)
+            {
+                int child = root * 2 + 1;
+                if (child >= count)
+                    break;
+                if (child + 1 < count && items[child + 1] > items[child])
+                    child++;
+                if (items[child] <= value)
+                    break;
+
+                items[root] = items[child];
+                root = child;
+            }
+
+            items[root] = value;
+        }
+
+        // Contains is given the volume's foot and radius; the in-plane offset to a contained foot is at most the
+        // shape's reach plus that radius, and its XZ part (exact on the vertical line) no longer.
+        static bool TryDiskReach(in GroundDisk disk, out float reach)
+        {
+            reach = disk.Radius * 1.01f;
+            if (!IsFinite(disk.Center))
+                return false;
+            if (disk.Shape == GroundFieldShape.Disk)
+                return true;
+
+            Vector3 normal = disk.Normal;
+            Vector3 axis = disk.Axis;
+            Vector3 side = disk.Side;
+            return IsFinite(normal)
+                && normal.y >= 0.01f
+                && disk.Length >= 0f
+                && disk.Width >= 0f
+                && Mathf.Abs(axis.sqrMagnitude - 1f) <= 1e-3f
+                && Mathf.Abs(side.sqrMagnitude - 1f) <= 1e-3f
+                && Mathf.Abs(Vector3.Dot(axis, side)) <= 1e-3f
+                && Mathf.Abs(Vector3.Dot(axis, normal)) <= 1e-3f * normal.magnitude
+                && Mathf.Abs(Vector3.Dot(side, normal)) <= 1e-3f * normal.magnitude;
+        }
+
+        // The cell of the XZ midpoint of the axis; extent is the volume's radius plus half the axis's XZ length.
+        static long CellOf(in Volume volume, out float extent)
+        {
+            Vector3 low = volume.Low;
+            Vector3 high = volume.High;
+            float halfX = (high.x - low.x) * 0.5f;
+            float halfZ = (high.z - low.z) * 0.5f;
+            extent = volume.Radius + Mathf.Sqrt(halfX * halfX + halfZ * halfZ);
+            float midX = (low.x + high.x) * 0.5f;
+            float midZ = (low.z + high.z) * 0.5f;
+            if (!(extent <= CellSize) || !(Mathf.Abs(midX) < MaxCellCoordinate) || !(Mathf.Abs(midZ) < MaxCellCoordinate))
+                return OversizeCell;
+
+            return PackCell(Mathf.FloorToInt(midX / CellSize), Mathf.FloorToInt(midZ / CellSize));
+        }
+
+        static long PackCell(int column, int row)
+        {
+            return ((long)column << 32) | (uint)row;
+        }
+
+        void Link(int slot, long cell)
+        {
+            int head = cellHeads.TryGetValue(cell, out int first) ? first : -1;
+            links[slot] = new CellLink(cell, -1, head);
+            if (head >= 0)
+                SetPrev(head, slot);
+            cellHeads[cell] = slot;
+        }
+
+        void Unlink(int slot)
+        {
+            CellLink link = links[slot];
+            if (link.Prev >= 0)
+                SetNext(link.Prev, link.Next);
+            else if (link.Next >= 0)
+                cellHeads[link.Cell] = link.Next;
+            else
+                cellHeads.Remove(link.Cell);
+
+            if (link.Next >= 0)
+                SetPrev(link.Next, link.Prev);
+            links[slot] = CellLink.Unlinked;
+        }
+
+        void MoveLink(int from, int to)
+        {
+            CellLink link = links[from];
+            links[to] = link;
+            links[from] = CellLink.Unlinked;
+            if (link.Prev >= 0)
+                SetNext(link.Prev, to);
+            else
+                cellHeads[link.Cell] = to;
+
+            if (link.Next >= 0)
+                SetPrev(link.Next, to);
+        }
+
+        void SetNext(int slot, int next)
+        {
+            CellLink link = links[slot];
+            links[slot] = new CellLink(link.Cell, link.Prev, next);
+        }
+
+        void SetPrev(int slot, int prev)
+        {
+            CellLink link = links[slot];
+            links[slot] = new CellLink(link.Cell, prev, link.Next);
+        }
+
+        static bool IsFinite(Vector3 v)
+        {
+            return float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
         }
 
         static HitInfo BuildOverlap(ProjectileId instanceId, Vector3 center, Volume volume, Vector3 axis, Vector3 delta)
@@ -485,6 +803,23 @@ namespace Veerdonk.ProjectileSystem
 
             public TargetId Id { get; }
             public bool Active { get; }
+        }
+
+        // A slot's place in its cell's doubly linked list; Prev and Next are slot indices, -1 at the ends.
+        readonly struct CellLink
+        {
+            public static readonly CellLink Unlinked = new CellLink(NoCell, -1, -1);
+
+            public CellLink(long cell, int prev, int next)
+            {
+                Cell = cell;
+                Prev = prev;
+                Next = next;
+            }
+
+            public long Cell { get; }
+            public int Prev { get; }
+            public int Next { get; }
         }
 
         // A sphere is a capsule whose Low and High are the same point.
