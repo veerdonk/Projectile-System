@@ -1231,6 +1231,23 @@ Change request veerdonk/Projectile-System#99 from the game board (UntitledTowerG
 
 **Stop.** Play Mode debug tooling is **phase 34**.
 
+## Phase 57 — Broad phase for published hit targets
+
+Change request veerdonk/Projectile-System#103 from the game board (veerdonk/UntitledTowerGame#839). Runs before phase 34. ADR-063. Version **0.2.21**.
+
+**In scope**
+
+- An internal XZ grid in `HitTargetCatalog`, kept up in `Set`, `SetCapsule`, `Remove`, and compaction; one cell per volume, oversize volumes always visited
+- Direct sweep, area sphere, and ground disk test only the volumes in the cells they reach, in list order, with the same narrow phase; linear fallback for unusable input or a walk larger than the catalog
+- `HitTargetCatalog` and `HomingCatalog` compact on adding an id when more slots are dead than live
+- Edit Mode tests (`HitTargetBroadPhaseTests`): seeded fuzz against the linear scan bit for bit (sweeps, spheres, disks, rectangles, sectors, tilted normals, margins, ignore and shooter skips, protection, removals, far and huge volumes, non-finite input); 2000 vs 100 targets with missing sweeps test about as many volumes; short and 30 m diagonal sweeps between the capsules of a dense 2000-target crowd test a handful each and miss, as the full scan does; moves across cells, remove, remove and re-set, unusable radius, compaction; 10 000 Remove + Set cycles keep both catalogs bounded. `HitTargetBroadPhaseAllocationTests`: moves across cells, grid and fallback sweeps, sphere, disk, and sector queries allocate nothing
+
+**Out of scope:** a broad phase for colliders (PhysX does its own) or shields; a grid for homing acquisition; changing what is hit or in which order
+
+**Proof:** Edit Mode tests above.
+
+**Stop.** Play Mode debug tooling is **phase 34**.
+
 ## Later (not scheduled)
 
 - Unity Physics and/or Entities Graphics adapters

@@ -5,6 +5,16 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Published hit targets (`SetHitTarget`) are found through an XZ grid: Direct sweeps, area spheres, and ground fields test only the targets near them instead of every published target, so a large moving crowd no longer makes every shot cost the whole catalog. What is hit, which hit wins, and the order of results are unchanged.
+
+### Fixed
+
+- Removing and re-publishing hit targets or homing candidates while no shot queried them grew the catalogs without bound; they now compact as ids are added.
+
 ## [0.2.20] - 2026-11-15
 
 ### Added
